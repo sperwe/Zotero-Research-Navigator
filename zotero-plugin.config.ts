@@ -7,7 +7,7 @@ export default defineConfig({
   name: pkg.config.addonName,
   id: pkg.config.addonID,
   namespace: pkg.config.addonRef,
-  // updateURL: "https://github.com/sperwe/Zotero-Research-Navigator/releases/latest/download/update.json",
+  updateURL: undefined, // 明确设置为 undefined 以防止自动添加
   xpiDownloadLink:
     "https://github.com/sperwe/Zotero-Research-Navigator/releases/download/v{{version}}/{{xpiName}}.xpi",
 
