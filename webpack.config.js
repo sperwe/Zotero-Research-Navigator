@@ -43,10 +43,7 @@ module.exports = (env = {}) => {
             from: 'addon/',
             to: './',
           },
-          {
-            from: '_locales/',
-            to: '_locales/',
-          },
+
           {
             from: 'addon/install.rdf',
             to: 'install.rdf',
