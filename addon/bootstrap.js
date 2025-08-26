@@ -59,6 +59,12 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
   ctx._globalThis = ctx;
   ctx.globalThis = ctx;
   ctx.window = ctx;
+  
+  // CRITICAL: Ensure Zotero is available in globalThis to prevent recursion
+  // This must be done BEFORE loading any scripts
+  if (!ctx.globalThis.Zotero) {
+    ctx.globalThis.Zotero = Zotero;
+  }
 
   // Load main script
   const scriptPath = `${rootURI}/content/scripts/researchnavigator.js`;
