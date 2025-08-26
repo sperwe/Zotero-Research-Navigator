@@ -1,9 +1,14 @@
 import { ZoteroToolkit } from "zotero-plugin-toolkit";
 import hooks from "./hooks";
 import { config } from "../package.json";
+import { createZToolkit } from "./utils/ztoolkit";
 
 class Addon {
   public data: {
+    alive: boolean;
+    config: typeof config;
+    env: "development" | "production";
+    initialized: boolean;
     ztoolkit: ZoteroToolkit;
     locale?: {
       current: any;
@@ -11,8 +16,6 @@ class Addon {
     prefs?: {
       window: Window | null;
     };
-    initialized: boolean;
-    config: typeof config;
   };
   
   // Lifecycle hooks
@@ -20,9 +23,11 @@ class Addon {
 
   constructor() {
     this.data = {
-      ztoolkit: new ZoteroToolkit(),
-      initialized: false,
+      alive: true,
       config: config,
+      env: __env__,
+      initialized: false,
+      ztoolkit: createZToolkit(),
     };
     this.hooks = hooks;
   }
