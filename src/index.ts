@@ -3,6 +3,11 @@
  * Zotero插件主入口文件
  */
 
+import { setupConsolePolyfill } from "./polyfills/console";
+
+// 首先设置 console polyfill
+setupConsolePolyfill();
+
 import { BasicTool } from "zotero-plugin-toolkit";
 import Addon from "./addon";
 import { config } from "../package.json";

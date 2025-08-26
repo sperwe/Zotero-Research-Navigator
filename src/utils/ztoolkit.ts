@@ -10,9 +10,10 @@ export function createZToolkit() {
 function initZToolkit(_ztoolkit: ZoteroToolkit) {
   const env = __env__;
   _ztoolkit.basicOptions.log.prefix = `[${config.addonName}]`;
-  _ztoolkit.basicOptions.log.disableConsole = env === "production";
-  _ztoolkit.UI.basicOptions.ui.enableElementJSONLog = env === "development";
-  _ztoolkit.UI.basicOptions.ui.enableElementDOMLog = env === "development";
+  // 在 Zotero 环境中，console 不可用，所以总是禁用
+  _ztoolkit.basicOptions.log.disableConsole = true;
+  _ztoolkit.UI.basicOptions.ui.enableElementJSONLog = false;
+  _ztoolkit.UI.basicOptions.ui.enableElementDOMLog = false;
   _ztoolkit.basicOptions.api.pluginID = config.addonID;
   _ztoolkit.ProgressWindow.setIconURI(
     "default",
