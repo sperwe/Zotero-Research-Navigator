@@ -1,0 +1,56 @@
+name: Test Plugin
+
+on:
+  push:
+    branches: [ master, main, 'feature/**', 'fix/**', 'refactor/**' ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18, 20]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm install --legacy-peer-deps
+    
+    - name: Run linting
+      run: npm run lint:check
+      continue-on-error: true
+    
+    - name: Build plugin
+      run: npm run build-prod
+    
+    - name: Run tests
+      run: npm test
+    
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results-node-${{ matrix.node-version }}
+        path: |
+          build/
+          test-results/
+        retention-days: 7
+    
+    - name: Test XPI structure
+      run: |
+        echo "=== XPI Structure Test ==="
+        unzip -l build/zotero-research-navigator.xpi
+        echo ""
+        echo "=== Manifest Content ==="
+        unzip -p build/zotero-research-navigator.xpi manifest.json | python3 -m json.tool
