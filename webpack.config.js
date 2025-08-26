@@ -47,20 +47,6 @@ module.exports = (env = {}) => {
             from: '_locales/',
             to: '_locales/',
           },
-          {
-            from: 'manifest.json',
-            to: 'manifest.json',
-            transform(content) {
-              const manifest = JSON.parse(content.toString());
-              // 替换占位符
-              manifest.name = config.addonName || manifest.name;
-              manifest.description = `A Zotero plugin for tracking research history and enhanced note navigation`;
-              manifest.author = 'Research Navigator Developer';
-              manifest.homepage_url = 'https://github.com/your-username/zotero-research-navigator';
-              
-              return JSON.stringify(manifest, null, 2);
-            },
-          },
         ],
       }),
     ],

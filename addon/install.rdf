@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+<RDF xmlns="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:em="http://www.mozilla.org/2004/em-rdf#">
+  
+  <Description about="urn:mozilla:install-manifest">
+    <em:id>research-navigator@zotero.org</em:id>
+    <em:name>Zotero Research Navigator</em:name>
+    <em:version>1.0.0</em:version>
+    <em:type>2</em:type>
+    <em:creator>Research Navigator Developer</em:creator>
+    <em:description>Track research history and enhance note navigation in Zotero</em:description>
+    <em:homepageURL>https://github.com/sperwe/Zotero-Research-Navigator</em:homepageURL>
+    <em:updateURL>https://raw.githubusercontent.com/sperwe/Zotero-Research-Navigator/master/update.rdf</em:updateURL>
+    
+    <em:iconURL>chrome://research-navigator/content/icons/icon.svg</em:iconURL>
+    <em:icon64URL>chrome://research-navigator/content/icons/icon.svg</em:icon64URL>
+    
+    <!-- Zotero 兼容性 -->
+    <em:targetApplication>
+      <Description>
+        <em:id>zotero@chnm.gmu.edu</em:id>
+        <em:minVersion>6.0</em:minVersion>
+        <em:maxVersion>7.0.*</em:maxVersion>
+      </Description>
+    </em:targetApplication>
+    
+    <!-- Zotero Standalone -->
+    <em:targetApplication>
+      <Description>
+        <em:id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</em:id>
+        <em:minVersion>6.0</em:minVersion>
+        <em:maxVersion>7.0.*</em:maxVersion>
+      </Description>
+    </em:targetApplication>
+    
+    <!-- 本地化 -->
+    <em:localized>
+      <Description>
+        <em:locale>en-US</em:locale>
+        <em:name>Zotero Research Navigator</em:name>
+        <em:description>Track research history and enhance note navigation in Zotero</em:description>
+      </Description>
+    </em:localized>
+    
+    <em:localized>
+      <Description>
+        <em:locale>zh-CN</em:locale>
+        <em:name>Zotero 研究导航器</em:name>
+        <em:description>追踪研究历史并增强 Zotero 中的笔记导航体验</em:description>
+      </Description>
+    </em:localized>
+    
+    <em:bootstrap>true</em:bootstrap>
+  </Description>
+</RDF>
