@@ -12,10 +12,10 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     
     - name: Setup Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'npm'
@@ -35,13 +35,9 @@ jobs:
     
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/')
-      uses: actions/create-release@v1
-      id: create_release
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v1
       with:
-        tag_name: ${{ github.ref_name }}
-        release_name: Zotero Research Navigator ${{ github.ref_name }}
+        name: Zotero Research Navigator ${{ github.ref_name }}
         body: |
           ## 🎉 Zotero Research Navigator ${{ github.ref_name }}
           
@@ -53,22 +49,12 @@ jobs:
           
           ### ✨ 更新内容
           请查看 [RELEASE_NOTES.md](https://github.com/${{ github.repository }}/blob/master/RELEASE_NOTES.md)
+        files: ./zotero-research-navigator-${{ github.ref_name }}.xpi
         draft: false
         prerelease: false
     
-    - name: Upload XPI to Release
-      if: startsWith(github.ref, 'refs/tags/')
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./zotero-research-navigator-${{ github.ref_name }}.xpi
-        asset_name: zotero-research-navigator-${{ github.ref_name }}.xpi
-        asset_content_type: application/x-xpinstall
-    
     - name: Upload XPI as Artifact (for manual workflow)
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: zotero-research-navigator-xpi
         path: ./zotero-research-navigator-*.xpi
