@@ -39,17 +39,22 @@ module.exports = (env = {}) => {
     plugins: [
       new CopyPlugin({
         patterns: [
-          {
-            from: 'addon/',
-            to: './',
-          },
-          {
-            from: '_locales/',
-            to: '_locales/',
-          },
+          // 复制 Zotero 插件必需文件
           {
             from: 'addon/install.rdf',
             to: 'install.rdf',
+          },
+          {
+            from: 'addon/chrome.manifest',
+            to: 'chrome.manifest',
+          },
+          {
+            from: 'addon/bootstrap.js',
+            to: 'bootstrap.js',
+          },
+          {
+            from: 'addon/chrome/',
+            to: 'chrome/',
           },
         ],
       }),
