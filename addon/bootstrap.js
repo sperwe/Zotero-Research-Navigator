@@ -14,7 +14,7 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
   ].getService(Components.interfaces.amIAddonManagerStartup);
   var manifestURI = Services.io.newURI(rootURI + "manifest.json");
   chromeHandle = aomStartup.registerChrome(manifestURI, [
-    ["content", "__addonRef__", rootURI + "chrome/content/"],
+    ["content", "__addonRef__", rootURI + "content/"],
   ]);
 
   // Global variables for plugin code
@@ -23,7 +23,7 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
 
   // Load main script
   Services.scriptloader.loadSubScript(
-    `${rootURI}/chrome/content/scripts/__addonRef__.js`,
+    `${rootURI}/content/scripts/__addonRef__.js`,
     ctx,
   );
   

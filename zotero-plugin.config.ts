@@ -2,12 +2,12 @@ import { defineConfig } from "zotero-plugin-scaffold";
 import pkg from "./package.json";
 
 export default defineConfig({
-  source: ["src", "addon"],
+  source: ["addon", "package.json"],
   dist: "build",
   name: pkg.config.addonName,
   id: pkg.config.addonID,
   namespace: pkg.config.addonRef,
-  updateURL: "https://github.com/sperwe/Zotero-Research-Navigator/releases/latest/download/update.json",
+  // updateURL: "https://github.com/sperwe/Zotero-Research-Navigator/releases/latest/download/update.json",
   xpiDownloadLink:
     "https://github.com/sperwe/Zotero-Research-Navigator/releases/download/v{{version}}/{{xpiName}}.xpi",
 
@@ -32,7 +32,7 @@ export default defineConfig({
         },
         bundle: true,
         target: "firefox115",
-        outfile: `build/addon/chrome/content/scripts/${pkg.config.addonRef}.js`,
+        outfile: `build/addon/content/scripts/${pkg.config.addonRef}.js`,
       },
     ],
   },
