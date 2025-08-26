@@ -3,11 +3,34 @@
  * Based on zotero-plugin-template
  */
 
+/* global Services, Components, ChromeUtils */
+
+if (typeof Services === 'undefined') {
+  // eslint-disable-next-line no-var
+  var { Services } = ChromeUtils.import('resource://gre/modules/Services.jsm');
+}
+
 var chromeHandle;
 
-function install() {}
+// 定义常量（如果尚未定义）
+if (typeof ADDON_DISABLE === 'undefined') {
+  // eslint-disable-next-line no-var
+  var ADDON_DISABLE = 4;
+  // eslint-disable-next-line no-var
+  var APP_SHUTDOWN = 2;
+}
+
+function log(msg) {
+  Services.console.logStringMessage('[Research Navigator] ' + msg);
+}
+
+function install() {
+  log('install() called');
+}
 
 async function startup({ id, version, resourceURI, rootURI }, reason) {
+  log('startup() called with reason: ' + reason);
+  
   // Register chrome
   var aomStartup = Components.classes[
     "@mozilla.org/addons/addon-manager-startup;1"
@@ -29,23 +52,31 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
   
   // Initialize plugin - 检查是否成功加载
   if (Zotero.ResearchNavigator && Zotero.ResearchNavigator.hooks) {
+    log('Plugin loaded successfully, calling onStartup');
     await Zotero.ResearchNavigator.hooks.onStartup();
+  } else {
+    log('ERROR: Plugin failed to load properly!');
   }
 }
 
 async function onMainWindowLoad({ window }, reason) {
+  log('onMainWindowLoad() called');
   if (Zotero.ResearchNavigator && Zotero.ResearchNavigator.hooks) {
     await Zotero.ResearchNavigator.hooks.onMainWindowLoad(window);
+  } else {
+    log('ERROR: Plugin not available in onMainWindowLoad');
   }
 }
 
 async function onMainWindowUnload({ window }, reason) {
+  log('onMainWindowUnload() called');
   if (Zotero.ResearchNavigator && Zotero.ResearchNavigator.hooks) {
     await Zotero.ResearchNavigator.hooks.onMainWindowUnload(window);
   }
 }
 
 async function shutdown({ id, version, resourceURI, rootURI }, reason) {
+  log('shutdown() called with reason: ' + reason);
   if (reason === APP_SHUTDOWN) {
     return;
   }
@@ -62,4 +93,6 @@ async function shutdown({ id, version, resourceURI, rootURI }, reason) {
   }
 }
 
-async function uninstall(data, reason) {}
+async function uninstall(data, reason) {
+  log('uninstall() called');
+}

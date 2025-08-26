@@ -20,6 +20,9 @@ export async function initializeUI(
   currentSearchEngine = searchEngine;
   
   try {
+    // 首先尝试创建一个简单的测试按钮
+    createSimpleTestButton(win);
+    
     // 添加工具栏按钮
     await createToolbarButton(win);
     ztoolkit.log("[Research Navigator] Toolbar button creation attempted");
@@ -48,6 +51,56 @@ export async function initializeUI(
     }, 2000);
   } catch (error) {
     ztoolkit.log(`[Research Navigator] UI initialization error: ${error}`, 'error');
+  }
+}
+
+function createSimpleTestButton(win: Window): void {
+  try {
+    const doc = win.document;
+    
+    // 查找 Zotero 主界面中的一个稳定元素
+    const zoteroPane = doc.getElementById("zotero-pane");
+    if (!zoteroPane) {
+      ztoolkit.log("[Research Navigator] zotero-pane not found", 'warn');
+      return;
+    }
+    
+    // 创建一个浮动按钮用于测试
+    const testButton = doc.createElement("button");
+    testButton.id = "research-navigator-test-button";
+    testButton.textContent = "📚 History";
+    testButton.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 10000;
+      padding: 10px 15px;
+      background: #2980b9;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    `;
+    
+    testButton.addEventListener("click", () => {
+      ztoolkit.log("[Research Navigator] Test button clicked!");
+      toggleHistoryPanel(win);
+    });
+    
+    testButton.addEventListener("mouseover", () => {
+      testButton.style.background = "#3498db";
+    });
+    
+    testButton.addEventListener("mouseout", () => {
+      testButton.style.background = "#2980b9";
+    });
+    
+    zoteroPane.appendChild(testButton);
+    ztoolkit.log("[Research Navigator] Test button added successfully");
+  } catch (error) {
+    ztoolkit.log(`[Research Navigator] Error creating test button: ${error}`, 'error');
   }
 }
 
