@@ -22,10 +22,13 @@ jobs:
         cache: 'npm'
     
     - name: Install dependencies
-      run: npm ci
+      run: npm install --legacy-peer-deps
     
     - name: Build plugin
-      run: npm run build-prod
+      run: |
+        echo "Starting build..."
+        npm run build-prod || (echo "Build failed!" && exit 1)
+        echo "Build completed successfully!"
     
     - name: Create XPI
       run: |
