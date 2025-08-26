@@ -9,7 +9,7 @@ class Addon {
     config: typeof config;
     env: "development" | "production";
     initialized: boolean;
-    ztoolkit: ZoteroToolkit;
+    ztoolkit?: ZoteroToolkit;
     locale?: {
       current: any;
     };
@@ -26,13 +26,16 @@ class Addon {
       alive: true,
       config: config,
       env: __env__,
-      initialized: false,
-      ztoolkit: createZToolkit(),
+      initialized: false
+      // ztoolkit will be created on demand
     };
     this.hooks = hooks;
   }
 
   get ztoolkit() {
+    if (!this.data.ztoolkit) {
+      this.data.ztoolkit = createZToolkit();
+    }
     return this.data.ztoolkit;
   }
 }

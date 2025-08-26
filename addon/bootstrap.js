@@ -40,9 +40,25 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
     ["content", "researchnavigator", rootURI + "content/"],
   ]);
 
-  // Global variables for plugin code
-  const ctx = { rootURI };
+  // Create a proper execution context with all globals
+  const ctx = {
+    window: {},
+    document: {},
+    _globalThis: null,
+    globalThis: null,
+    Zotero: Zotero,
+    Services: Services,
+    Components: Components,
+    ChromeUtils: ChromeUtils,
+    console: Services.console,
+    _console: Services.console,
+    rootURI: rootURI
+  };
+  
+  // Self references
   ctx._globalThis = ctx;
+  ctx.globalThis = ctx;
+  ctx.window = ctx;
 
   // Load main script
   const scriptPath = `${rootURI}/content/scripts/researchnavigator.js`;
@@ -57,7 +73,15 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
     return;
   }
   
-  // Initialize plugin - 检查是否成功加载
+  // The script should have created addon instance
+  if (ctx.addon) {
+    log('Addon instance found in context');
+    // Copy to global Zotero object
+    Zotero.ResearchNavigator = ctx.addon;
+    log('Addon copied to Zotero.ResearchNavigator');
+  }
+  
+  // Initialize plugin
   if (Zotero.ResearchNavigator && Zotero.ResearchNavigator.hooks) {
     log('Plugin loaded successfully, calling onStartup');
     try {
@@ -69,6 +93,7 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
   } else {
     log('ERROR: Plugin failed to load properly!');
     log('Zotero.ResearchNavigator = ' + Zotero.ResearchNavigator);
+    log('ctx.addon = ' + ctx.addon);
   }
 }
 

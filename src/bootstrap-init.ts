@@ -43,7 +43,12 @@
   };
   
   // Force set all possible console references
-  const targets = [globalThis, (globalThis as any).window, self];
+  const targets = [globalThis, (globalThis as any).window];
+  // Only add self if it exists
+  if (typeof self !== 'undefined') {
+    targets.push(self);
+  }
+  
   const names = ['console', '_console'];
   
   targets.forEach(target => {

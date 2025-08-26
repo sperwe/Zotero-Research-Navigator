@@ -6,10 +6,10 @@
 // 最先导入初始化代码
 import "./bootstrap-init";
 
-import { setupConsolePolyfill } from "./polyfills/console";
 import { BasicTool } from "zotero-plugin-toolkit";
 import Addon from "./addon";
 import { config } from "../package.json";
+import { setupConsolePolyfill } from "./polyfills/console";
 
 // 再次确保 console polyfill 被设置
 setupConsolePolyfill();
@@ -17,17 +17,28 @@ setupConsolePolyfill();
 const basicTool = new BasicTool();
 
 if (!basicTool.getGlobal("Zotero")[config.addonInstance]) {
-  _globalThis.addon = new Addon();
-  defineGlobal("addon");
-  defineGlobal("ztoolkit", () => {
-    return _globalThis.addon.data.ztoolkit;
-  });
-  basicTool.getGlobal("Zotero")[config.addonInstance] = addon;
+  const _globalThis = basicTool.getGlobal("globalThis");
   
-  // 使用 Zotero 的日志方法
-  const Zotero = basicTool.getGlobal("Zotero");
-  if (Zotero && Zotero.debug) {
-    Zotero.debug("[Research Navigator] Addon instance created and registered");
+  try {
+    _globalThis.addon = new Addon();
+    defineGlobal("addon");
+    defineGlobal("ztoolkit", () => {
+      return _globalThis.addon.data.ztoolkit;
+    });
+    
+    basicTool.getGlobal("Zotero")[config.addonInstance] = addon;
+    
+    const Zotero = basicTool.getGlobal("Zotero");
+    if (Zotero && Zotero.debug) {
+      Zotero.debug("[Research Navigator] Addon instance created and registered");
+      Zotero.debug("[Research Navigator] Version: " + config.version);
+      Zotero.debug("[Research Navigator] Addon ID: " + config.addonID);
+    }
+  } catch (error) {
+    const Zotero = basicTool.getGlobal("Zotero");
+    if (Zotero && Zotero.debug) {
+      Zotero.debug("[Research Navigator] Failed to create addon: " + error);
+    }
   }
 }
 
