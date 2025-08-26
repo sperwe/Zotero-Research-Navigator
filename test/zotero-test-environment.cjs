@@ -338,6 +338,9 @@ class ZoteroTestEnvironment {
       vm.createContext(sandbox);
       vm.runInContext(bootstrapCode, sandbox);
       
+      // 调试：检查 sandbox 中的内容
+      this.log('debug', `Sandbox keys after bootstrap: ${Object.keys(sandbox).join(', ')}`);
+      
       // 验证必需函数
       const requiredFunctions = ['install', 'startup', 'shutdown'];
       for (const func of requiredFunctions) {
@@ -353,6 +356,7 @@ class ZoteroTestEnvironment {
       
     } catch (error) {
       this.log('error', `Failed to load bootstrap.js: ${error.message}`);
+      this.log('debug', `Error stack: ${error.stack}`);
       throw error;
     }
   }

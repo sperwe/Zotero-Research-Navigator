@@ -41,7 +41,12 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
   ]);
 
   // Global variables for plugin code
-  const ctx = { rootURI };
+  const ctx = { 
+    rootURI,
+    Zotero: Zotero,
+    Services: Services,
+    console: Services.console
+  };
   ctx._globalThis = ctx;
 
   // Load main script
@@ -56,6 +61,14 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
     await Zotero.ResearchNavigator.hooks.onStartup();
   } else {
     log('ERROR: Plugin failed to load properly!');
+    // 尝试从 ctx 中获取
+    if (ctx.Zotero && ctx.Zotero.ResearchNavigator) {
+      log('Found plugin in context, copying to global Zotero');
+      Zotero.ResearchNavigator = ctx.Zotero.ResearchNavigator;
+      if (Zotero.ResearchNavigator.hooks) {
+        await Zotero.ResearchNavigator.hooks.onStartup();
+      }
+    }
   }
 }
 
