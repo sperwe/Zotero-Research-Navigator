@@ -27,16 +27,22 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
     ctx,
   );
   
-  // Initialize plugin
-  await Zotero.ResearchNavigator.hooks.onStartup();
+  // Initialize plugin - 检查是否成功加载
+  if (Zotero.ResearchNavigator && Zotero.ResearchNavigator.hooks) {
+    await Zotero.ResearchNavigator.hooks.onStartup();
+  }
 }
 
 async function onMainWindowLoad({ window }, reason) {
-  await Zotero.ResearchNavigator?.hooks.onMainWindowLoad(window);
+  if (Zotero.ResearchNavigator && Zotero.ResearchNavigator.hooks) {
+    await Zotero.ResearchNavigator.hooks.onMainWindowLoad(window);
+  }
 }
 
 async function onMainWindowUnload({ window }, reason) {
-  await Zotero.ResearchNavigator?.hooks.onMainWindowUnload(window);
+  if (Zotero.ResearchNavigator && Zotero.ResearchNavigator.hooks) {
+    await Zotero.ResearchNavigator.hooks.onMainWindowUnload(window);
+  }
 }
 
 async function shutdown({ id, version, resourceURI, rootURI }, reason) {
@@ -45,7 +51,9 @@ async function shutdown({ id, version, resourceURI, rootURI }, reason) {
   }
 
   // Shutdown plugin
-  await Zotero.ResearchNavigator?.hooks.onShutdown();
+  if (Zotero.ResearchNavigator && Zotero.ResearchNavigator.hooks) {
+    await Zotero.ResearchNavigator.hooks.onShutdown();
+  }
 
   // Unregister chrome
   if (chromeHandle) {
