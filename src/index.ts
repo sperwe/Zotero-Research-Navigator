@@ -3,33 +3,25 @@
  * Zotero插件主入口文件
  */
 
-// 立即输出到控制台
-if (typeof console !== 'undefined') {
-  console.log("[Research Navigator] index.ts loading...");
-}
-
 import { BasicTool } from "zotero-plugin-toolkit";
 import Addon from "./addon";
 import { config } from "../package.json";
 
-// 确认导入成功
-if (typeof console !== 'undefined') {
-  console.log("[Research Navigator] imports completed, config:", config);
-}
-
 const basicTool = new BasicTool();
 
 if (!basicTool.getGlobal("Zotero")[config.addonInstance]) {
-  console.log("[Research Navigator] Creating addon instance");
   _globalThis.addon = new Addon();
   defineGlobal("addon");
   defineGlobal("ztoolkit", () => {
     return _globalThis.addon.data.ztoolkit;
   });
   basicTool.getGlobal("Zotero")[config.addonInstance] = addon;
-  console.log("[Research Navigator] Addon registered as:", config.addonInstance);
-} else {
-  console.log("[Research Navigator] Addon already exists");
+  
+  // 使用 Zotero 的日志方法
+  const Zotero = basicTool.getGlobal("Zotero");
+  if (Zotero && Zotero.debug) {
+    Zotero.debug("[Research Navigator] Addon instance created and registered");
+  }
 }
 
 function defineGlobal(name: Parameters<BasicTool["getGlobal"]>[0]): void;

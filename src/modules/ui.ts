@@ -227,7 +227,6 @@ async function createToolbarButton(win: Window): Promise<void> {
     }
   } catch (error) {
     ztoolkit.log(`[Research Navigator] Error creating toolbar button: ${error}`, 'error');
-    console.error(error);
   }
 }
 

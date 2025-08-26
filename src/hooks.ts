@@ -2,17 +2,12 @@ import { initializeUI } from "./modules/ui";
 import { HistoryTracker } from "./modules/historyTracker";
 import { SearchEngine } from "./modules/searchEngine";
 
-// 立即输出日志
-if (typeof console !== 'undefined') {
-  console.log("[Research Navigator] hooks.ts loaded");
-}
-
 let historyTracker: HistoryTracker;
 let searchEngine: SearchEngine;
 
 async function onStartup() {
-  console.log("[Research Navigator] onStartup called");
-  ztoolkit.log("[Research Navigator] onStartup called (ztoolkit)");
+  // 只使用 ztoolkit.log
+  ztoolkit.log("[Research Navigator] onStartup called");
   
   await Zotero.initializationPromise;
 
@@ -27,7 +22,6 @@ async function onStartup() {
 }
 
 async function onMainWindowLoad(win: Window): Promise<void> {
-  console.log("[Research Navigator] onMainWindowLoad called", win);
   ztoolkit.log("[Research Navigator] Main window loaded");
   
   try {
@@ -35,7 +29,6 @@ async function onMainWindowLoad(win: Window): Promise<void> {
     await initializeUI(win, historyTracker, searchEngine);
     ztoolkit.log("[Research Navigator] UI initialization completed");
   } catch (error) {
-    console.error("[Research Navigator] Error in onMainWindowLoad:", error);
     ztoolkit.log(`[Research Navigator] Error in onMainWindowLoad: ${error}`, 'error');
   }
 }
