@@ -29,13 +29,14 @@ jobs:
         echo "Starting build..."
         npm run build-prod || (echo "Build failed!" && exit 1)
         echo "Build completed successfully!"
+        echo "Checking generated files..."
+        ls -la build/
     
-    - name: Create XPI
+    - name: Copy XPI file
       run: |
-        cd build
-        zip -r ../zotero-research-navigator-latest.xpi *
-        cd ..
-        echo "XPI file created successfully!"
+        # zotero-plugin build 已经生成了正确的 XPI 文件
+        cp build/zotero-research-navigator.xpi ./zotero-research-navigator-latest.xpi
+        echo "XPI file copied successfully!"
         ls -la *.xpi
     
     - name: Upload XPI
