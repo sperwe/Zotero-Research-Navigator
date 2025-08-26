@@ -10,9 +10,13 @@ import { BasicTool } from "zotero-plugin-toolkit";
 import Addon from "./addon";
 import { config } from "../package.json";
 import { setupConsolePolyfill } from "./polyfills/console";
+import { patchBasicTool } from "./utils/basic-tool-patch";
 
 // 再次确保 console polyfill 被设置
 setupConsolePolyfill();
+
+// 防止 BasicTool 递归
+patchBasicTool();
 
 const basicTool = new BasicTool();
 
@@ -26,7 +30,7 @@ if (!basicTool.getGlobal("Zotero")[config.addonInstance]) {
       return _globalThis.addon.data.ztoolkit;
     });
     
-    basicTool.getGlobal("Zotero")[config.addonInstance] = addon;
+    basicTool.getGlobal("Zotero")[config.addonInstance] = _globalThis.addon;
     
     const Zotero = basicTool.getGlobal("Zotero");
     if (Zotero && Zotero.debug) {
