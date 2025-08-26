@@ -14,54 +14,115 @@ export async function initializeUI(
   historyTracker: HistoryTracker,
   searchEngine: SearchEngine
 ): Promise<void> {
+  ztoolkit.log("[Research Navigator] Starting UI initialization");
+  
   currentHistoryTracker = historyTracker;
   currentSearchEngine = searchEngine;
   
-  // 添加工具栏按钮
-  await createToolbarButton(win);
-  
-  // 创建历史面板
-  createHistoryPanel(win, historyTracker, searchEngine);
-  
-  // 添加菜单项
-  createMenuItems(win);
-  
-  // 注册快捷键
-  registerShortcuts(win);
+  try {
+    // 添加工具栏按钮
+    await createToolbarButton(win);
+    ztoolkit.log("[Research Navigator] Toolbar button creation attempted");
+    
+    // 创建历史面板
+    createHistoryPanel(win, historyTracker, searchEngine);
+    ztoolkit.log("[Research Navigator] History panel created");
+    
+    // 添加菜单项
+    createMenuItems(win);
+    ztoolkit.log("[Research Navigator] Menu items created");
+    
+    // 注册快捷键
+    registerShortcuts(win);
+    ztoolkit.log("[Research Navigator] Shortcuts registered");
+    
+    ztoolkit.log("[Research Navigator] UI initialization completed");
+    
+    // 添加一个测试通知来确认插件已加载
+    win.setTimeout(() => {
+      ztoolkit.getGlobal("Zotero").alert(
+        null,
+        "Research Navigator",
+        "Plugin loaded successfully! Use Ctrl+Shift+H to open the history panel."
+      );
+    }, 2000);
+  } catch (error) {
+    ztoolkit.log(`[Research Navigator] UI initialization error: ${error}`, 'error');
+  }
 }
 
 async function createToolbarButton(win: Window): Promise<void> {
   const doc = win.document;
   
-  // 创建工具栏按钮
-  const button = ztoolkit.UI.createElement(doc, "toolbarbutton", {
-    id: "research-navigator-button",
-    namespace: "xul",
-    attributes: {
-      tooltiptext: "Research Navigator - View History",
-      label: "Research History",
-      class: "toolbarbutton-1",
-      style: "list-style-image: url(chrome://researchnavigator/content/icons/icon-16.png)",
-    },
-    listeners: [
-      {
-        type: "click",
-        listener: () => {
-          toggleHistoryPanel(win);
-        },
-      },
-    ],
-  });
-  
-  // 尝试添加到多个工具栏
-  const toolbarIds = ["zotero-toolbar", "zotero-items-toolbar", "nav-bar"];
-  for (const toolbarId of toolbarIds) {
-    const toolbar = doc.getElementById(toolbarId);
-    if (toolbar && button) {
-      toolbar.appendChild(button);
-      ztoolkit.log(`[Research Navigator] Toolbar button added to ${toolbarId}`);
-      break;
+  try {
+    // 基于 Zotero 源码，工具栏按钮应该是这样的结构
+    const props = {
+      id: "zotero-tb-research-navigator",
+      class: "zotero-tb-button",
+      tooltiptext: "Research Navigator - View History", 
+      tabindex: "-1",
+      label: "Research History"
+    };
+    
+    // 创建工具栏按钮
+    const toolbarbutton = doc.createXULElement("toolbarbutton");
+    for (const [key, value] of Object.entries(props)) {
+      toolbarbutton.setAttribute(key, value);
     }
+    
+    // 设置图标样式
+    toolbarbutton.style.listStyleImage = "url('chrome://researchnavigator/content/icons/favicon@0.5x.png')";
+    
+    // 添加事件监听器
+    toolbarbutton.addEventListener("command", () => {
+      ztoolkit.log("[Research Navigator] Toolbar button clicked");
+      toggleHistoryPanel(win);
+    });
+    
+    // Zotero 7 的主要工具栏位置
+    const toolbarLocations = [
+      // 项目工具栏（最常用的位置）
+      { id: "zotero-items-toolbar", position: "afterend", referenceId: "zotero-tb-lookup" },
+      // 标签工具栏
+      { id: "zotero-tabs-toolbar", position: "beforeend", referenceId: null },
+      // 收藏工具栏
+      { id: "zotero-collections-toolbar", position: "beforeend", referenceId: null }
+    ];
+    
+    let added = false;
+    for (const location of toolbarLocations) {
+      const toolbar = doc.getElementById(location.id);
+      if (toolbar) {
+        // 检查按钮是否已存在
+        if (doc.getElementById(props.id)) {
+          ztoolkit.log(`[Research Navigator] Button already exists in ${location.id}`);
+          return;
+        }
+        
+        if (location.referenceId) {
+          // 插入到特定位置
+          const referenceNode = doc.getElementById(location.referenceId);
+          if (referenceNode) {
+            referenceNode.insertAdjacentElement('afterend', toolbarbutton);
+            ztoolkit.log(`[Research Navigator] Button added after ${location.referenceId} in ${location.id}`);
+            added = true;
+            break;
+          }
+        } else {
+          // 添加到工具栏末尾
+          toolbar.appendChild(toolbarbutton);
+          ztoolkit.log(`[Research Navigator] Button added to end of ${location.id}`);
+          added = true;
+          break;
+        }
+      }
+    }
+    
+    if (!added) {
+      ztoolkit.log("[Research Navigator] ERROR: Could not find any toolbar to add button", 'error');
+    }
+  } catch (error) {
+    ztoolkit.log(`[Research Navigator] Error creating toolbar button: ${error}`, 'error');
   }
 }
 
@@ -458,31 +519,74 @@ async function openItem(itemID: string): Promise<void> {
 }
 
 function createMenuItems(win: Window): void {
-  // 添加到工具菜单
-  ztoolkit.Menu.register("menuTools", {
-    tag: "menuitem",
-    id: "research-navigator-menu-tools",
-    label: "Research Navigator",
-    commandListener: () => toggleHistoryPanel(win),
-  });
-  
-  // 添加到视图菜单
-  ztoolkit.Menu.register("menuView", {
-    tag: "menuitem", 
-    id: "research-navigator-menu-view",
-    label: "Research History Panel",
-    type: "checkbox",
-    commandListener: () => toggleHistoryPanel(win),
-  });
+  try {
+    const doc = win.document;
+    
+    // 直接添加到工具菜单（基于 Zotero 源码）
+    const toolsMenuPopup = doc.getElementById("menu_ToolsPopup");
+    if (toolsMenuPopup) {
+      // 创建菜单项
+      const menuitem = doc.createXULElement("menuitem");
+      menuitem.setAttribute("id", "research-navigator-menu-tools");
+      menuitem.setAttribute("label", "Research Navigator");
+      menuitem.addEventListener("command", () => {
+        ztoolkit.log("[Research Navigator] Tools menu item clicked");
+        toggleHistoryPanel(win);
+      });
+      
+      // 添加分隔符
+      const separator = doc.createXULElement("menuseparator");
+      
+      // 插入到插件菜单项之前（menu_addons）
+      const addonsMenuItem = doc.getElementById("menu_addons");
+      if (addonsMenuItem) {
+        toolsMenuPopup.insertBefore(separator, addonsMenuItem);
+        toolsMenuPopup.insertBefore(menuitem, separator);
+        ztoolkit.log("[Research Navigator] Menu item added to Tools menu");
+      } else {
+        // 如果找不到插件菜单项，添加到末尾
+        toolsMenuPopup.appendChild(separator);
+        toolsMenuPopup.appendChild(menuitem);
+        ztoolkit.log("[Research Navigator] Menu item added to end of Tools menu");
+      }
+    } else {
+      ztoolkit.log("[Research Navigator] Tools menu not found", 'warn');
+    }
+    
+    // 同时尝试使用 ztoolkit 的方法（作为备用）
+    ztoolkit.Menu.register("menuTools", {
+      tag: "menuitem",
+      id: "research-navigator-menu-tools-ztoolkit",
+      label: "Research Navigator (ZToolkit)",
+      commandListener: () => {
+        ztoolkit.log("[Research Navigator] ZToolkit menu item clicked");
+        toggleHistoryPanel(win);
+      },
+    });
+    
+  } catch (error) {
+    ztoolkit.log(`[Research Navigator] Error creating menu items: ${error}`, 'error');
+  }
 }
 
 function registerShortcuts(win: Window): void {
-  // 注册快捷键 Ctrl/Cmd + Shift + H
-  ztoolkit.Keyboard.register((ev) => {
-    if (ev.key === "H" && ev.ctrlKey && ev.shiftKey) {
-      toggleHistoryPanel(win);
-      ev.preventDefault();
-      ev.stopPropagation();
-    }
-  });
+  try {
+    // 注册快捷键 Ctrl/Cmd + Shift + H
+    ztoolkit.Keyboard.register((ev, data) => {
+      ztoolkit.log(`[Research Navigator] Key event: ${ev.key}, ctrl: ${ev.ctrlKey}, shift: ${ev.shiftKey}, meta: ${ev.metaKey}`);
+      
+      if (ev.key === "H" && ev.shiftKey && (ev.ctrlKey || ev.metaKey)) {
+        ztoolkit.log("[Research Navigator] Shortcut triggered!");
+        toggleHistoryPanel(win);
+        ev.preventDefault();
+        ev.stopPropagation();
+        return true;
+      }
+      return false;
+    });
+    
+    ztoolkit.log("[Research Navigator] Keyboard shortcut registered (Ctrl/Cmd+Shift+H)");
+  } catch (error) {
+    ztoolkit.log(`[Research Navigator] Error registering shortcuts: ${error}`, 'error');
+  }
 }
