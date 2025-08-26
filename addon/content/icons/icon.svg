@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <!-- 背景圆 -->
+  <circle cx="24" cy="24" r="22" fill="#2980b9" stroke="#34495e" stroke-width="1"/>
+  
+  <!-- 内圈 -->
+  <circle cx="24" cy="24" r="19" fill="#ecf0f1"/>
+  
+  <!-- 时钟刻度 -->
+  <g stroke="#2c3e50" stroke-width="2">
+    <!-- 12点 -->
+    <line x1="24" y1="6" x2="24" y2="10" stroke-width="2.5"/>
+    <!-- 3点 -->
+    <line x1="42" y1="24" x2="38" y2="24" stroke-width="2.5"/>
+    <!-- 6点 -->
+    <line x1="24" y1="42" x2="24" y2="38" stroke-width="2.5"/>
+    <!-- 9点 -->
+    <line x1="6" y1="24" x2="10" y2="24" stroke-width="2.5"/>
+    
+    <!-- 其他刻度 -->
+    <line x1="34.4" y1="9.6" x2="32.5" y2="11.5" stroke-width="1"/>
+    <line x1="38.4" y1="13.6" x2="36.5" y2="15.5" stroke-width="1"/>
+    <line x1="38.4" y1="34.4" x2="36.5" y2="32.5" stroke-width="1"/>
+    <line x1="34.4" y1="38.4" x2="32.5" y2="36.5" stroke-width="1"/>
+    <line x1="13.6" y1="38.4" x2="15.5" y2="36.5" stroke-width="1"/>
+    <line x1="9.6" y1="34.4" x2="11.5" y2="32.5" stroke-width="1"/>
+    <line x1="9.6" y1="13.6" x2="11.5" y2="15.5" stroke-width="1"/>
+    <line x1="13.6" y1="9.6" x2="15.5" y2="11.5" stroke-width="1"/>
+  </g>
+  
+  <!-- 时针（指向10点） -->
+  <line x1="24" y1="24" x2="18" y2="14" stroke="#2c3e50" stroke-width="3" stroke-linecap="round"/>
+  
+  <!-- 分针（指向2点） -->
+  <line x1="24" y1="24" x2="34" y2="18" stroke="#2c3e50" stroke-width="2" stroke-linecap="round"/>
+  
+  <!-- 中心点 -->
+  <circle cx="24" cy="24" r="3" fill="#e74c3c"/>
+  
+  <!-- 逆时针箭头 -->
+  <g fill="none" stroke="#e74c3c" stroke-width="2.5" stroke-linecap="round">
+    <!-- 弧形 -->
+    <path d="M 35 35 A 15 15 0 0 0 13 35" />
+    <!-- 箭头 -->
+    <path d="M 13 35 L 10 32 M 13 35 L 10 38" />
+  </g>
+  
+  <!-- 高光效果 -->
+  <ellipse cx="20" cy="15" rx="8" ry="5" fill="white" opacity="0.3"/>
+</svg>

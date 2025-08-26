@@ -71,7 +71,7 @@ async function createToolbarButton(win: Window): Promise<void> {
     }
     
     // 设置图标样式
-    toolbarbutton.style.listStyleImage = "url('chrome://researchnavigator/content/icons/favicon@0.5x.png')";
+    toolbarbutton.style.listStyleImage = "url('chrome://researchnavigator/content/icons/icon.svg')";
     
     // 添加事件监听器
     toolbarbutton.addEventListener("command", () => {

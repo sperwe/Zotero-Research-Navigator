@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Research Navigator Icon Preview</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .icon-container {
+            display: inline-block;
+            margin: 10px;
+            text-align: center;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .icon {
+            display: inline-block;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+        .icon::before {
+            content: "🕐";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 70%;
+            filter: grayscale(100%) brightness(200%);
+        }
+        .icon::after {
+            content: "↺";
+            position: absolute;
+            bottom: 15%;
+            right: 15%;
+            transform: rotate(-45deg);
+            font-size: 40%;
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .icon-16 { width: 16px; height: 16px; }
+        .icon-32 { width: 32px; height: 32px; }
+        .icon-48 { width: 48px; height: 48px; }
+        .icon-96 { width: 96px; height: 96px; }
+        
+        /* 更醒目的设计 */
+        .icon-v2 {
+            display: inline-block;
+            background: #e74c3c;
+            color: white;
+            border-radius: 20%;
+            position: relative;
+            font-weight: bold;
+            text-align: center;
+            line-height: 1;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .icon-v2::before {
+            content: "H";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 60%;
+        }
+        .icon-v2::after {
+            content: "↺";
+            position: absolute;
+            top: 5%;
+            right: 5%;
+            font-size: 30%;
+            transform: rotate(-45deg);
+        }
+    </style>
+</head>
+<body>
+    <h1>Research Navigator Icon Designs</h1>
+    
+    <h2>Design 1: Clock with History Arrow</h2>
+    <div>
+        <div class="icon-container">
+            <div class="icon icon-16"></div>
+            <p>16x16</p>
+        </div>
+        <div class="icon-container">
+            <div class="icon icon-32"></div>
+            <p>32x32</p>
+        </div>
+        <div class="icon-container">
+            <div class="icon icon-48"></div>
+            <p>48x48</p>
+        </div>
+        <div class="icon-container">
+            <div class="icon icon-96"></div>
+            <p>96x96</p>
+        </div>
+    </div>
+    
+    <h2>Design 2: Bold "H" for History</h2>
+    <div>
+        <div class="icon-container">
+            <div class="icon-v2 icon-16"></div>
+            <p>16x16</p>
+        </div>
+        <div class="icon-container">
+            <div class="icon-v2 icon-32"></div>
+            <p>32x32</p>
+        </div>
+        <div class="icon-container">
+            <div class="icon-v2 icon-48"></div>
+            <p>48x48</p>
+        </div>
+        <div class="icon-container">
+            <div class="icon-v2 icon-96"></div>
+            <p>96x96</p>
+        </div>
+    </div>
+    
+    <h2>SVG Version</h2>
+    <div class="icon-container">
+        <img src="icon.svg" width="96" height="96">
+        <p>SVG (scalable)</p>
+    </div>
+    
+    <p><strong>Note:</strong> The actual icons will be properly rendered PNG files. This is just a preview.</p>
+</body>
+</html>
