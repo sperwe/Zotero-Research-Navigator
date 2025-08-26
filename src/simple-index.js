@@ -3,7 +3,26 @@
  * 简化的JavaScript入口文件
  */
 
-console.log('Research Navigator: Loading...');
+// 日志输出辅助函数
+function log(msg, level = 'info') {
+  const prefix = '[Research Navigator]';
+  const fullMsg = `${prefix} ${msg}`;
+  
+  if (typeof Zotero !== 'undefined' && Zotero.debug) {
+    // 在 Zotero 环境中使用 Zotero.debug
+    const debugLevel = level === 'error' ? 1 : 3;
+    Zotero.debug(fullMsg, debugLevel);
+  } else if (typeof console !== 'undefined') {
+    // 在开发环境中使用 console
+    if (level === 'error' && typeof console !== 'undefined' && console.error) {
+      console.error(fullMsg);
+    } else if (typeof console !== 'undefined' && console.log) {
+      console.log(fullMsg);
+    }
+  }
+}
+
+log('Loading...');
 
 // 简单的历史跟踪器
 class SimpleHistoryTracker {
@@ -20,10 +39,10 @@ class SimpleHistoryTracker {
     try {
       if (typeof Zotero !== 'undefined' && Zotero.Notifier) {
         Zotero.Notifier.registerObserver(this, ['item', 'collection'], 'researchNavigator');
-        console.log('Research Navigator: Event listeners registered');
+        log('Event listeners registered');
       }
     } catch (error) {
-      console.error('Research Navigator: Failed to register listeners:', error);
+      log('Failed to register listeners:', 'error', error);
     }
   }
 
@@ -35,7 +54,7 @@ class SimpleHistoryTracker {
         }
       }
     } catch (error) {
-      console.error('Research Navigator: Error in notify:', error);
+      log('Error in notify:', 'error', error);
     }
   }
 
@@ -61,7 +80,7 @@ class SimpleHistoryTracker {
         console.log('Research Navigator: Recorded access:', record.title);
       }
     } catch (error) {
-      console.error('Research Navigator: Error recording access:', error);
+      log('Error recording access:', 'error', error);
     }
   }
 
@@ -127,7 +146,7 @@ class SimpleHistoryTracker {
         }
       }
     } catch (error) {
-      console.error('Research Navigator: Error loading from storage:', error);
+      log('Error loading from storage:', 'error', error);
     }
   }
 
@@ -137,7 +156,7 @@ class SimpleHistoryTracker {
         Zotero.Prefs.set(`${this.prefsPrefix}.accessHistory`, JSON.stringify(this.accessHistory));
       }
     } catch (error) {
-      console.error('Research Navigator: Error saving to storage:', error);
+      log('Error saving to storage:', 'error', error);
     }
   }
 
@@ -159,9 +178,9 @@ class SimpleUI {
     try {
       await this.waitForZotero();
       this.createSidebarPanel();
-      console.log('Research Navigator: UI initialized');
+      log('UI initialized');
     } catch (error) {
-      console.error('Research Navigator: UI initialization failed:', error);
+      log('UI initialization failed:', 'error', error);
     }
   }
 
@@ -229,9 +248,9 @@ class SimpleUI {
       this.setupEventListeners();
       this.loadHistoryData();
 
-      console.log('Research Navigator: Panel created');
+      log('Panel created');
     } catch (error) {
-      console.error('Research Navigator: Failed to create panel:', error);
+      log('Failed to create panel:', 'error', error);
     }
   }
 
@@ -271,7 +290,7 @@ class SimpleUI {
       const historyTree = this.historyTracker.buildHistoryTree();
       this.renderHistoryTree(historyTree);
     } catch (error) {
-      console.error('Research Navigator: Error loading history:', error);
+      log('Error loading history:', 'error', error);
       this.showError('加载历史数据失败');
     }
   }
@@ -346,7 +365,7 @@ class SimpleUI {
           Zotero.Reader.open(zoteroId);
         }
       } catch (error) {
-        console.error('Research Navigator: Failed to open item:', error);
+        log('Failed to open item:', 'error', error);
       }
     }
   }
@@ -418,16 +437,16 @@ class SimpleResearchNavigator {
     if (this.initialized) return;
 
     try {
-      console.log('Research Navigator: Starting up...');
+      log('Starting up...');
       
       await this.ui.initialize();
       this.registerMenuItems();
       this.setupToolbarButton();
       
       this.initialized = true;
-      console.log('Research Navigator: Startup completed');
+      log('Startup completed');
     } catch (error) {
-      console.error('Research Navigator: Startup failed:', error);
+      log('Startup failed:', 'error', error);
     }
   }
 
@@ -436,45 +455,83 @@ class SimpleResearchNavigator {
       // 只在有document的情况下注册菜单
       if (typeof document !== 'undefined') {
         // 这里可以添加菜单项，但现在保持简单
-        console.log('Research Navigator: Menu items registration skipped (simplified version)');
+        log('Menu items registration skipped (simplified version)');
       }
     } catch (error) {
-      console.error('Research Navigator: Failed to register menu items:', error);
+      log('Failed to register menu items:', 'error', error);
     }
   }
 
   setupToolbarButton() {
     try {
       if (typeof document !== 'undefined') {
-        // 尝试找到工具栏并添加按钮
+        // 尝试多个位置添加按钮
         setTimeout(() => {
-          const toolbar = document.getElementById('zotero-toolbar') || 
-                         document.querySelector('.toolbar') ||
-                         document.querySelector('toolbar');
+          // 查找所有可能的工具栏位置
+          const toolbarIds = [
+            'zotero-toolbar',
+            'zotero-items-toolbar',
+            'zotero-collections-toolbar'
+          ];
           
-          if (toolbar) {
-            const button = document.createElement('button');
-            button.textContent = '🔍';
-            button.title = 'Research Navigator';
-            button.style.cssText = `
-              padding: 4px 8px;
-              margin: 2px;
-              border: 1px solid #ccc;
-              background: white;
-              border-radius: 3px;
-              cursor: pointer;
-              font-size: 14px;
-            `;
-            
-            button.addEventListener('click', () => this.togglePanel());
-            toolbar.appendChild(button);
-            
-            console.log('Research Navigator: Toolbar button added');
+          let buttonAdded = false;
+          
+          for (const toolbarId of toolbarIds) {
+            const toolbar = document.getElementById(toolbarId);
+            if (toolbar && !buttonAdded) {
+              // 创建一个更明显的按钮
+              const button = document.createElement('toolbarbutton');
+              button.id = 'research-navigator-button';
+              button.setAttribute('label', 'Research History');
+              button.setAttribute('tooltiptext', 'Research Navigator - Click to view history (研究历史导航器)');
+              button.setAttribute('class', 'zotero-tb-button');
+              button.style.cssText = `
+                -moz-appearance: toolbarbutton;
+                padding: 4px 8px;
+                margin: 0 2px;
+                border: 1px solid #999;
+                background: linear-gradient(to bottom, #fff, #f0f0f0);
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 14px;
+                min-width: 80px;
+                color: #000;
+                font-weight: bold;
+              `;
+              
+              // 添加图标和文字
+              const icon = document.createElement('span');
+              icon.textContent = '🔍 ';
+              icon.style.fontSize = '16px';
+              button.insertBefore(icon, button.firstChild);
+              
+              // 添加点击事件
+              button.addEventListener('click', () => this.togglePanel());
+              
+              // 鼠标悬停效果
+              button.addEventListener('mouseenter', () => {
+                button.style.background = 'linear-gradient(to bottom, #f8f8f8, #e0e0e0)';
+                button.style.borderColor = '#666';
+              });
+              
+              button.addEventListener('mouseleave', () => {
+                button.style.background = 'linear-gradient(to bottom, #fff, #f0f0f0)';
+                button.style.borderColor = '#999';
+              });
+              
+              toolbar.appendChild(button);
+              buttonAdded = true;
+              log(`Toolbar button added to ${toolbarId}`);
+            }
           }
-        }, 1000);
+          
+          if (!buttonAdded) {
+            log('Could not find suitable toolbar, button not added', 'error');
+          }
+        }, 2000); // 增加延迟确保工具栏已加载
       }
     } catch (error) {
-      console.error('Research Navigator: Failed to setup toolbar button:', error);
+      log('Failed to setup toolbar button: ' + error, 'error');
     }
   }
 
@@ -504,9 +561,9 @@ class SimpleResearchNavigator {
       this.ui.destroy();
       this.initialized = false;
       
-      console.log('Research Navigator: Shutdown completed');
+      log('Shutdown completed');
     } catch (error) {
-      console.error('Research Navigator: Shutdown failed:', error);
+      log('Shutdown failed:', 'error', error);
     }
   }
 }
@@ -551,7 +608,7 @@ async function startResearchNavigator() {
       await researchNavigatorInstance.startup();
     }
   } catch (error) {
-    console.error('Research Navigator: Failed to start:', error);
+    log('Failed to start:', 'error', error);
   }
 }
 
@@ -563,7 +620,7 @@ async function stopResearchNavigator() {
       researchNavigatorInstance = null;
     }
   } catch (error) {
-    console.error('Research Navigator: Failed to stop:', error);
+    log('Failed to stop:', 'error', error);
   }
 }
 
@@ -572,7 +629,7 @@ if (typeof window !== 'undefined') {
   setTimeout(startResearchNavigator, 2000);
 }
 
-console.log('Research Navigator: Simple version loaded');
+log('Simple version loaded');
 
 // 导出用于Node.js环境
 if (typeof module !== 'undefined' && module.exports) {
