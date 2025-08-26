@@ -484,7 +484,5 @@ function registerShortcuts(win: Window): void {
       ev.preventDefault();
       ev.stopPropagation();
     }
-  }, {
-    id: "research-navigator-toggle"
   });
 }

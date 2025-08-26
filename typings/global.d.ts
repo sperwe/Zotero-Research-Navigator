@@ -6,3 +6,5 @@ declare const _globalThis: {
 
 declare const addon: import("../src/addon").default;
 declare const ztoolkit: import("zotero-plugin-toolkit").ZoteroToolkit;
+
+declare const Zotero: any;
