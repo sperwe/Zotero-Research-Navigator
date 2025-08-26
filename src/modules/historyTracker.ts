@@ -37,7 +37,7 @@ export class HistoryTracker {
 
     // 注册 Zotero 事件监听器
     this.observerID = Zotero.Notifier.registerObserver({
-      notify: async (event: string, type: string, ids: string[] | number[], extraData: any) => {
+      notify: async (event: string, type: string, ids: string[] | number[], _extraData: any) => {
         if (type === 'item' || type === 'collection') {
           for (const id of ids) {
             const itemID = String(id);

@@ -6,7 +6,6 @@
 import { HistoryTracker, HistoryNode } from "./historyTracker";
 import { SearchEngine } from "./searchEngine";
 
-let currentWindow: Window;
 let currentHistoryTracker: HistoryTracker;
 let currentSearchEngine: SearchEngine;
 
@@ -15,7 +14,6 @@ export async function initializeUI(
   historyTracker: HistoryTracker,
   searchEngine: SearchEngine
 ): Promise<void> {
-  currentWindow = win;
   currentHistoryTracker = historyTracker;
   currentSearchEngine = searchEngine;
   
@@ -36,8 +34,7 @@ async function createToolbarButton(win: Window): Promise<void> {
   const doc = win.document;
   
   // 创建工具栏按钮
-  ztoolkit.UI.appendElement({
-    tag: "toolbarbutton",
+  const button = ztoolkit.UI.createElement(doc, "toolbarbutton", {
     id: "research-navigator-button",
     namespace: "xul",
     attributes: {
@@ -60,13 +57,10 @@ async function createToolbarButton(win: Window): Promise<void> {
   const toolbarIds = ["zotero-toolbar", "zotero-items-toolbar", "nav-bar"];
   for (const toolbarId of toolbarIds) {
     const toolbar = doc.getElementById(toolbarId);
-    if (toolbar) {
-      const button = doc.getElementById("research-navigator-button");
-      if (button && !button.parentNode) {
-        toolbar.appendChild(button);
-        ztoolkit.log(`[Research Navigator] Toolbar button added to ${toolbarId}`);
-        break;
-      }
+    if (toolbar && button) {
+      toolbar.appendChild(button);
+      ztoolkit.log(`[Research Navigator] Toolbar button added to ${toolbarId}`);
+      break;
     }
   }
 }
@@ -79,7 +73,7 @@ function createHistoryPanel(
   const doc = win.document;
   
   // 创建面板容器
-  const panel = ztoolkit.UI.appendElement({
+  const panel = ztoolkit.UI.createElement(doc, "div", {
     tag: "div",
     id: "research-navigator-panel",
     namespace: "html",
@@ -185,7 +179,9 @@ function createHistoryPanel(
         },
       },
     ],
-  }, doc.body);
+  });
+  
+  doc.body.appendChild(panel);
   
   // 存储到窗口对象
   (win as any).researchNavigatorPanel = panel;
@@ -447,7 +443,6 @@ async function openItem(itemID: string): Promise<void> {
     
     if (item) {
       // 选择条目
-      const libraryID = item.libraryID;
       const itemTreeView = Zotero.getActiveZoteroPane().itemsView;
       
       await itemTreeView.selectItem(id);
@@ -483,12 +478,13 @@ function createMenuItems(win: Window): void {
 
 function registerShortcuts(win: Window): void {
   // 注册快捷键 Ctrl/Cmd + Shift + H
-  ztoolkit.Shortcut.register("event", {
-    id: "research-navigator-toggle",
-    key: "H",
-    modifiers: "accel,shift",
-    callback: () => {
+  ztoolkit.Keyboard.register((ev) => {
+    if (ev.key === "H" && ev.ctrlKey && ev.shiftKey) {
       toggleHistoryPanel(win);
-    },
+      ev.preventDefault();
+      ev.stopPropagation();
+    }
+  }, {
+    id: "research-navigator-toggle"
   });
 }

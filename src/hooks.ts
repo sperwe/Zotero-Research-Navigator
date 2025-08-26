@@ -1,5 +1,3 @@
-import { BasicTool, getMainWindow } from "zotero-plugin-toolkit";
-import { config } from "../package.json";
 import { initializeUI } from "./modules/ui";
 import { HistoryTracker } from "./modules/historyTracker";
 import { SearchEngine } from "./modules/searchEngine";
@@ -26,7 +24,7 @@ async function onMainWindowLoad(win: Window): Promise<void> {
   await initializeUI(win, historyTracker, searchEngine);
 }
 
-async function onMainWindowUnload(win: Window): Promise<void> {
+async function onMainWindowUnload(_win: Window): Promise<void> {
   ztoolkit.log("[Research Navigator] Main window unloaded");
   // 清理UI相关资源
 }
@@ -51,7 +49,7 @@ function onShutdown(): void {
  * @param type event type
  * @param data event data
  */
-async function onPrefsEvent(type: string, data: { [key: string]: any }) {
+async function onPrefsEvent(type: string, _data: { [key: string]: any }) {
   switch (type) {
     case "load":
       ztoolkit.log("[Research Navigator] Prefs window loaded");

@@ -1,8 +1,8 @@
-import { PluginInstance, UITool, ZoteroToolkit } from "zotero-plugin-toolkit";
+import { ZoteroToolkit } from "zotero-plugin-toolkit";
 import hooks from "./hooks";
 import { config } from "../package.json";
 
-class Addon implements PluginInstance {
+class Addon {
   public data: {
     ztoolkit: ZoteroToolkit;
     locale?: {
@@ -12,6 +12,7 @@ class Addon implements PluginInstance {
       window: Window | null;
     };
     initialized: boolean;
+    config: typeof config;
   };
   
   // Lifecycle hooks
@@ -21,6 +22,7 @@ class Addon implements PluginInstance {
     this.data = {
       ztoolkit: new ZoteroToolkit(),
       initialized: false,
+      config: config,
     };
     this.hooks = hooks;
   }
