@@ -65,7 +65,10 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
   log('Attempting to load script from: ' + scriptPath);
   
   try {
-    Services.scriptloader.loadSubScript(scriptPath, ctx);
+    Services.scriptloader.loadSubScriptWithOptions(scriptPath, { 
+      target: ctx, 
+      ignoreCache: true 
+    });
     log('Script loaded successfully');
   } catch (e) {
     log('ERROR loading script: ' + e.toString());
