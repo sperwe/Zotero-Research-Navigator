@@ -1,0 +1,168 @@
+🔄 ZOTERO RESEARCH NAVIGATOR - COMPLETE HANDOVER PROMPT FOR NEW AGENT
+
+## 🎯 MISSION BRIEFING
+
+You are taking over the development of **Zotero Research Navigator**, a plugin that brings tree-style history tracking to Zotero (academic reference manager). The user wants to migrate functionality from the "Tree Style History" browser extension to Zotero platform.
+
+## 📋 CURRENT STATUS
+
+**Repository**: https://github.com/sperwe/Tree-Style-History  
+**Target Branch**: `analyze-and-refactor-plugins-for-zotero-compatibility-bd69`  
+**Current Version**: v1.0.0 MVP completed  
+**Critical File**: `zotero-research-navigator-v1.0.0.xpi` (may or may not exist in remote branch)
+
+## 🚀 IMMEDIATE FIRST STEPS
+
+1. **CLONE AND ASSESS**:
+```bash
+git clone https://github.com/sperwe/Tree-Style-History.git
+cd Tree-Style-History
+git checkout analyze-and-refactor-plugins-for-zotero-compatibility-bd69
+
+# Check for XPI file
+find . -name "*.xpi" -type f
+ls -la | grep -E "(zotero|research|navigator)"
+
+# If XPI exists → proceed to testing
+# If XPI missing → build from source
+```
+
+2. **DETERMINE PATH FORWARD**:
+   - **Path A**: If XPI exists → Focus on feature enhancement
+   - **Path B**: If XPI missing → Complete basic build first
+
+## 🎯 USER'S CORE REQUIREMENTS (PRIORITY ORDER)
+
+1. **🌳 Tree-style History Tracking** (HIGHEST)
+   - Visual tree navigation of research paths
+   - Track opened literature/note tabs in Zotero
+   - Similar to browser history but for academic workflow
+
+2. **🔍 Enhanced Search & Navigation** (HIGH)
+   - Real-time fuzzy search
+   - Quick access to previously viewed items
+   - Time-based grouping (Today/Yesterday/Earlier)
+
+3. **📋 Card-style Note Management** (MEDIUM)
+   - Borrow concepts from ZotCard project
+   - Different interaction method than Zotero's built-in features
+   - Focus on note switching and preview
+
+## 🔧 TECHNICAL FOUNDATION
+
+**Platform**: Zotero 6.0.27+  
+**Core APIs**: Zotero.Notifier, Zotero.Prefs, Zotero.Items  
+**Languages**: TypeScript/JavaScript  
+**Build**: Webpack  
+**UI**: Native JS + XUL (current), React components (planned)
+
+**Key Files Structure**:
+```
+├── src/
+│   ├── modules/historyTracker.ts (✅ Core tracking logic)
+│   ├── modules/searchEngine.ts (✅ Fuzzy search)
+│   ├── simple-index.js (✅ Working entry point)
+│   └── components/HistoryTreeView.tsx (🔄 Needs enhancement)
+├── addon/
+│   ├── bootstrap.js (✅ Plugin lifecycle)
+│   └── chrome/content/overlay.xul (✅ UI integration)
+└── zotero-research-navigator-v1.0.0.xpi (❓ Check if exists)
+```
+
+## 📊 DEVELOPMENT ROADMAP
+
+### **PHASE 1: Validate & Enhance Core** (Week 1)
+- [ ] Confirm XPI functionality in Zotero
+- [ ] Improve history tracking accuracy
+- [ ] Enhance tree view UI/UX
+- [ ] Add better search highlighting
+
+### **PHASE 2: Card View Integration** (Week 2-3)
+- [ ] Study ZotCard implementation patterns
+- [ ] Add card-style previews for history items
+- [ ] Implement smooth transitions and animations
+- [ ] Create note switching interface
+
+### **PHASE 3: Advanced Features** (Week 4+)
+- [ ] PDF reader integration
+- [ ] Note relationship visualization
+- [ ] Export/import functionality
+- [ ] Performance optimization for 1000+ items
+
+## 🛠️ BUILD & TEST PROCESS
+
+```bash
+# Install dependencies
+npm install
+
+# Development mode
+npm run watch
+
+# Production build
+npm run build-prod
+
+# Test in Zotero
+# Tools → Add-ons → Install Add-on From File → Select XPI
+```
+
+## 💡 USER FEEDBACK INSIGHTS
+
+The user emphasized:
+- **"更喜欢树状历史"** (Prefers tree-style history) - Make this PERFECT
+- **"可以追溯打开过的文献或笔记标签历史"** (Track literature/note tab history) - Core value
+- **"借用卡片视图"** (Borrow card view concepts) - Don't fully copy ZotCard, adapt concepts
+- **"换个方式来互动"** (Different interaction method) - Don't duplicate Zotero features
+
+## ⚠️ KNOWN TECHNICAL DEBT
+
+1. TypeScript integration needs improvement
+2. React components not fully integrated in build
+3. Error handling needs strengthening  
+4. Performance optimization required
+5. Test coverage missing
+
+## 🎯 SUCCESS CRITERIA
+
+**Functional**:
+- [ ] History tracking accuracy > 95%
+- [ ] Search response time < 100ms
+- [ ] Supports 1000+ history records smoothly
+- [ ] Zero crashes or memory leaks
+
+**User Experience**:
+- [ ] Works immediately after installation
+- [ ] Intuitive interface matching Zotero design
+- [ ] Keyboard shortcuts for power users
+- [ ] Multi-language support (EN/CN)
+
+## 📚 REFERENCE RESOURCES
+
+- **Original Extension**: https://github.com/turanszkij/tree-style-history
+- **ZotCard Reference**: https://github.com/018/zotcard
+- **Zotero Plugin Template**: https://github.com/windingwind/zotero-plugin-template
+- **Zotero Dev Docs**: https://www.zotero.org/support/dev/client_coding
+
+## 🚨 CRITICAL FIRST ACTIONS
+
+1. **VERIFY CURRENT STATE**: Check if functional XPI exists in remote branch
+2. **TEST IN ZOTERO**: Install and validate basic functionality
+3. **ASSESS GAPS**: Compare current vs. required features
+4. **PLAN SPRINT**: Based on actual state, plan next 1-2 weeks
+5. **COMMUNICATE**: Update user on status and roadmap
+
+## 💬 COMMUNICATION APPROACH
+
+- Focus on TREE-STYLE HISTORY as the killer feature
+- Show working prototypes frequently
+- Be transparent about technical challenges
+- Prioritize user workflow efficiency over technical perfection
+
+---
+
+**GOAL**: Transform this from MVP to production-ready plugin that researchers actually want to use daily.
+
+**TIMELINE**: Iterative development, 1-2 week sprints, continuous user feedback.
+
+**SUCCESS METRIC**: User says "I can't imagine using Zotero without this plugin anymore."
+
+START WITH: Check the remote branch status and confirm XPI availability. Then proceed based on findings!
