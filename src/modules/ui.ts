@@ -112,9 +112,8 @@ async function createToolbarButton(win: Window): Promise<void> {
     const props = {
       id: "zotero-tb-research-navigator",
       class: "zotero-tb-button",
-      tooltiptext: "Research Navigator - View History", 
-      tabindex: "-1",
-      label: "Research History"
+      tooltiptext: "Research Navigator - View History (Ctrl+Shift+H)", 
+      tabindex: "-1"
     };
     
     // 创建工具栏按钮
@@ -123,8 +122,11 @@ async function createToolbarButton(win: Window): Promise<void> {
       toolbarbutton.setAttribute(key, value);
     }
     
-    // 设置图标样式
-    toolbarbutton.style.listStyleImage = "url('chrome://researchnavigator/content/icons/icon.svg')";
+    // 设置图标样式 - 使用内联样式确保显示
+    toolbarbutton.style.cssText = `
+      list-style-image: url('chrome://researchnavigator/content/icons/icon.svg');
+      -moz-image-region: rect(0, 16px, 16px, 0);
+    `;
     
     // 添加事件监听器
     toolbarbutton.addEventListener("command", () => {
@@ -132,50 +134,100 @@ async function createToolbarButton(win: Window): Promise<void> {
       toggleHistoryPanel(win);
     });
     
-    // Zotero 7 的主要工具栏位置
-    const toolbarLocations = [
-      // 项目工具栏（最常用的位置）
-      { id: "zotero-items-toolbar", position: "afterend", referenceId: "zotero-tb-lookup" },
-      // 标签工具栏
-      { id: "zotero-tabs-toolbar", position: "beforeend", referenceId: null },
-      // 收藏工具栏
-      { id: "zotero-collections-toolbar", position: "beforeend", referenceId: null }
+    // Zotero 7 的主要工具栏位置 - 基于实际源码
+    const insertLocations = [
+      // 1. 最理想的位置：在笔记按钮后面
+      { 
+        containerId: "zotero-items-toolbar", 
+        afterId: "zotero-tb-note-add",
+        beforeId: null,
+        desc: "after note button"
+      },
+      // 2. 备选：在附件按钮后面
+      { 
+        containerId: "zotero-items-toolbar", 
+        afterId: "zotero-tb-attachment-add",
+        beforeId: null,
+        desc: "after attachment button"
+      },
+      // 3. 备选：在查找按钮后面（如果存在）
+      { 
+        containerId: "zotero-items-toolbar", 
+        afterId: "zotero-tb-lookup",
+        beforeId: null,
+        desc: "after lookup button"
+      },
+      // 4. 备选：在搜索框前面
+      { 
+        containerId: "zotero-items-toolbar", 
+        afterId: null,
+        beforeId: "zotero-tb-search-spinner",
+        desc: "before search"
+      }
     ];
     
     let added = false;
-    for (const location of toolbarLocations) {
-      const toolbar = doc.getElementById(location.id);
-      if (toolbar) {
-        // 检查按钮是否已存在
-        if (doc.getElementById(props.id)) {
-          ztoolkit.log(`[Research Navigator] Button already exists in ${location.id}`);
-          return;
+    
+    // 首先检查按钮是否已存在
+    if (doc.getElementById(props.id)) {
+      ztoolkit.log(`[Research Navigator] Button already exists`);
+      return;
+    }
+    
+    for (const location of insertLocations) {
+      const container = doc.getElementById(location.containerId);
+      if (!container) {
+        ztoolkit.log(`[Research Navigator] Container ${location.containerId} not found`);
+        continue;
+      }
+      
+      if (location.afterId) {
+        const referenceNode = doc.getElementById(location.afterId);
+        if (referenceNode && referenceNode.parentNode === container) {
+          // 插入到参考节点之后
+          referenceNode.insertAdjacentElement('afterend', toolbarbutton);
+          ztoolkit.log(`[Research Navigator] Button inserted ${location.desc}`);
+          added = true;
+          break;
         }
-        
-        if (location.referenceId) {
-          // 插入到特定位置
-          const referenceNode = doc.getElementById(location.referenceId);
-          if (referenceNode) {
-            referenceNode.insertAdjacentElement('afterend', toolbarbutton);
-            ztoolkit.log(`[Research Navigator] Button added after ${location.referenceId} in ${location.id}`);
-            added = true;
-            break;
-          }
-        } else {
-          // 添加到工具栏末尾
-          toolbar.appendChild(toolbarbutton);
-          ztoolkit.log(`[Research Navigator] Button added to end of ${location.id}`);
+      } else if (location.beforeId) {
+        const referenceNode = doc.getElementById(location.beforeId);
+        if (referenceNode && referenceNode.parentNode === container) {
+          // 插入到参考节点之前
+          referenceNode.insertAdjacentElement('beforebegin', toolbarbutton);
+          ztoolkit.log(`[Research Navigator] Button inserted ${location.desc}`);
           added = true;
           break;
         }
       }
     }
     
+    // 如果都失败了，尝试直接添加到工具栏
     if (!added) {
-      ztoolkit.log("[Research Navigator] ERROR: Could not find any toolbar to add button", 'error');
+      const toolbar = doc.getElementById("zotero-items-toolbar");
+      if (toolbar) {
+        // 查找 spacer 元素
+        const spacer = toolbar.querySelector("spacer[flex='1']");
+        if (spacer) {
+          // 在 spacer 之前插入
+          spacer.insertAdjacentElement('beforebegin', toolbarbutton);
+          ztoolkit.log("[Research Navigator] Button inserted before spacer");
+          added = true;
+        } else {
+          // 添加到末尾
+          toolbar.appendChild(toolbarbutton);
+          ztoolkit.log("[Research Navigator] Button added to end of toolbar");
+          added = true;
+        }
+      }
+    }
+    
+    if (!added) {
+      ztoolkit.log("[Research Navigator] ERROR: Could not add toolbar button to any location", 'error');
     }
   } catch (error) {
     ztoolkit.log(`[Research Navigator] Error creating toolbar button: ${error}`, 'error');
+    console.error(error);
   }
 }
 
