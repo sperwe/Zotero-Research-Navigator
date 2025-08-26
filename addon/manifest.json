@@ -1,12 +1,12 @@
 {
-	"manifest_version": 2,
-	"name": "__addonName__",
-	"version": "__buildVersion__",
-	"applications": {
-		"zotero": {
-			"id": "__addonID__",
-			"strict_min_version": "7.0.0",
-			"strict_max_version": "7.0.99"
-		}
-	}
+  "manifest_version": 2,
+  "name": "Zotero Research Navigator",
+  "version": "2.0.0",
+  "applications": {
+    "zotero": {
+      "id": "research-navigator@zotero.org",
+      "strict_min_version": "7.0.0",
+      "strict_max_version": "7.0.99"
+    }
+  }
 }

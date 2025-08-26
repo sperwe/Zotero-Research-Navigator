@@ -17,12 +17,8 @@ export default defineConfig({
     },
     assets: ["addon/**/*.*"],
     define: {
-      ...pkg.config,
-      author: pkg.author,
-      description: pkg.description,
-      homepage: pkg.homepage,
-      buildVersion: pkg.version,
-      buildTime: "{{buildTime}}",
+      // 不使用任何占位符，避免替换问题
+      __env__: `"${process.env.NODE_ENV || "development"}"`,
     },
     prefs: {
       prefix: pkg.config.prefsPrefix,

@@ -1,6 +1,6 @@
 // Preference settings for Research Navigator
-pref("__prefsPrefix__.enable", true);
-pref("__prefsPrefix__.showToolbarButton", true);
-pref("__prefsPrefix__.maxHistoryItems", 1000);
-pref("__prefsPrefix__.autoSaveHistory", true);
-pref("__prefsPrefix__.treeViewType", "expandable"); // expandable or collapsed
+pref("extensions.zotero.researchnavigator.enable", true);
+pref("extensions.zotero.researchnavigator.showToolbarButton", true);
+pref("extensions.zotero.researchnavigator.maxHistoryItems", 1000);
+pref("extensions.zotero.researchnavigator.autoSaveHistory", true);
+pref("extensions.zotero.researchnavigator.treeViewType", "expandable"); // expandable or collapsed

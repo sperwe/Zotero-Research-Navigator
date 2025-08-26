@@ -14,7 +14,7 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
   ].getService(Components.interfaces.amIAddonManagerStartup);
   var manifestURI = Services.io.newURI(rootURI + "manifest.json");
   chromeHandle = aomStartup.registerChrome(manifestURI, [
-    ["content", "__addonRef__", rootURI + "content/"],
+    ["content", "researchnavigator", rootURI + "content/"],
   ]);
 
   // Global variables for plugin code
@@ -23,20 +23,20 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
 
   // Load main script
   Services.scriptloader.loadSubScript(
-    `${rootURI}/content/scripts/__addonRef__.js`,
+    `${rootURI}/content/scripts/researchnavigator.js`,
     ctx,
   );
   
   // Initialize plugin
-  await Zotero.__addonInstance__.hooks.onStartup();
+  await Zotero.ResearchNavigator.hooks.onStartup();
 }
 
 async function onMainWindowLoad({ window }, reason) {
-  await Zotero.__addonInstance__?.hooks.onMainWindowLoad(window);
+  await Zotero.ResearchNavigator?.hooks.onMainWindowLoad(window);
 }
 
 async function onMainWindowUnload({ window }, reason) {
-  await Zotero.__addonInstance__?.hooks.onMainWindowUnload(window);
+  await Zotero.ResearchNavigator?.hooks.onMainWindowUnload(window);
 }
 
 async function shutdown({ id, version, resourceURI, rootURI }, reason) {
@@ -45,7 +45,7 @@ async function shutdown({ id, version, resourceURI, rootURI }, reason) {
   }
 
   // Shutdown plugin
-  await Zotero.__addonInstance__?.hooks.onShutdown();
+  await Zotero.ResearchNavigator?.hooks.onShutdown();
 
   // Unregister chrome
   if (chromeHandle) {
