@@ -259,4 +259,4 @@ zotero-research-navigator/
 
 ---
 
-**如果这个插件对您的研究工作有帮助，请给个 ⭐ Star 支持！**
+**如果这个插件对您的研究工作有帮助，请给个 ⭐ Star 支持！**# GitHub Actions Test
