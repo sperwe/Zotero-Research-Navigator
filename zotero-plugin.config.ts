@@ -12,6 +12,9 @@ export default defineConfig({
     "https://github.com/sperwe/Zotero-Research-Navigator/releases/download/v{{version}}/{{xpiName}}.xpi",
 
   build: {
+    makeManifest: {
+      enable: false  // 禁用自动修改 manifest.json
+    },
     assets: ["addon/**/*.*"],
     define: {
       ...pkg.config,
