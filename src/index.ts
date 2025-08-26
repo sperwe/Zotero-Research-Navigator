@@ -3,14 +3,16 @@
  * Zotero插件主入口文件
  */
 
+// 最先导入初始化代码
+import "./bootstrap-init";
+
 import { setupConsolePolyfill } from "./polyfills/console";
-
-// 首先设置 console polyfill
-setupConsolePolyfill();
-
 import { BasicTool } from "zotero-plugin-toolkit";
 import Addon from "./addon";
 import { config } from "../package.json";
+
+// 再次确保 console polyfill 被设置
+setupConsolePolyfill();
 
 const basicTool = new BasicTool();
 

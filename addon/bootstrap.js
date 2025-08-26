@@ -41,34 +41,34 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
   ]);
 
   // Global variables for plugin code
-  const ctx = { 
-    rootURI,
-    Zotero: Zotero,
-    Services: Services,
-    console: Services.console
-  };
+  const ctx = { rootURI };
   ctx._globalThis = ctx;
 
   // Load main script
-  Services.scriptloader.loadSubScript(
-    `${rootURI}/content/scripts/researchnavigator.js`,
-    ctx,
-  );
+  const scriptPath = `${rootURI}/content/scripts/researchnavigator.js`;
+  log('Attempting to load script from: ' + scriptPath);
+  
+  try {
+    Services.scriptloader.loadSubScript(scriptPath, ctx);
+    log('Script loaded successfully');
+  } catch (e) {
+    log('ERROR loading script: ' + e.toString());
+    log('Stack: ' + (e.stack || 'No stack trace'));
+    return;
+  }
   
   // Initialize plugin - 检查是否成功加载
   if (Zotero.ResearchNavigator && Zotero.ResearchNavigator.hooks) {
     log('Plugin loaded successfully, calling onStartup');
-    await Zotero.ResearchNavigator.hooks.onStartup();
+    try {
+      await Zotero.ResearchNavigator.hooks.onStartup();
+      log('onStartup completed successfully');
+    } catch (e) {
+      log('ERROR in onStartup: ' + e.toString());
+    }
   } else {
     log('ERROR: Plugin failed to load properly!');
-    // 尝试从 ctx 中获取
-    if (ctx.Zotero && ctx.Zotero.ResearchNavigator) {
-      log('Found plugin in context, copying to global Zotero');
-      Zotero.ResearchNavigator = ctx.Zotero.ResearchNavigator;
-      if (Zotero.ResearchNavigator.hooks) {
-        await Zotero.ResearchNavigator.hooks.onStartup();
-      }
-    }
+    log('Zotero.ResearchNavigator = ' + Zotero.ResearchNavigator);
   }
 }
 
