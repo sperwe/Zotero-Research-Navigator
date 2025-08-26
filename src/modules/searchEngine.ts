@@ -1,337 +1,187 @@
 /**
- * Research Navigator - Search Engine
- * 移植自 Tree Style History 的模糊搜索功能
+ * Search engine module for Research Navigator
+ * Provides fuzzy search functionality for history items
  */
 
-import { HistoryNode, AccessRecord } from './historyTracker';
+import { HistoryNode } from './historyTracker';
 
 export interface SearchResult {
-  id: string;
-  title: string;
-  type: string;
-  highlights: string[];
+  node: HistoryNode;
   score: number;
-  timestamp: number;
+  matches: {
+    field: string;
+    indices: [number, number][];
+  }[];
 }
 
 export class SearchEngine {
-  private metaCharRegex = /[\[\]\\^$.|?*+()]/g;
+  private searchIndex: Map<string, HistoryNode>;
 
-  /**
-   * 模糊搜索历史记录 - 移植自 fuzzysearch.js
-   */
-  fuzzySearchHistory(
-    query: string, 
-    records: AccessRecord[], 
-    options: {
-      highlightMatches?: boolean;
-      maxResults?: number;
-      scoreThreshold?: number;
-    } = {}
-  ): SearchResult[] {
-    const { 
-      highlightMatches = true, 
-      maxResults = 50, 
-      scoreThreshold = 0.1 
-    } = options;
-
-    if (!query.trim()) {
-      return records.slice(0, maxResults).map(record => ({
-        id: record.id,
-        title: record.title,
-        type: record.itemType,
-        highlights: [],
-        score: 1,
-        timestamp: record.timestamp
-      }));
-    }
-
-    const searchTerm = this.escapeMetaCharacters(query.toLowerCase());
-    const regex = new RegExp(searchTerm, 'gi');
-    const results: SearchResult[] = [];
-
-    for (const record of records) {
-      const score = this.calculateScore(record, query);
-      if (score < scoreThreshold) continue;
-
-      const highlights: string[] = [];
-      let title = record.title;
-
-      if (highlightMatches) {
-        // 高亮匹配的文本
-        title = title.replace(regex, (match) => {
-          highlights.push(match);
-          return `<span class="search-highlight">${match}</span>`;
-        });
-
-        // 同时搜索标签
-        if (record.tags) {
-          for (const tag of record.tags) {
-            if (tag.toLowerCase().includes(query.toLowerCase())) {
-              highlights.push(tag);
-            }
-          }
-        }
-      }
-
-      results.push({
-        id: record.id,
-        title: highlightMatches ? title : record.title,
-        type: record.itemType,
-        highlights,
-        score,
-        timestamp: record.timestamp
-      });
-    }
-
-    // 按评分排序
-    results.sort((a, b) => b.score - a.score);
-    
-    return results.slice(0, maxResults);
+  constructor() {
+    this.searchIndex = new Map();
   }
 
   /**
-   * 树状数据的模糊搜索 - 移植并改进原 ztreeFilter 功能
+   * 构建搜索索引
    */
-  filterTreeNodes(
-    nodes: HistoryNode[], 
-    query: string,
-    options: {
-      highlightMatches?: boolean;
-      expandMatched?: boolean;
-    } = {}
-  ): HistoryNode[] {
-    const { highlightMatches = true, expandMatched = false } = options;
+  buildIndex(nodes: HistoryNode[]): void {
+    this.searchIndex.clear();
+    this.indexNodes(nodes);
+    ztoolkit.log(`[Research Navigator] Search index built with ${this.searchIndex.size} items`);
+  }
 
-    if (!query.trim()) {
-      return this.expandAllNodes(nodes);
-    }
-
-    const searchTerm = this.escapeMetaCharacters(query.toLowerCase());
-    const filteredNodes: HistoryNode[] = [];
-
+  private indexNodes(nodes: HistoryNode[]): void {
     for (const node of nodes) {
-      const filteredNode = this.filterNode(node, searchTerm, highlightMatches);
-      if (filteredNode) {
-        filteredNodes.push(filteredNode);
+      this.searchIndex.set(node.itemID, node);
+      if (node.children && node.children.length > 0) {
+        this.indexNodes(node.children);
       }
     }
-
-    return filteredNodes;
   }
 
   /**
-   * 过滤单个节点
+   * 执行模糊搜索
    */
-  private filterNode(
-    node: HistoryNode, 
-    searchTerm: string, 
-    highlightMatches: boolean
-  ): HistoryNode | null {
-    const nodeMatches = this.nodeMatchesQuery(node, searchTerm);
-    const filteredChildren: HistoryNode[] = [];
-
-    // 递归过滤子节点
-    if (node.children) {
-      for (const child of node.children) {
-        const filteredChild = this.filterNode(child, searchTerm, highlightMatches);
-        if (filteredChild) {
-          filteredChildren.push(filteredChild);
-        }
-      }
+  search(query: string, limit: number = 50): SearchResult[] {
+    if (!query || query.trim().length === 0) {
+      return [];
     }
 
-    // 如果节点匹配或有匹配的子节点，则保留
-    if (nodeMatches || filteredChildren.length > 0) {
-      const newNode: HistoryNode = {
-        ...node,
-        children: filteredChildren.length > 0 ? filteredChildren : undefined
-      };
-
-      // 高亮匹配文本
-      if (nodeMatches && highlightMatches) {
-        newNode.title = this.highlightText(node.title, searchTerm);
-      }
-
-      return newNode;
-    }
-
-    return null;
-  }
-
-  /**
-   * 检查节点是否匹配查询
-   */
-  private nodeMatchesQuery(node: HistoryNode, searchTerm: string): boolean {
-    const title = node.title.toLowerCase();
-    return title.includes(searchTerm.toLowerCase());
-  }
-
-  /**
-   * 高亮匹配的文本
-   */
-  private highlightText(text: string, searchTerm: string): string {
-    const regex = new RegExp(`(${searchTerm})`, 'gi');
-    return text.replace(regex, '<span class="search-highlight">$1</span>');
-  }
-
-  /**
-   * 展开所有节点
-   */
-  private expandAllNodes(nodes: HistoryNode[]): HistoryNode[] {
-    return nodes.map(node => ({
-      ...node,
-      children: node.children ? this.expandAllNodes(node.children) : undefined
-    }));
-  }
-
-  /**
-   * 计算搜索评分
-   */
-  private calculateScore(record: AccessRecord, query: string): number {
-    const title = record.title.toLowerCase();
+    const results: SearchResult[] = [];
     const queryLower = query.toLowerCase();
-    let score = 0;
+    const queryTerms = queryLower.split(/\s+/).filter(term => term.length > 0);
 
-    // 完全匹配得分最高
-    if (title === queryLower) {
-      score += 1.0;
-    }
-    // 开始匹配得分较高
-    else if (title.startsWith(queryLower)) {
-      score += 0.8;
-    }
-    // 包含匹配
-    else if (title.includes(queryLower)) {
-      score += 0.6;
+    for (const node of this.searchIndex.values()) {
+      const result = this.scoreNode(node, queryTerms);
+      if (result.score > 0) {
+        results.push(result);
+      }
     }
 
-    // 标签匹配
-    if (record.tags) {
-      for (const tag of record.tags) {
-        if (tag.toLowerCase().includes(queryLower)) {
-          score += 0.4;
+    // 按分数排序
+    results.sort((a, b) => b.score - a.score);
+
+    return results.slice(0, limit);
+  }
+
+  /**
+   * 计算节点的匹配分数
+   */
+  private scoreNode(node: HistoryNode, queryTerms: string[]): SearchResult {
+    const result: SearchResult = {
+      node,
+      score: 0,
+      matches: []
+    };
+
+    // 搜索标题
+    const titleScore = this.scoreField(node.title, queryTerms, 'title', 2.0);
+    if (titleScore.score > 0) {
+      result.score += titleScore.score;
+      result.matches.push(titleScore.match);
+    }
+
+    // 搜索项目类型
+    const typeScore = this.scoreField(node.itemType, queryTerms, 'itemType', 0.5);
+    if (typeScore.score > 0) {
+      result.score += typeScore.score;
+      result.matches.push(typeScore.match);
+    }
+
+    // 访问频率加成
+    const accessCount = node.accessRecords?.length || 0;
+    if (accessCount > 0) {
+      result.score *= (1 + Math.log10(accessCount) * 0.1);
+    }
+
+    // 最近访问加成
+    const daysSinceAccess = (Date.now() - node.lastAccessed) / (1000 * 60 * 60 * 24);
+    if (daysSinceAccess < 7) {
+      result.score *= (1 + (7 - daysSinceAccess) / 7 * 0.2);
+    }
+
+    return result;
+  }
+
+  /**
+   * 计算字段的匹配分数
+   */
+  private scoreField(text: string, queryTerms: string[], fieldName: string, weight: number): {
+    score: number;
+    match: { field: string; indices: [number, number][] };
+  } {
+    if (!text) {
+      return { score: 0, match: { field: fieldName, indices: [] } };
+    }
+
+    const textLower = text.toLowerCase();
+    let totalScore = 0;
+    const indices: [number, number][] = [];
+
+    for (const term of queryTerms) {
+      let index = textLower.indexOf(term);
+      if (index !== -1) {
+        // 完全匹配
+        totalScore += weight;
+        indices.push([index, index + term.length - 1]);
+      } else {
+        // 模糊匹配
+        const fuzzyScore = this.fuzzyMatch(textLower, term);
+        if (fuzzyScore > 0) {
+          totalScore += fuzzyScore * weight * 0.5;
         }
       }
     }
 
-    // 最近访问的项目得分更高
-    const daysSinceAccess = (Date.now() - record.timestamp) / (1000 * 60 * 60 * 24);
-    if (daysSinceAccess < 1) {
-      score += 0.3;
-    } else if (daysSinceAccess < 7) {
-      score += 0.2;
-    } else if (daysSinceAccess < 30) {
-      score += 0.1;
-    }
-
-    return Math.min(score, 1.0);
+    return {
+      score: totalScore,
+      match: { field: fieldName, indices }
+    };
   }
 
   /**
-   * 转义正则表达式元字符
+   * 简单的模糊匹配算法
    */
-  private escapeMetaCharacters(text: string): string {
-    return text.replace(this.metaCharRegex, '\\$&');
-  }
+  private fuzzyMatch(text: string, query: string): number {
+    let queryIndex = 0;
+    let matchCount = 0;
 
-  /**
-   * 智能建议 - 基于历史记录提供搜索建议
-   */
-  getSuggestions(
-    query: string, 
-    records: AccessRecord[], 
-    limit: number = 5
-  ): string[] {
-    if (!query.trim()) return [];
-
-    const suggestions = new Set<string>();
-    const queryLower = query.toLowerCase();
-
-    // 从标题中提取建议
-    for (const record of records) {
-      const words = record.title.toLowerCase().split(/\s+/);
-      for (const word of words) {
-        if (word.startsWith(queryLower) && word.length > query.length) {
-          suggestions.add(word);
-          if (suggestions.size >= limit) break;
-        }
+    for (let i = 0; i < text.length && queryIndex < query.length; i++) {
+      if (text[i] === query[queryIndex]) {
+        matchCount++;
+        queryIndex++;
       }
-      if (suggestions.size >= limit) break;
     }
 
-    // 从标签中提取建议
-    for (const record of records) {
-      if (record.tags) {
-        for (const tag of record.tags) {
-          if (tag.toLowerCase().startsWith(queryLower)) {
-            suggestions.add(tag);
-            if (suggestions.size >= limit) break;
-          }
-        }
-      }
-      if (suggestions.size >= limit) break;
-    }
-
-    return Array.from(suggestions).slice(0, limit);
+    return queryIndex === query.length ? matchCount / query.length : 0;
   }
 
   /**
-   * 高级搜索 - 支持多种搜索条件
+   * 高亮搜索结果
    */
-  advancedSearch(
-    records: AccessRecord[],
-    criteria: {
-      title?: string;
-      tags?: string[];
-      itemType?: string;
-      dateRange?: { start: Date; end: Date };
-      minScore?: number;
-    }
-  ): SearchResult[] {
-    let filteredRecords = records;
-
-    // 按条目类型过滤
-    if (criteria.itemType) {
-      filteredRecords = filteredRecords.filter(
-        record => record.itemType === criteria.itemType
-      );
+  highlightText(text: string, indices: [number, number][]): string {
+    if (!indices || indices.length === 0) {
+      return text;
     }
 
-    // 按日期范围过滤
-    if (criteria.dateRange) {
-      filteredRecords = filteredRecords.filter(
-        record => record.timestamp >= criteria.dateRange!.start.getTime() &&
-                  record.timestamp <= criteria.dateRange!.end.getTime()
-      );
+    // 按索引位置排序
+    indices.sort((a, b) => a[0] - b[0]);
+
+    let result = '';
+    let lastIndex = 0;
+
+    for (const [start, end] of indices) {
+      if (start > lastIndex) {
+        result += text.substring(lastIndex, start);
+      }
+      result += `<mark>${text.substring(start, end + 1)}</mark>`;
+      lastIndex = end + 1;
     }
 
-    // 按标签过滤
-    if (criteria.tags && criteria.tags.length > 0) {
-      filteredRecords = filteredRecords.filter(
-        record => record.tags?.some(tag => 
-          criteria.tags!.some(searchTag => 
-            tag.toLowerCase().includes(searchTag.toLowerCase())
-          )
-        )
-      );
+    if (lastIndex < text.length) {
+      result += text.substring(lastIndex);
     }
 
-    // 按标题搜索
-    if (criteria.title) {
-      return this.fuzzySearchHistory(criteria.title, filteredRecords, {
-        scoreThreshold: criteria.minScore || 0.1
-      });
-    }
-
-    // 转换为搜索结果格式
-    return filteredRecords.map(record => ({
-      id: record.id,
-      title: record.title,
-      type: record.itemType,
-      highlights: [],
-      score: 1,
-      timestamp: record.timestamp
-    }));
+    return result;
   }
 }
