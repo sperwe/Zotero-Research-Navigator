@@ -1,0 +1,110 @@
+name: Build Debug XPI
+
+on:
+  push:
+    branches: [ 'fix/**', 'debug/**' ]
+  workflow_dispatch:
+    inputs:
+      bootstrap_version:
+        description: 'Bootstrap version to use'
+        required: false
+        default: 'full-featured'
+        type: choice
+        options:
+          - full-featured
+          - debug-simple
+          - elegant-compact
+          - tabs-fixed
+
+jobs:
+  build-debug:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm install --legacy-peer-deps
+    
+    - name: Select bootstrap version
+      run: |
+        BOOTSTRAP_VERSION="${{ github.event.inputs.bootstrap_version || 'full-featured' }}"
+        echo "Using bootstrap version: $BOOTSTRAP_VERSION"
+        
+        if [ -f "addon/bootstrap-${BOOTSTRAP_VERSION}.js" ]; then
+          cp "addon/bootstrap-${BOOTSTRAP_VERSION}.js" "addon/bootstrap.js"
+          echo "✅ Copied bootstrap-${BOOTSTRAP_VERSION}.js to bootstrap.js"
+        else
+          echo "❌ bootstrap-${BOOTSTRAP_VERSION}.js not found!"
+          exit 1
+        fi
+    
+    - name: Build plugin
+      run: |
+        echo "Starting build..."
+        npm run build-prod || npm run build || (echo "Build failed!" && exit 1)
+        echo "Build completed successfully!"
+        echo "Checking generated files..."
+        ls -la build/
+    
+    - name: Check manifest
+      run: |
+        echo "=== Manifest.json content ==="
+        cat build/addon/manifest.json || echo "manifest.json not found"
+        echo ""
+        echo "=== Bootstrap.js first 50 lines ==="
+        head -n 50 build/addon/bootstrap.js || echo "bootstrap.js not found"
+    
+    - name: Create debug info
+      run: |
+        echo "Build Information" > build-info.txt
+        echo "=================" >> build-info.txt
+        echo "Date: $(date)" >> build-info.txt
+        echo "Commit: ${{ github.sha }}" >> build-info.txt
+        echo "Branch: ${{ github.ref_name }}" >> build-info.txt
+        echo "Bootstrap Version: ${{ github.event.inputs.bootstrap_version || 'full-featured' }}" >> build-info.txt
+        echo "" >> build-info.txt
+        echo "Files in build directory:" >> build-info.txt
+        find build -type f -name "*.js" -o -name "*.json" | head -20 >> build-info.txt
+    
+    - name: Copy XPI file
+      run: |
+        BOOTSTRAP_VERSION="${{ github.event.inputs.bootstrap_version || 'full-featured' }}"
+        cp build/zotero-research-navigator.xpi "./zotero-research-navigator-${BOOTSTRAP_VERSION}-debug.xpi"
+        echo "XPI file copied successfully!"
+        ls -la *.xpi
+    
+    - name: Upload XPI
+      uses: actions/upload-artifact@v4
+      with:
+        name: zotero-research-navigator-debug-xpi
+        path: |
+          ./zotero-research-navigator-*-debug.xpi
+          ./build-info.txt
+        retention-days: 30
+    
+    - name: Upload build directory
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-directory
+        path: build/
+        retention-days: 7
+    
+    - name: Output download instructions
+      run: |
+        echo "✅ Debug build completed successfully!"
+        echo "📦 XPI file is available as an artifact in this workflow run."
+        echo "📥 Click on 'Summary' tab above, then download 'zotero-research-navigator-debug-xpi'"
+        echo ""
+        echo "🐛 Debugging tips:"
+        echo "1. Install the XPI in Zotero"
+        echo "2. Open Zotero Debug Output (Help > Debug Output Logging > View Output)"
+        echo "3. Look for '[Research Navigator]' messages"
+        echo "4. Check Browser Console (Ctrl+Shift+J) for JavaScript errors"

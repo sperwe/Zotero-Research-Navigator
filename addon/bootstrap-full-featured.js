@@ -1740,7 +1740,7 @@ var ResearchNavigator = {
       'default': '📄'
     };
     return icons[itemType] || icons.default;
-  }
+  },
   
   // 更新推荐
   updateRecommendations() {
@@ -1915,6 +1915,16 @@ var ResearchNavigator = {
 };
 
 // 继续在startup函数之前添加必要的函数定义
+
+// Bootstrap 常量
+const APP_STARTUP = 1;
+const APP_SHUTDOWN = 2;
+const ADDON_ENABLE = 3;
+const ADDON_DISABLE = 4;
+const ADDON_INSTALL = 5;
+const ADDON_UNINSTALL = 6;
+const ADDON_UPGRADE = 7;
+const ADDON_DOWNGRADE = 8;
 
 function install(data, reason) {}
 

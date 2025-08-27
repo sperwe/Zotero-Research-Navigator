@@ -1740,7 +1740,7 @@ var ResearchNavigator = {
       'default': '📄'
     };
     return icons[itemType] || icons.default;
-  }
+  },
   
   // 更新推荐
   updateRecommendations() {
@@ -1916,44 +1916,78 @@ var ResearchNavigator = {
 
 // 继续在startup函数之前添加必要的函数定义
 
+// Bootstrap 常量
+const APP_STARTUP = 1;
+const APP_SHUTDOWN = 2;
+const ADDON_ENABLE = 3;
+const ADDON_DISABLE = 4;
+const ADDON_INSTALL = 5;
+const ADDON_UNINSTALL = 6;
+const ADDON_UPGRADE = 7;
+const ADDON_DOWNGRADE = 8;
+
 function install(data, reason) {}
 
 async function startup({ id, version, resourceURI, rootURI }, reason) {
-  await waitForZotero();
-  
-  if (!rootURI) {
-    rootURI = resourceURI.spec;
+  // 添加调试输出
+  if (typeof dump !== 'undefined') {
+    dump(`\n[Research Navigator] Starting up... Version: ${version}, Reason: ${reason}\n`);
   }
+  
+  try {
+    await waitForZotero();
+    
+    if (!rootURI) {
+      rootURI = resourceURI.spec;
+    }
 
-  ResearchNavigator.id = id;
-  ResearchNavigator.version = version;
-  ResearchNavigator.rootURI = rootURI;
-  
-  // 初始化
-  await ResearchNavigator.init();
-  
-  // 注册到 Zotero
-  Zotero.ResearchNavigator = ResearchNavigator;
-  
-  // 设置监听器
-  ResearchNavigator.setupTabListener();
-  
-  // 初始化现有标签页
-  await ResearchNavigator.initializeTabs();
-  
-  // 确保在所有已打开的窗口中添加 UI
-  var windows = Services.wm.getEnumerator("navigator:browser");
-  while (windows.hasMoreElements()) {
-    let win = windows.getNext();
-    if (win.Zotero && win.document.readyState === "complete") {
-      addUI(win);
+    ResearchNavigator.id = id;
+    ResearchNavigator.version = version;
+    ResearchNavigator.rootURI = rootURI;
+    
+    // 调试：检查Zotero版本
+    ResearchNavigator.debug(`Zotero version: ${Zotero.version}`);
+    ResearchNavigator.debug(`Plugin version: ${version}`);
+    ResearchNavigator.debug(`Startup reason: ${reason}`);
+    
+    // 初始化
+    await ResearchNavigator.init();
+    
+    // 注册到 Zotero
+    Zotero.ResearchNavigator = ResearchNavigator;
+    
+    // 设置监听器
+    ResearchNavigator.setupTabListener();
+    
+    // 初始化现有标签页
+    await ResearchNavigator.initializeTabs();
+    
+    // 确保在所有已打开的窗口中添加 UI
+    var windows = Services.wm.getEnumerator("navigator:browser");
+    let windowCount = 0;
+    while (windows.hasMoreElements()) {
+      let win = windows.getNext();
+      windowCount++;
+      ResearchNavigator.debug(`Checking window ${windowCount}...`);
+      if (win.Zotero && win.document.readyState === "complete") {
+        ResearchNavigator.debug(`Adding UI to window ${windowCount}`);
+        addUI(win);
+      } else {
+        ResearchNavigator.debug(`Window ${windowCount} not ready or no Zotero`);
+      }
+    }
+    
+    // 监听新窗口
+    Services.wm.addListener(windowListener);
+    
+    ResearchNavigator.debug('Research Navigator started successfully');
+  } catch (e) {
+    ResearchNavigator.debug(`Startup error: ${e}`);
+    ResearchNavigator.debug(`Stack: ${e.stack}`);
+    if (typeof dump !== 'undefined') {
+      dump(`[Research Navigator] Startup error: ${e}\n${e.stack}\n`);
     }
   }
-  
-  // 监听新窗口
-  Services.wm.addListener(windowListener);
-  
-  ResearchNavigator.debug('Research Navigator started');
 }
 
 function shutdown({ id, version, resourceURI, rootURI }, reason) {
