@@ -3,6 +3,8 @@
 /* eslint-disable */
 // @ts-nocheck
 export type FluentMessageId =
+  | 'addon-description'
+  | 'addon-name'
   | 'history-panel-empty'
   | 'history-panel-no-results'
   | 'history-panel-search-placeholder'
