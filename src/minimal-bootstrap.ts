@@ -3,6 +3,12 @@
  * 用于诊断插件加载问题
  */
 
+// 声明 dump 函数（如果不存在则使用 console.log）
+declare function dump(msg: string): void;
+if (typeof dump === 'undefined') {
+  (globalThis as any).dump = (msg: string) => console.log(msg);
+}
+
 // 直接在全局作用域定义函数
 (globalThis as any).install = function() {
   dump("[Research Navigator MINIMAL] install() called\n");
