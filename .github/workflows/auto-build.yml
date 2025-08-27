@@ -1,0 +1,236 @@
+name: Auto Build XPI
+
+on:
+  push:
+    branches: 
+      - master
+      - main
+      - 'feature/**'
+      - 'fix/**'
+      - 'refactor/**'
+    paths:
+      - 'addon/**'
+      - 'src/**'
+      - 'package.json'
+      - 'tsconfig.json'
+      - '.github/workflows/auto-build.yml'
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # 获取完整历史，用于生成更好的版本信息
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm install --legacy-peer-deps
+    
+    - name: Get version and commit info
+      id: version
+      run: |
+        # 从package.json获取版本
+        VERSION=$(node -p "require('./package.json').version")
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        
+        # 获取短commit hash
+        SHORT_SHA=$(git rev-parse --short HEAD)
+        echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_OUTPUT
+        
+        # 获取分支名
+        BRANCH_NAME=${GITHUB_REF#refs/heads/}
+        echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_OUTPUT
+        
+        # 生成构建版本号
+        BUILD_VERSION="${VERSION}-${SHORT_SHA}"
+        echo "BUILD_VERSION=$BUILD_VERSION" >> $GITHUB_OUTPUT
+        
+        # 生成文件名安全的分支名
+        SAFE_BRANCH=$(echo "$BRANCH_NAME" | sed 's/[^a-zA-Z0-9-]/-/g')
+        echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_OUTPUT
+        
+        echo "Version: $VERSION"
+        echo "Branch: $BRANCH_NAME"
+        echo "Commit: $SHORT_SHA"
+        echo "Build Version: $BUILD_VERSION"
+    
+    - name: Build plugin
+      run: |
+        echo "Building plugin..."
+        npm run build-prod || npm run build
+        echo "Build completed!"
+        
+        # 检查构建结果
+        if [ ! -f "build/zotero-research-navigator.xpi" ]; then
+          echo "Error: XPI file not found!"
+          exit 1
+        fi
+        
+        ls -la build/
+    
+    - name: Generate build info
+      run: |
+        cat > build-info.json << EOF
+        {
+          "version": "${{ steps.version.outputs.VERSION }}",
+          "buildVersion": "${{ steps.version.outputs.BUILD_VERSION }}",
+          "branch": "${{ steps.version.outputs.BRANCH_NAME }}",
+          "commit": "${{ github.sha }}",
+          "shortCommit": "${{ steps.version.outputs.SHORT_SHA }}",
+          "buildDate": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+          "buildNumber": "${{ github.run_number }}",
+          "repository": "${{ github.repository }}",
+          "workflow": "${{ github.workflow }}",
+          "runner": "${{ runner.os }}-${{ runner.arch }}"
+        }
+        EOF
+        
+        cat build-info.json
+    
+    - name: Rename XPI with version info
+      run: |
+        # 创建多个版本的文件名
+        cp build/zotero-research-navigator.xpi "zotero-research-navigator-latest.xpi"
+        cp build/zotero-research-navigator.xpi "zotero-research-navigator-${{ steps.version.outputs.VERSION }}.xpi"
+        cp build/zotero-research-navigator.xpi "zotero-research-navigator-${{ steps.version.outputs.SAFE_BRANCH }}-${{ steps.version.outputs.SHORT_SHA }}.xpi"
+        
+        ls -la *.xpi
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: zotero-research-navigator-${{ steps.version.outputs.SAFE_BRANCH }}-${{ steps.version.outputs.SHORT_SHA }}
+        path: |
+          zotero-research-navigator-*.xpi
+          build-info.json
+        retention-days: 30
+    
+    - name: Create development release
+      if: github.event_name == 'push' && github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: dev-${{ steps.version.outputs.SAFE_BRANCH }}-${{ steps.version.outputs.SHORT_SHA }}
+        name: Development Build - ${{ steps.version.outputs.BRANCH_NAME }} (${{ steps.version.outputs.SHORT_SHA }})
+        body: |
+          ## 🔧 Development Build
+          
+          - **Branch**: `${{ steps.version.outputs.BRANCH_NAME }}`
+          - **Commit**: ${{ github.sha }}
+          - **Version**: ${{ steps.version.outputs.BUILD_VERSION }}
+          - **Build Date**: ${{ steps.version.outputs.BUILD_DATE }}
+          
+          ### 📦 Installation
+          1. Download the `.xpi` file below
+          2. In Zotero: Tools → Add-ons → Install Add-on From File
+          3. Select the downloaded XPI file
+          4. Restart Zotero
+          
+          ### ⚠️ Note
+          This is a development build and may contain bugs. Use at your own risk.
+          
+          ### 📝 Recent Changes
+          ${{ github.event.head_commit.message }}
+        files: |
+          zotero-research-navigator-${{ steps.version.outputs.SAFE_BRANCH }}-${{ steps.version.outputs.SHORT_SHA }}.xpi
+          build-info.json
+        draft: false
+        prerelease: true
+        generate_release_notes: true
+    
+    - name: Update latest release
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: latest
+        name: Latest Build - v${{ steps.version.outputs.VERSION }}
+        body: |
+          ## 🚀 Latest Build
+          
+          - **Version**: ${{ steps.version.outputs.VERSION }}
+          - **Commit**: ${{ github.sha }}
+          - **Build Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          
+          ### 📦 Installation
+          1. Download the `.xpi` file below
+          2. In Zotero: Tools → Add-ons → Install Add-on From File
+          3. Select the downloaded XPI file
+          4. Restart Zotero
+          
+          ### 📝 Recent Changes
+          ${{ github.event.head_commit.message }}
+          
+          ### ⬇️ Download
+          This release is automatically updated with each push to the main branch.
+        files: |
+          zotero-research-navigator-latest.xpi
+          zotero-research-navigator-${{ steps.version.outputs.VERSION }}.xpi
+          build-info.json
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+    
+    - name: Comment on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const artifactUrl = `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
+          const body = `## 🤖 Build Preview Ready!\n\n` +
+            `A preview build of this PR has been generated.\n\n` +
+            `### 📦 Download\n` +
+            `- [Download XPI from Actions](${artifactUrl})\n\n` +
+            `### 📋 Build Info\n` +
+            `- Version: \`${{ steps.version.outputs.BUILD_VERSION }}\`\n` +
+            `- Commit: \`${{ steps.version.outputs.SHORT_SHA }}\`\n\n` +
+            `### 🔍 Testing\n` +
+            `1. Click the link above\n` +
+            `2. Download the artifact \`zotero-research-navigator-...\`\n` +
+            `3. Extract and install the XPI file in Zotero\n`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: body
+          });
+    
+    - name: Output summary
+      run: |
+        echo "## 🎉 Build Completed Successfully!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📊 Build Information" >> $GITHUB_STEP_SUMMARY
+        echo "- **Version**: ${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Branch**: ${{ steps.version.outputs.BRANCH_NAME }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Commit**: \`${{ steps.version.outputs.SHORT_SHA }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **Build Number**: #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📦 Artifacts" >> $GITHUB_STEP_SUMMARY
+        echo "The following files have been generated:" >> $GITHUB_STEP_SUMMARY
+        echo "- \`zotero-research-navigator-latest.xpi\`" >> $GITHUB_STEP_SUMMARY
+        echo "- \`zotero-research-navigator-${{ steps.version.outputs.VERSION }}.xpi\`" >> $GITHUB_STEP_SUMMARY
+        echo "- \`zotero-research-navigator-${{ steps.version.outputs.SAFE_BRANCH }}-${{ steps.version.outputs.SHORT_SHA }}.xpi\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        if [[ "${{ github.event_name }}" == "push" ]]; then
+          if [[ "${{ github.ref }}" == "refs/heads/master" ]] || [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "### 🚀 Release" >> $GITHUB_STEP_SUMMARY
+            echo "A new 'latest' release has been created/updated." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### 🔧 Development Release" >> $GITHUB_STEP_SUMMARY
+            echo "A development release has been created with tag: \`dev-${{ steps.version.outputs.SAFE_BRANCH }}-${{ steps.version.outputs.SHORT_SHA }}\`" >> $GITHUB_STEP_SUMMARY
+          fi
+        fi

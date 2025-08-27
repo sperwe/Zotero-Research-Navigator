@@ -2,9 +2,12 @@
 
 一个强大的 Zotero 插件，用于追踪研究历史和增强笔记导航体验。
 
-![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)
-![Zotero](https://img.shields.io/badge/Zotero-6.0.27+-red.svg)
-![Version](https://img.shields.io/badge/version-1.0.0-green.svg)
+[![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
+[![Zotero](https://img.shields.io/badge/Zotero-7.0+-red.svg)](https://www.zotero.org/)
+[![Version](https://img.shields.io/github/package-json/v/sperwe/Zotero-Research-Navigator)](package.json)
+[![Build Status](https://github.com/sperwe/Zotero-Research-Navigator/actions/workflows/auto-build.yml/badge.svg)](https://github.com/sperwe/Zotero-Research-Navigator/actions/workflows/auto-build.yml)
+[![Latest Release](https://img.shields.io/github/v/release/sperwe/Zotero-Research-Navigator?label=latest%20release)](https://github.com/sperwe/Zotero-Research-Navigator/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/sperwe/Zotero-Research-Navigator/total)](https://github.com/sperwe/Zotero-Research-Navigator/releases)
 
 ## ✨ 特色功能
 
@@ -34,17 +37,32 @@
 
 ## 📦 安装指南
 
-### 方式一：从 Release 安装 (推荐)
+### 方式一：自动构建版本 (推荐)
 
-1. 访问 [Releases 页面](https://github.com/YOUR_USERNAME/zotero-research-navigator/releases)
-2. 下载最新版本的 `.xpi` 文件
-3. 在 Zotero 中：
+每次代码推送都会自动生成最新的 XPI 文件：
+
+1. **稳定版本（主分支）**
+   - 访问 [Latest Release](https://github.com/sperwe/Zotero-Research-Navigator/releases/tag/latest)
+   - 下载 `zotero-research-navigator-latest.xpi`
+
+2. **开发版本（功能分支）**
+   - 访问 [Releases 页面](https://github.com/sperwe/Zotero-Research-Navigator/releases)
+   - 找到以 `dev-` 开头的版本
+   - 下载对应的 `.xpi` 文件
+
+3. **在 Zotero 中安装**：
    - 打开 `工具` → `插件`
    - 点击设置齿轮 → `从文件安装插件...`
    - 选择下载的 `.xpi` 文件
    - 重启 Zotero
 
-### 方式二：从源码构建
+### 方式二：从 GitHub Actions 获取
+
+1. 访问 [Actions 页面](https://github.com/sperwe/Zotero-Research-Navigator/actions)
+2. 选择最新的成功构建
+3. 在 Artifacts 部分下载 XPI 文件
+
+### 方式三：从源码构建
 
 1. **克隆仓库**
    ```bash
