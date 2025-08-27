@@ -354,7 +354,15 @@ function createHistoryPanel(
 
 function toggleHistoryPanel(win: Window): void {
   const doc = win.document;
-  const panel = doc.getElementById("research-navigator-panel");
+  let panel = doc.getElementById("research-navigator-panel");
+  
+  // 如果面板不存在，先创建它
+  if (!panel) {
+    ztoolkit.log("[Research Navigator] Panel not found, creating it now");
+    createHistoryPanel(win, currentHistoryTracker, currentSearchEngine);
+    panel = doc.getElementById("research-navigator-panel");
+  }
+  
   if (panel) {
     const isVisible = panel.style.display !== "none";
     panel.style.display = isVisible ? "none" : "flex";
@@ -363,6 +371,9 @@ function toggleHistoryPanel(win: Window): void {
       // 面板打开时更新显示
       updateHistoryDisplay(win, currentHistoryTracker, currentSearchEngine);
     }
+    ztoolkit.log(`[Research Navigator] Panel ${isVisible ? 'hidden' : 'shown'}`);
+  } else {
+    ztoolkit.log("[Research Navigator] Failed to create or find panel", 'error');
   }
 }
 

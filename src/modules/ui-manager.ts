@@ -167,7 +167,22 @@ export class UIManager {
    */
   toggleHistoryPanel(win: Window): void {
     const panelKey = `history-panel-${win.location.href}`;
-    const panel = this.uiElements.get(panelKey) as HTMLElement;
+    let panel = this.uiElements.get(panelKey) as HTMLElement;
+    
+    // 如果面板不存在，尝试创建它
+    if (!panel) {
+      addon.ztoolkit.log("History panel not found in UI elements, attempting to create");
+      this.createHistoryPanel(win).then(() => {
+        panel = this.uiElements.get(panelKey) as HTMLElement;
+        if (panel) {
+          panel.style.display = "block";
+          this.updateHistoryPanel(win);
+        }
+      }).catch(error => {
+        addon.ztoolkit.log(`Failed to create history panel: ${error}`, 'error');
+      });
+      return;
+    }
     
     if (panel) {
       const isVisible = panel.style.display !== "none";
