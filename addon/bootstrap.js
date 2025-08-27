@@ -591,20 +591,20 @@ var ResearchNavigator = {
     const sessions = this.getTreeData();
     
     if (sessions.length === 0) {
-      const emptyMsg = doc.createXULElement('vbox');
-      emptyMsg.style.cssText = 'padding: 30px 20px; align-items: center;';
-      
-      const icon = doc.createXULElement('label');
-      icon.setAttribute('value', '🌱');
-      icon.style.cssText = 'font-size: 42px; margin-bottom: 8px;';
-      
-      const text = doc.createXULElement('label');
-      text.setAttribute('value', 'Start exploring to build your research tree');
-      text.style.cssText = 'color: #999; font-size: 0.9em; text-align: center;';
-      
-      emptyMsg.appendChild(icon);
-      emptyMsg.appendChild(text);
-      treeContainer.appendChild(emptyMsg);
+          const emptyMsg = doc.createXULElement('vbox');
+    emptyMsg.style.cssText = 'padding: 30px 20px; align-items: center;';
+    
+    const icon = doc.createXULElement('label');
+    icon.setAttribute('value', '🌱');
+    icon.style.cssText = 'font-size: 42px; margin-bottom: 8px;';
+    
+    const text = doc.createXULElement('label');
+    text.setAttribute('value', 'Start exploring to build your research tree');
+    text.style.cssText = 'color: #999; font-size: 0.9em; text-align: center;';
+    
+    emptyMsg.appendChild(icon);
+    emptyMsg.appendChild(text);
+    treeContainer.appendChild(emptyMsg);
       return;
     }
     
@@ -1192,10 +1192,9 @@ function createTreePanel(window) {
     return;
   }
   
-  // 外层容器 - 使用 vbox 并设置 flex 布局
+  // 外层容器
   const panelWrapper = doc.createXULElement('vbox');
   panelWrapper.id = 'research-navigator-panel';
-  panelWrapper.setAttribute('flex', '0');
   panelWrapper.style.cssText = `
     position: fixed;
     right: ${ResearchNavigator.panelRight}px;
@@ -1210,12 +1209,12 @@ function createTreePanel(window) {
     display: none;
     min-width: 320px;
     max-width: 600px;
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   `;
   
   // 标题栏
   const header = doc.createXULElement('hbox');
-  header.setAttribute('flex', '0');
   header.style.cssText = `
     background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
     color: white;
@@ -1223,8 +1222,7 @@ function createTreePanel(window) {
     align-items: center;
     border-radius: 8px 8px 0 0;
     cursor: move;
-    min-height: 40px;
-    max-height: 40px;
+    flex: 0 0 auto;
   `;
   
   // 拖动功能
@@ -1319,14 +1317,12 @@ function createTreePanel(window) {
   
   // 工具栏
   const toolbar = doc.createXULElement('hbox');
-  toolbar.setAttribute('flex', '0');
   toolbar.style.cssText = `
     padding: 8px 10px;
     border-bottom: 1px solid #f0f0f0;
     background: #fafbfc;
     align-items: center;
-    min-height: 36px;
-    max-height: 36px;
+    flex: 0 0 auto;
   `;
   
   const statsLabel = doc.createXULElement('label');
@@ -1379,11 +1375,7 @@ function createTreePanel(window) {
   toolbar.appendChild(viewToggle);
   toolbar.appendChild(clearBtn);
   
-  // 内容区域 - 使用 vbox 包装 scrollbox
-  const contentWrapper = doc.createXULElement('vbox');
-  contentWrapper.setAttribute('flex', '1');
-  contentWrapper.style.cssText = 'overflow: hidden; min-height: 0;';
-  
+  // 内容区域（使用 scrollbox）
   const scrollbox = doc.createXULElement('scrollbox');
   scrollbox.setAttribute('flex', '1');
   scrollbox.setAttribute('orient', 'vertical');
@@ -1391,6 +1383,7 @@ function createTreePanel(window) {
     overflow: auto;
     background: white;
     min-height: 0;
+    flex: 1 1 auto;
   `;
   
   // 树容器
@@ -1399,7 +1392,6 @@ function createTreePanel(window) {
   treeContainer.style.cssText = 'padding: 8px; min-width: max-content;';
   
   scrollbox.appendChild(treeContainer);
-  contentWrapper.appendChild(scrollbox);
   
   // 调整大小手柄
   const resizeHandle = doc.createXULElement('box');
@@ -1458,7 +1450,7 @@ function createTreePanel(window) {
   
   panelWrapper.appendChild(header);
   panelWrapper.appendChild(toolbar);
-  panelWrapper.appendChild(contentWrapper);
+  panelWrapper.appendChild(scrollbox);
   panelWrapper.appendChild(resizeHandle);
   
   // 添加到文档
@@ -1481,13 +1473,13 @@ function toggleTreePanel(window) {
     createTreePanel(window);
     const newPanel = doc.getElementById('research-navigator-panel');
     if (newPanel) {
-      newPanel.style.display = 'flex';
+      newPanel.style.display = 'block';
     }
     return;
   }
   
   if (panel.style.display === 'none') {
-    panel.style.display = 'flex';
+    panel.style.display = 'block';
     ResearchNavigator.updateTreePanel(window, panel);
   } else {
     panel.style.display = 'none';
