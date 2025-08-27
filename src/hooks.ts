@@ -142,20 +142,27 @@ async function onStartup() {
  */
 async function onMainWindowLoad(win: Window) {
   diagnostic.log("Main window load event", true, { phase: "begin" });
+  addon.ztoolkit.log("[DEBUG] onMainWindowLoad called");
+  addon.ztoolkit.log(`[DEBUG] Window type: ${win.constructor.name}`);
+  addon.ztoolkit.log(`[DEBUG] Window location: ${win.location?.href}`);
+  addon.ztoolkit.log(`[DEBUG] Document ready state: ${win.document?.readyState}`);
   
   // 验证窗口对象
   const windowValid = diagnostic.validateWindow(win);
   if (!windowValid) {
     diagnostic.log("Window validation failed", false, { phase: "validation" });
+    addon.ztoolkit.log("[DEBUG] Window validation failed!");
     return;
   }
   
   // 等待窗口完全加载
   if (win.document.readyState !== "complete") {
     diagnostic.log("Waiting for window load", true, { readyState: win.document.readyState });
+    addon.ztoolkit.log(`[DEBUG] Document not ready, waiting... (state: ${win.document.readyState})`);
     await new Promise<void>((resolve) => {
       win.addEventListener("load", () => {
         diagnostic.log("Window load event fired", true, { readyState: "complete" });
+        addon.ztoolkit.log("[DEBUG] Window load event fired");
         resolve();
       }, { once: true });
     });
@@ -212,9 +219,19 @@ async function onMainWindowLoad(win: Window) {
     
     // 初始化UI
     diagnostic.log("Initializing UI", true, { phase: "ui-init" });
-    await diagnostic.measurePerformance("UI initialization", async () => {
-      await moduleManager.initializeUI(win);
-    });
+    addon.ztoolkit.log("[DEBUG] Starting UI initialization...");
+    addon.ztoolkit.log(`[DEBUG] Module manager initialized: ${!!moduleManager}`);
+    
+    try {
+      await diagnostic.measurePerformance("UI initialization", async () => {
+        await moduleManager.initializeUI(win);
+      });
+      addon.ztoolkit.log("[DEBUG] UI initialization completed successfully");
+    } catch (error) {
+      addon.ztoolkit.log(`[DEBUG] UI initialization error: ${error}`, 'error');
+      addon.ztoolkit.log(`[DEBUG] Error stack: ${error.stack}`, 'error');
+      throw error;
+    }
     
     // 显示加载成功提示（仅在开发模式）
     if (addon.data.env === "development") {

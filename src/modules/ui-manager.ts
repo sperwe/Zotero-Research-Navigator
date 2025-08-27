@@ -34,14 +34,19 @@ export class UIManager {
       return;
     }
 
+    addon.ztoolkit.log("[UIManager] Initialize called");
+    addon.ztoolkit.log(`[UIManager] Window location: ${win?.location?.href}`);
+    addon.ztoolkit.log(`[UIManager] Already initialized: ${this.initialized}`);
+    addon.ztoolkit.log(`[UIManager] Window in set: ${this.windows.has(win)}`);
+    
     // 验证窗口对象
     if (!win || !win.document) {
-      addon.ztoolkit.log("Invalid window object provided", 'error');
+      addon.ztoolkit.log("[UIManager] Invalid window object provided", 'error');
       return;
     }
 
     try {
-      addon.ztoolkit.log("Initializing UI components...");
+      addon.ztoolkit.log("[UIManager] Starting UI component initialization...");
       
       // 运行诊断（仅在开发模式）
       if (addon.data.env === "development") {
@@ -61,10 +66,12 @@ export class UIManager {
       
       for (const step of initSteps) {
         try {
+          addon.ztoolkit.log(`[UIManager] Initializing ${step.name}...`);
           await step.fn();
-          addon.ztoolkit.log(`Successfully initialized ${step.name}`);
+          addon.ztoolkit.log(`[UIManager] Successfully initialized ${step.name}`);
         } catch (error) {
-          addon.ztoolkit.log(`Failed to initialize ${step.name}: ${error}`, 'warn');
+          addon.ztoolkit.log(`[UIManager] Failed to initialize ${step.name}: ${error}`, 'warn');
+          addon.ztoolkit.log(`[UIManager] Error stack: ${error.stack}`, 'warn');
           // 继续初始化其他组件
         }
       }
