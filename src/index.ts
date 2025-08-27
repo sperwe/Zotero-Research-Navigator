@@ -14,47 +14,43 @@ import { setupConsolePolyfill } from "./polyfills/console";
 // 再次确保 console polyfill 被设置
 setupConsolePolyfill();
 
-const basicTool = new BasicTool();
+// Create addon instance
+const addonInstance = new Addon();
 
-// Check if we're in the bootstrap script context
-// Bootstrap.js loads this script into 'ctx' which becomes our globalThis
-if (typeof addon === "undefined" && !basicTool.getGlobal("Zotero")[config.addonInstance]) {
-  const _globalThis = basicTool.getGlobal("globalThis");
-  
-  try {
-    // Create addon instance and make it available in current context
-    _globalThis.addon = new Addon();
-    
-    // Define helper functions
-    defineGlobal("addon");
-    defineGlobal("ztoolkit", () => {
-      return _globalThis.addon.data.ztoolkit;
-    });
-    
-    // Register with Zotero
-    basicTool.getGlobal("Zotero")[config.addonInstance] = _globalThis.addon;
-    
-    const Zotero = basicTool.getGlobal("Zotero");
-    if (Zotero && Zotero.debug) {
-      Zotero.debug("[Research Navigator] Addon instance created and registered");
-      Zotero.debug("[Research Navigator] Version: " + config.version);
-      Zotero.debug("[Research Navigator] Addon ID: " + config.addonID);
-    }
-  } catch (error) {
-    const Zotero = basicTool.getGlobal("Zotero");
-    if (Zotero && Zotero.debug) {
-      Zotero.debug("[Research Navigator] Failed to create addon: " + error);
-      Zotero.debug("[Research Navigator] Stack: " + (error as any).stack);
-    }
-  }
+// Log creation
+if (typeof Zotero !== "undefined" && Zotero.debug) {
+  Zotero.debug("[Research Navigator] Creating addon instance...");
 }
 
-function defineGlobal(name: Parameters<BasicTool["getGlobal"]>[0]): void;
-function defineGlobal(name: string, getter: () => any): void;
-function defineGlobal(name: string, getter?: () => any) {
-  Object.defineProperty(_globalThis, name, {
-    get() {
-      return getter ? getter() : basicTool.getGlobal(name);
-    },
-  });
+// Make addon available in multiple locations for bootstrap.js to find
+if (typeof globalThis !== "undefined") {
+  (globalThis as any).addon = addonInstance;
+  (globalThis as any).ztoolkit = addonInstance.ztoolkit;
 }
+
+// Also try to set on the current context (which might be 'ctx' from bootstrap.js)
+try {
+  (eval("this") as any).addon = addonInstance;
+  (eval("this") as any).ztoolkit = addonInstance.ztoolkit;
+} catch (e) {
+  // eval might fail in strict mode
+}
+
+// Set on window if available
+if (typeof window !== "undefined") {
+  (window as any).addon = addonInstance;
+  (window as any).ztoolkit = addonInstance.ztoolkit;
+}
+
+// Register with Zotero
+if (typeof Zotero !== "undefined") {
+  Zotero[config.addonInstance] = addonInstance;
+  Zotero.debug("[Research Navigator] Addon instance created and registered");
+  Zotero.debug("[Research Navigator] Version: " + (config as any).version || "unknown");
+  Zotero.debug("[Research Navigator] Addon ID: " + config.addonID);
+} else {
+  console.log("[Research Navigator] Warning: Zotero not available during initialization");
+}
+
+// Export for potential use by other modules
+export { addonInstance as addon };
