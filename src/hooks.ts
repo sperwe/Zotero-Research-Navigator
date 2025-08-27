@@ -3,6 +3,8 @@ import { HistoryTracker } from "./modules/historyTracker";
 import { SearchEngine } from "./modules/searchEngine";
 import { UIManager } from "./modules/ui-manager";
 import { config } from "../package.json";
+import { diagnostic } from "./utils/diagnostic";
+import { safeLoader } from "./bootstrap/safe-loader";
 
 // 模块管理器
 class ModuleManager {
@@ -61,39 +63,133 @@ const moduleManager = new ModuleManager();
  * 插件启动钩子
  */
 async function onStartup() {
-  addon.ztoolkit.log("Starting Research Navigator...");
+  // 使用安全加载器确保只初始化一次
+  return safeLoader.initialize(async () => {
+    diagnostic.clear();
+    diagnostic.log("Plugin startup", true, { phase: "begin" });
 
-  try {
-    // 等待 Zotero 完全初始化
-    await BasicTool.waitForZotero();
-    
-    // 初始化模块
-    await moduleManager.initialize();
-    
-    // 标记插件已初始化
-    addon.data.initialized = true;
-    addon.ztoolkit.log("Research Navigator startup completed");
-  } catch (error) {
-    addon.ztoolkit.log(`Startup failed: ${error}`, 'error');
-    throw error;
-  }
+    try {
+      // 验证环境
+      const envValid = await diagnostic.validateEnvironment();
+      if (!envValid) {
+        throw new Error("Environment validation failed");
+      }
+
+      // 使用安全加载器等待 Zotero
+      diagnostic.log("Waiting for Zotero", true, { phase: "wait" });
+      const zoteroReady = await safeLoader.waitForZotero(30000);
+      
+      if (!zoteroReady) {
+        throw new Error("Zotero initialization timeout");
+      }
+      
+      // 等待 Schema 更新完成
+      if (Zotero.Schema && Zotero.Schema.schemaUpdatePromise) {
+        try {
+          await Zotero.Schema.schemaUpdatePromise;
+          diagnostic.log("Schema update completed", true, { phase: "schema" });
+        } catch (e) {
+          diagnostic.log("Schema update failed", false, { 
+            phase: "schema",
+            error: e.message 
+          });
+          // 继续执行，Schema 更新失败不应阻止插件加载
+        }
+      }
+      
+      diagnostic.log("Zotero ready", true, { 
+        version: Zotero.version,
+        platform: Zotero.platform,
+        locale: Zotero.locale
+      });
+      
+      // 初始化模块
+      diagnostic.log("Initializing modules", true, { phase: "modules" });
+      await diagnostic.measurePerformance("Module initialization", async () => {
+        await moduleManager.initialize();
+      });
+      
+      // 标记插件已初始化
+      addon.data.initialized = true;
+      diagnostic.log("Plugin startup completed", true, { 
+        phase: "complete",
+        totalTime: `${Date.now()}ms`
+      });
+      
+      addon.ztoolkit.log("Research Navigator startup completed");
+    } catch (error) {
+      diagnostic.log("Plugin startup failed", false, { 
+        phase: "error",
+        error: error.message,
+        stack: error.stack
+      }, error);
+      addon.ztoolkit.log(`Startup failed: ${error}`, 'error');
+      
+      // 生成诊断报告
+      const report = diagnostic.generateReport();
+      addon.ztoolkit.log(`Diagnostic report: ${report}`);
+      
+      throw error;
+    }
+  });
 }
 
 /**
  * 主窗口加载钩子
  */
 async function onMainWindowLoad(win: Window) {
-  addon.ztoolkit.log("Main window loaded");
+  diagnostic.log("Main window load event", true, { phase: "begin" });
+  
+  // 验证窗口对象
+  const windowValid = diagnostic.validateWindow(win);
+  if (!windowValid) {
+    diagnostic.log("Window validation failed", false, { phase: "validation" });
+    return;
+  }
   
   // 等待窗口完全加载
   if (win.document.readyState !== "complete") {
+    diagnostic.log("Waiting for window load", true, { readyState: win.document.readyState });
     await new Promise<void>((resolve) => {
-      win.addEventListener("load", () => resolve(), { once: true });
+      win.addEventListener("load", () => {
+        diagnostic.log("Window load event fired", true, { readyState: "complete" });
+        resolve();
+      }, { once: true });
     });
   }
   
-  // 额外延迟以确保 Zotero UI 完全初始化
-  await new Promise(resolve => win.setTimeout(resolve, 100));
+  // 等待 Zotero UI 元素
+  diagnostic.log("Waiting for Zotero UI", true, { phase: "ui-wait" });
+  await new Promise<void>((resolve) => {
+    let attempts = 0;
+    const checkUI = () => {
+      attempts++;
+      const doc = win.document;
+      
+      // 检查关键 UI 元素
+      const hasItemsTree = doc.getElementById("zotero-items-tree") !== null;
+      const hasPane = doc.getElementById("zotero-pane") !== null;
+      
+      if (hasItemsTree && hasPane) {
+        diagnostic.log("Zotero UI ready", true, { 
+          attempts,
+          hasItemsTree,
+          hasPane 
+        });
+        resolve();
+      } else if (attempts > 50) { // 5秒超时
+        diagnostic.log("Zotero UI timeout", false, { 
+          attempts,
+          hasItemsTree,
+          hasPane 
+        });
+        resolve();
+      } else {
+        win.setTimeout(checkUI, 100);
+      }
+    };
+    checkUI();
+  });
   
   try {
     // 确保模块已初始化
@@ -101,18 +197,39 @@ async function onMainWindowLoad(win: Window) {
     
     // 检查是否是主 Zotero 窗口
     if (win.location.href !== "chrome://zotero/content/zotero.xhtml") {
-      addon.ztoolkit.log("Not the main Zotero window, skipping UI initialization");
+      diagnostic.log("Not main window", true, { 
+        location: win.location.href,
+        action: "skip" 
+      });
       return;
     }
     
-    // 初始化UI
-    await moduleManager.initializeUI(win);
+    // 验证 UI 元素
+    diagnostic.validateUIElements(win.document);
     
-    // 显示加载成功提示
-    showWelcomeMessage(win);
+    // 初始化UI
+    diagnostic.log("Initializing UI", true, { phase: "ui-init" });
+    await diagnostic.measurePerformance("UI initialization", async () => {
+      await moduleManager.initializeUI(win);
+    });
+    
+    // 显示加载成功提示（仅在开发模式）
+    if (addon.data.env === "development") {
+      showWelcomeMessage(win);
+    }
+    
+    diagnostic.log("Main window load completed", true, { 
+      phase: "complete",
+      report: diagnostic.generateReport()
+    });
     
     addon.ztoolkit.log("UI initialization completed successfully");
   } catch (error) {
+    diagnostic.log("UI initialization failed", false, { 
+      phase: "error",
+      error: error.message 
+    }, error);
+    
     addon.ztoolkit.log(`Failed to initialize UI: ${error}`, 'error');
     
     // 只在主窗口显示错误
@@ -125,8 +242,9 @@ async function onMainWindowLoad(win: Window) {
           })
           .show();
       } catch (e) {
-        // ProgressWindow 可能还不可用
-        addon.ztoolkit.log("Could not show error notification", 'warn');
+        diagnostic.log("Could not show error notification", false, { 
+          error: e.message 
+        });
       }
     }
   }

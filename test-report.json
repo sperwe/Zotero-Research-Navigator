@@ -1,0 +1,100 @@
+{
+  "timestamp": "2025-08-27T00:41:01.052Z",
+  "stats": {
+    "total": 21,
+    "passed": 20,
+    "failed": 1,
+    "warnings": 0
+  },
+  "results": {
+    "passed": [
+      {
+        "test": "File Structure",
+        "details": "Found: build/addon/manifest.json"
+      },
+      {
+        "test": "File Structure",
+        "details": "Found: build/addon/bootstrap.js"
+      },
+      {
+        "test": "File Structure",
+        "details": "Found: build/addon/chrome.manifest"
+      },
+      {
+        "test": "File Structure",
+        "details": "Found: build/addon/content/scripts/researchnavigator.js"
+      },
+      {
+        "test": "File Structure",
+        "details": "Found: build/addon/locale/en-US/researchnavigator-addon.ftl"
+      },
+      {
+        "test": "File Structure",
+        "details": "Found: build/addon/locale/zh-CN/researchnavigator-addon.ftl"
+      },
+      {
+        "test": "Code Quality",
+        "details": "✓ Diagnostic logging"
+      },
+      {
+        "test": "Code Quality",
+        "details": "✓ Safe loader"
+      },
+      {
+        "test": "Code Quality",
+        "details": "✓ Error handling"
+      },
+      {
+        "test": "Code Quality",
+        "details": "✓ Async/await usage"
+      },
+      {
+        "test": "Code Quality",
+        "details": "✓ History tracking"
+      },
+      {
+        "test": "Code Quality",
+        "details": "✓ UI management"
+      },
+      {
+        "test": "Code Quality",
+        "details": "Script stats: 5422 lines, 174.23KB"
+      },
+      {
+        "test": "Compatibility",
+        "details": "Zotero 7 compatible: 7.0 - 7.1.*"
+      },
+      {
+        "test": "Manifest",
+        "details": "name: Zotero Research Navigator"
+      },
+      {
+        "test": "Manifest",
+        "details": "version: 2.0.3"
+      },
+      {
+        "test": "Manifest",
+        "details": "description: Track research history and enhance note navigation in Zotero"
+      },
+      {
+        "test": "Performance",
+        "details": "Startup time: 550.23ms (< 1000ms)"
+      },
+      {
+        "test": "Performance",
+        "details": "UI initialization: 332.06ms (< 500ms)"
+      },
+      {
+        "test": "Performance",
+        "details": "History loading: 151.91ms (< 200ms)"
+      }
+    ],
+    "failed": [
+      {
+        "test": "Build Process",
+        "error": "Command failed: npm run build"
+      }
+    ],
+    "warnings": []
+  }
+}
