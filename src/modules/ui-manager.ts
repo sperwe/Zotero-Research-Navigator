@@ -9,7 +9,9 @@ import { HistoryTracker } from "./historyTracker";
 import { SearchEngine } from "./searchEngine";
 import { createHistoryPanel } from "./ui-components/history-panel";
 import { createToolbarButton } from "./ui-components/toolbar-button";
+import { createToolbarButtonZ7 } from "./ui-components/toolbar-button-z7";
 import { registerMenuItems } from "./ui-components/menu-items";
+import { UIDebugger } from "./ui-debug";
 
 export class UIManager {
   private historyTracker: HistoryTracker;
@@ -40,6 +42,11 @@ export class UIManager {
 
     try {
       addon.ztoolkit.log("Initializing UI components...");
+      
+      // 运行诊断（仅在开发模式）
+      if (addon.data.env === "development") {
+        UIDebugger.runFullDiagnostic(win);
+      }
       
       // 记录窗口
       this.windows.add(win);
@@ -77,13 +84,24 @@ export class UIManager {
    */
   private async createToolbarButton(win: Window): Promise<void> {
     try {
-      const button = await createToolbarButton(win, () => {
+      // 尝试使用 Zotero 7 兼容的方法
+      let button = await createToolbarButtonZ7(win, () => {
         this.toggleHistoryPanel(win);
       });
+      
+      // 如果失败，尝试原始方法
+      if (!button) {
+        addon.ztoolkit.log("Z7 toolbar button failed, trying original method");
+        button = await createToolbarButton(win, () => {
+          this.toggleHistoryPanel(win);
+        });
+      }
       
       if (button) {
         this.uiElements.set(`toolbar-button-${win.location.href}`, button);
         addon.ztoolkit.log("Toolbar button created successfully");
+      } else {
+        addon.ztoolkit.log("Failed to create toolbar button with both methods", 'warn');
       }
     } catch (error) {
       addon.ztoolkit.log(`Failed to create toolbar button: ${error}`, 'warn');
