@@ -1,3 +1,5 @@
+addon-name = 研究导航器
+addon-description = 追踪研究历史并增强Zotero中的笔记导航
 startup-begin = 插件加载中
 startup-finish = 插件已就绪
 menuitem-label = Research Navigator

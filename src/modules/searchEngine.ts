@@ -3,7 +3,7 @@
  * Provides fuzzy search functionality for history items
  */
 
-import { HistoryNode } from './historyTracker';
+import { HistoryNode, HistoryTracker } from './historyTracker';
 
 export interface SearchResult {
   node: HistoryNode;
@@ -16,9 +16,11 @@ export interface SearchResult {
 
 export class SearchEngine {
   private searchIndex: Map<string, HistoryNode>;
+  private historyTracker: HistoryTracker;
 
-  constructor() {
+  constructor(historyTracker: HistoryTracker) {
     this.searchIndex = new Map();
+    this.historyTracker = historyTracker;
   }
 
   /**
@@ -42,9 +44,9 @@ export class SearchEngine {
   /**
    * 执行模糊搜索
    */
-  search(query: string, limit: number = 50): SearchResult[] {
+  search(query: string, limit: number = 50): HistoryNode[] {
     if (!query || query.trim().length === 0) {
-      return [];
+      return this.historyTracker.getHistoryTree();
     }
 
     const results: SearchResult[] = [];
@@ -61,7 +63,7 @@ export class SearchEngine {
     // 按分数排序
     results.sort((a, b) => b.score - a.score);
 
-    return results.slice(0, limit);
+    return results.slice(0, limit).map(r => r.node);
   }
 
   /**

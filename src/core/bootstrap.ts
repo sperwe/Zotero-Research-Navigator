@@ -1,0 +1,106 @@
+/**
+ * Bootstrap initialization for Research Navigator
+ * 提供插件的核心初始化逻辑
+ */
+
+import { BasicTool } from "zotero-plugin-toolkit";
+import { config } from "../../package.json";
+import Addon from "../addon";
+
+export interface BootstrapContext {
+  rootURI: string;
+  version: string;
+  resourceURI: string;
+}
+
+/**
+ * 插件启动入口
+ */
+export async function startup(
+  { rootURI }: BootstrapContext,
+  reason: number
+): Promise<void> {
+  await BasicTool.waitForZotero();
+  
+  const Zotero = BasicTool.getZotero();
+  
+  // 创建并注册插件实例
+  if (!Zotero[config.addonInstance]) {
+    const addon = new Addon();
+    Zotero[config.addonInstance] = addon;
+    
+    // 设置全局引用
+    if (typeof globalThis !== "undefined") {
+      globalThis.addon = addon;
+      globalThis.ztoolkit = addon.ztoolkit;
+    }
+    
+    // 调用启动钩子
+    await addon.hooks.onStartup();
+  }
+}
+
+/**
+ * 插件关闭入口
+ */
+export function shutdown(
+  { rootURI }: BootstrapContext,
+  reason: number
+): void {
+  const Zotero = BasicTool.getZotero();
+  const addon = Zotero[config.addonInstance];
+  
+  if (addon) {
+    addon.hooks.onShutdown();
+    delete Zotero[config.addonInstance];
+    
+    // 清理全局引用
+    if (typeof globalThis !== "undefined") {
+      delete globalThis.addon;
+      delete globalThis.ztoolkit;
+    }
+  }
+}
+
+/**
+ * 插件卸载入口
+ */
+export function uninstall(
+  { rootURI }: BootstrapContext,
+  reason: number
+): void {
+  // 执行卸载清理
+  const Zotero = BasicTool.getZotero();
+  
+  // 清理偏好设置
+  if (Zotero.Prefs) {
+    const branch = Zotero.Prefs.getBranch(config.prefsPrefix);
+    if (branch) {
+      branch.deleteBranch("");
+    }
+  }
+}
+
+/**
+ * 主窗口加载事件
+ */
+export function onMainWindowLoad(win: Window): void {
+  const Zotero = BasicTool.getZotero();
+  const addon = Zotero[config.addonInstance];
+  
+  if (addon) {
+    addon.hooks.onMainWindowLoad(win);
+  }
+}
+
+/**
+ * 主窗口卸载事件
+ */
+export function onMainWindowUnload(win: Window): void {
+  const Zotero = BasicTool.getZotero();
+  const addon = Zotero[config.addonInstance];
+  
+  if (addon) {
+    addon.hooks.onMainWindowUnload(win);
+  }
+}

@@ -1,3 +1,5 @@
+addon-name = Research Navigator
+addon-description = Track research history and enhance note navigation in Zotero
 startup-begin = Addon is loading
 startup-finish = Addon is ready
 menuitem-label = Research Navigator

@@ -156,4 +156,16 @@ export class HistoryTracker {
     this.saveHistory();
     ztoolkit.log('[Research Navigator] History tracker destroyed');
   }
+
+  getHistoryTree(): HistoryNode[] {
+    return this.getHistory();
+  }
+
+  exportHistory(): any {
+    return {
+      version: "1.0",
+      exportDate: new Date().toISOString(),
+      items: Array.from(this.historyTree.values())
+    };
+  }
 }
