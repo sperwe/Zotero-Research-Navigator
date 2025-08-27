@@ -88,24 +88,25 @@ export function uninstall(
 
 /**
  * 主窗口加载事件
+ * 注意：Zotero 传入的是 { window } 对象，不是直接的 window
  */
-export function onMainWindowLoad(win: Window): void {
+export function onMainWindowLoad({ window }: { window: Window }): void {
   const Zotero = BasicTool.getZotero();
   const addon = Zotero[config.addonInstance];
   
   if (addon) {
-    addon.hooks.onMainWindowLoad(win);
+    addon.hooks.onMainWindowLoad(window);
   }
 }
 
 /**
  * 主窗口卸载事件
  */
-export function onMainWindowUnload(win: Window): void {
+export function onMainWindowUnload({ window }: { window: Window }): void {
   const Zotero = BasicTool.getZotero();
   const addon = Zotero[config.addonInstance];
   
   if (addon) {
-    addon.hooks.onMainWindowUnload(win);
+    addon.hooks.onMainWindowUnload(window);
   }
 }

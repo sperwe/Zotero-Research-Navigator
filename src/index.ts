@@ -76,3 +76,6 @@ if (typeof Zotero !== "undefined") {
 
 // Export for potential use by other modules
 export { addonInstance as addon };
+
+// 导入 bootstrap 导出，确保函数在全局作用域中可用
+import "./bootstrap-exports";

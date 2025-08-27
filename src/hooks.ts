@@ -109,33 +109,8 @@ async function onStartup() {
         await moduleManager.initialize();
       });
       
-      // 获取主窗口并初始化 UI
-      diagnostic.log("Getting main window", true, { phase: "window" });
-      const win = Zotero.getMainWindow();
-      if (win && win.document.readyState === "complete") {
-        diagnostic.log("Main window ready, initializing UI", true, { phase: "ui-init" });
-        try {
-          await moduleManager.initializeUI(win);
-          diagnostic.log("UI initialized successfully", true, { phase: "ui-init-complete" });
-        } catch (error) {
-          diagnostic.log("UI initialization failed", false, { error: error.message });
-          addon.ztoolkit.log(`UI initialization failed: ${error}`, 'error');
-        }
-      } else if (win) {
-        diagnostic.log("Main window not ready, registering load listener", true, { phase: "ui-init-delayed" });
-        win.addEventListener("load", async () => {
-          diagnostic.log("Main window load event fired, initializing UI", true, { phase: "ui-init-onload" });
-          try {
-            await moduleManager.initializeUI(win);
-            diagnostic.log("UI initialized successfully after load", true, { phase: "ui-init-complete" });
-          } catch (error) {
-            diagnostic.log("UI initialization failed after load", false, { error: error.message });
-            addon.ztoolkit.log(`UI initialization failed after load: ${error}`, 'error');
-          }
-        }, { once: true });
-      } else {
-        diagnostic.log("No main window available", false, { phase: "ui-init-nowindow" });
-      }
+      // 注意：UI 初始化应该在 onMainWindowLoad 中进行，而不是在这里
+      // 因为插件在 Sandbox 中运行，必须使用 Zotero 传入的 window 参数
       
       // 标记插件已初始化
       addon.data.initialized = true;
