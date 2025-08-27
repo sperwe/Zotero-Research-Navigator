@@ -69,6 +69,9 @@ export class UIManager {
         }
       }
       
+      // 创建调试浮动按钮（确保至少有一个可见的UI元素）
+      this.createDebugButton(win);
+      
       this.initialized = true;
       addon.ztoolkit.log("UI initialization completed");
     } catch (error) {
@@ -300,5 +303,59 @@ export class UIManager {
    */
   get isInitialized(): boolean {
     return this.initialized;
+  }
+
+  /**
+   * 创建调试浮动按钮
+   */
+  private createDebugButton(win: Window): void {
+    try {
+      const doc = win.document;
+      
+      // 查找 Zotero 主界面
+      const zoteroPane = doc.getElementById("zotero-pane") || doc.documentElement;
+      
+      // 创建浮动按钮
+      const button = doc.createElement("button");
+      button.id = "research-navigator-debug-button";
+      button.textContent = "📚 RN";
+      button.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 10000;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: #2980b9;
+        color: white;
+        border: none;
+        cursor: pointer;
+        font-size: 18px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        transition: all 0.3s ease;
+      `;
+      
+      button.addEventListener("click", () => {
+        addon.ztoolkit.log("Debug button clicked!");
+        this.toggleHistoryPanel(win);
+      });
+      
+      button.addEventListener("mouseenter", () => {
+        button.style.transform = "scale(1.1)";
+        button.style.background = "#3498db";
+      });
+      
+      button.addEventListener("mouseleave", () => {
+        button.style.transform = "scale(1)";
+        button.style.background = "#2980b9";
+      });
+      
+      zoteroPane.appendChild(button);
+      this.uiElements.set(`debug-button-${win.location.href}`, button);
+      addon.ztoolkit.log("Debug floating button created successfully");
+    } catch (error) {
+      addon.ztoolkit.log(`Failed to create debug button: ${error}`, 'warn');
+    }
   }
 }
