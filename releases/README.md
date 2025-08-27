@@ -1,65 +1,52 @@
 # Research Navigator Plugin Releases
 
-## Version 2.0.3 Releases
+## 有效版本
 
-### Latest Stable: `zotero-research-navigator-v2.0.3-ui-fix.xpi`
-**Release Date**: 2024-08-27
+### v2.0.3-functional (最新版本)
+- **文件**: `zotero-research-navigator-v2.0.3-functional.xpi`
+- **状态**: ✅ 完全可用
+- **功能**: 
+  - 历史记录追踪
+  - 历史面板（可关闭）
+  - 右键菜单功能
+  - 通知提示
+  - 双击打开文献
+- **说明**: [FUNCTIONAL_VERSION.md](FUNCTIONAL_VERSION.md)
 
-This is the recommended version with all fixes applied:
-- ✅ Fixed bootstrap.js context issue (addon instance not found)
-- ✅ Enhanced UI component creation for Zotero 7 compatibility
-- ✅ Added floating button fallback for toolbar issues
-- ✅ Comprehensive error handling and diagnostic system
-- ✅ Professional logging and performance monitoring
+### v2.0.3-minimal-working
+- **文件**: `zotero-research-navigator-v2.0.3-minimal-working.xpi`
+- **状态**: ✅ UI 可见（基础版本）
+- **功能**: 
+  - 蓝色浮动按钮
+  - 工具菜单项
+  - 右键菜单项
+  - 基本的测试对话框
+- **说明**: [MINIMAL_WORKING_VERSION.md](MINIMAL_WORKING_VERSION.md)
 
-**Key Features**:
-- Multiple toolbar location attempts
-- Floating button as fallback when toolbars unavailable
-- Debug mode with full diagnostic reporting
-- Improved Zotero 7 compatibility
+## 安装说明
 
-### Previous Builds
+1. 下载最新的 `zotero-research-navigator-v2.0.3-functional.xpi`
+2. 打开 Zotero
+3. 工具 → 插件 → 齿轮图标 → Install Add-on From File
+4. 选择下载的 XPI 文件
+5. 重启 Zotero
 
-#### `zotero-research-navigator-v2.0.3-fixed.xpi`
-- Fixed the critical `ctx._globalThis.addon` undefined error
-- Basic functionality restored
+## 使用说明
 
-#### `zotero-research-navigator-v2.0.3-final.xpi`
-- Added professional diagnostic system
-- Enhanced initialization robustness
+安装后您应该看到：
+- 右下角的蓝色圆形按钮（📚）
+- 工具菜单中的 "Research Navigator - History Panel"
+- 文献右键菜单中的 "Add to Research History"
 
-#### `zotero-research-navigator-v2.0.3-refactored.xpi`
-- Major refactoring of UI components
-- Modularized architecture
+点击蓝色按钮或使用菜单项可打开历史面板。
 
-#### `zotero-research-navigator-v2.0.2.xpi`
-- Initial refactored version
-- Base functionality
+## 开发历程
 
-## Installation
+这个插件经历了多次重构才成功适配 Zotero 7：
+- 最初使用 TypeScript + zotero-plugin-toolkit
+- 遇到 Zotero 7 的 Sandbox 隔离问题
+- 最终使用纯 JavaScript 重写 bootstrap.js
+- 参考了 zotero-style 插件的架构
 
-1. Download the latest `.xpi` file (recommended: `v2.0.3-ui-fix.xpi`)
-2. In Zotero, go to Tools → Add-ons
-3. Click the gear icon → Install Add-on From File
-4. Select the downloaded `.xpi` file
-5. Restart Zotero
-
-## Troubleshooting
-
-If you don't see the plugin UI:
-1. Try the keyboard shortcut: `Ctrl+Shift+H` (Windows/Linux) or `Cmd+Shift+H` (Mac)
-2. Check Tools menu → Research Navigator
-3. See [UI Troubleshooting Guide](../docs/UI_TROUBLESHOOTING_GUIDE.md)
-
-## Known Issues
-
-- Zotero 7 beta has different toolbar structures that may affect button placement
-- Some environments may show a floating button instead of toolbar button
-- WebSocket errors are Zotero internal issues, not plugin-related
-
-## Support
-
-For issues or questions:
-1. Check the Error Console (Tools → Developer → Error Console)
-2. Run diagnostic commands from the troubleshooting guide
-3. Report issues with console logs and Zotero version info
+---
+更新日期：2025-01-27
