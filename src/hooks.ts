@@ -85,25 +85,50 @@ async function onStartup() {
 async function onMainWindowLoad(win: Window) {
   addon.ztoolkit.log("Main window loaded");
   
+  // 等待窗口完全加载
+  if (win.document.readyState !== "complete") {
+    await new Promise<void>((resolve) => {
+      win.addEventListener("load", () => resolve(), { once: true });
+    });
+  }
+  
+  // 额外延迟以确保 Zotero UI 完全初始化
+  await new Promise(resolve => win.setTimeout(resolve, 100));
+  
   try {
     // 确保模块已初始化
     await moduleManager.initialize();
+    
+    // 检查是否是主 Zotero 窗口
+    if (win.location.href !== "chrome://zotero/content/zotero.xhtml") {
+      addon.ztoolkit.log("Not the main Zotero window, skipping UI initialization");
+      return;
+    }
     
     // 初始化UI
     await moduleManager.initializeUI(win);
     
     // 显示加载成功提示
     showWelcomeMessage(win);
+    
+    addon.ztoolkit.log("UI initialization completed successfully");
   } catch (error) {
     addon.ztoolkit.log(`Failed to initialize UI: ${error}`, 'error');
     
-    // 显示错误提示
-    new ProgressWindowHelper(config.addonName)
-      .createLine({
-        text: "Failed to initialize Research Navigator",
-        type: "error"
-      })
-      .show();
+    // 只在主窗口显示错误
+    if (win.location.href === "chrome://zotero/content/zotero.xhtml") {
+      try {
+        new ProgressWindowHelper(config.addonName)
+          .createLine({
+            text: "Failed to initialize Research Navigator",
+            type: "error"
+          })
+          .show();
+      } catch (e) {
+        // ProgressWindow 可能还不可用
+        addon.ztoolkit.log("Could not show error notification", 'warn');
+      }
+    }
   }
 }
 
@@ -157,22 +182,30 @@ function onPrefsEvent(type: string, data: { window?: Window }) {
  * 显示欢迎消息
  */
 function showWelcomeMessage(win: Window) {
-  const Zotero = BasicTool.getZotero();
-  
   // 只在开发模式下显示
   if (addon.data.env === "development") {
     win.setTimeout(() => {
-      const progressWindow = new ProgressWindowHelper(config.addonName);
-      progressWindow
-        .createLine({
-          text: "Research Navigator loaded successfully!",
-          type: "success",
-          progress: 100
-        })
-        .show();
-      
-      // 3秒后自动关闭
-      win.setTimeout(() => progressWindow.close(), 3000);
+      try {
+        const progressWindow = new ProgressWindowHelper(config.addonName);
+        progressWindow
+          .createLine({
+            text: "Research Navigator loaded successfully!",
+            type: "success",
+            progress: 100
+          })
+          .show();
+        
+        // 3秒后自动关闭
+        win.setTimeout(() => {
+          try {
+            progressWindow.close();
+          } catch (e) {
+            // 窗口可能已经关闭
+          }
+        }, 3000);
+      } catch (error) {
+        addon.ztoolkit.log("Could not show welcome message", 'warn');
+      }
     }, 1000);
   }
 }

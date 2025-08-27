@@ -14,8 +14,10 @@ export async function createToolbarButton(
   
   // 查找合适的工具栏位置
   const toolbarLocations = [
+    { id: "zotero-tb-advanced-search", desc: "search toolbar" },
     { id: "zotero-items-toolbar", desc: "items toolbar" },
     { id: "zotero-toolbar", desc: "main toolbar" },
+    { id: "zotero-tb-actions", desc: "actions toolbar" },
     { id: "nav-bar", desc: "navigation bar" }
   ];
   

@@ -32,28 +32,42 @@ export class UIManager {
       return;
     }
 
+    // 验证窗口对象
+    if (!win || !win.document) {
+      addon.ztoolkit.log("Invalid window object provided", 'error');
+      return;
+    }
+
     try {
       addon.ztoolkit.log("Initializing UI components...");
       
       // 记录窗口
       this.windows.add(win);
       
-      // 创建工具栏按钮
-      await this.createToolbarButton(win);
+      // 逐步初始化各个组件，捕获单个组件的错误
+      const initSteps = [
+        { name: "toolbar button", fn: () => this.createToolbarButton(win) },
+        { name: "history panel", fn: () => this.createHistoryPanel(win) },
+        { name: "menu items", fn: () => this.registerMenuItems(win) },
+        { name: "shortcuts", fn: () => this.registerShortcuts(win) }
+      ];
       
-      // 创建历史面板
-      await this.createHistoryPanel(win);
-      
-      // 注册菜单项
-      await this.registerMenuItems(win);
-      
-      // 注册快捷键
-      await this.registerShortcuts(win);
+      for (const step of initSteps) {
+        try {
+          await step.fn();
+          addon.ztoolkit.log(`Successfully initialized ${step.name}`);
+        } catch (error) {
+          addon.ztoolkit.log(`Failed to initialize ${step.name}: ${error}`, 'warn');
+          // 继续初始化其他组件
+        }
+      }
       
       this.initialized = true;
       addon.ztoolkit.log("UI initialization completed");
     } catch (error) {
       addon.ztoolkit.log(`UI initialization failed: ${error}`, 'error');
+      // 清理已添加的窗口
+      this.windows.delete(win);
       throw error;
     }
   }
