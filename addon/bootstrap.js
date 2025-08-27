@@ -1125,6 +1125,8 @@ function createTreePanel(window) {
     display: none;
     min-width: 300px;
     max-width: 800px;
+    display: flex;
+    flex-direction: column;
   `;
   
   // 标题栏（可拖动）
@@ -1136,6 +1138,7 @@ function createTreePanel(window) {
     align-items: center;
     border-radius: 6px 6px 0 0;
     cursor: move;
+    flex: 0 0 auto;
   `;
   
   // 拖动功能
@@ -1205,7 +1208,7 @@ function createTreePanel(window) {
   
   // 工具栏
   const toolbar = doc.createXULElement('hbox');
-  toolbar.style.cssText = 'padding: 8px; border-bottom: 1px solid #e0e0e0; background: #f8f8f8;';
+  toolbar.style.cssText = 'padding: 8px; border-bottom: 1px solid #e0e0e0; background: #f8f8f8; flex: 0 0 auto;';
   
   // 统计信息
   const statsLabel = doc.createXULElement('label');
@@ -1259,12 +1262,12 @@ function createTreePanel(window) {
   const scrollbox = doc.createXULElement('scrollbox');
   scrollbox.setAttribute('flex', '1');
   scrollbox.setAttribute('orient', 'vertical');
-  scrollbox.style.cssText = 'overflow: auto; background: #fafafa;';
+  scrollbox.style.cssText = 'overflow: auto; background: #fafafa; min-height: 0; flex: 1 1 auto;';
   
   // 树容器
   const treeContainer = doc.createXULElement('vbox');
   treeContainer.id = 'research-navigator-tree-container';
-  treeContainer.style.cssText = 'padding: 10px; min-width: max-content;';
+  treeContainer.style.cssText = 'padding: 8px; min-width: max-content;';
   
   scrollbox.appendChild(treeContainer);
   
