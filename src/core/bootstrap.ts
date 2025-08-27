@@ -6,6 +6,7 @@
 import { BasicTool } from "zotero-plugin-toolkit";
 import { config } from "../../package.json";
 import Addon from "../addon";
+import { safeLoader } from "../bootstrap/safe-loader";
 
 export interface BootstrapContext {
   rootURI: string;
@@ -20,7 +21,11 @@ export async function startup(
   { rootURI }: BootstrapContext,
   reason: number
 ): Promise<void> {
-  await BasicTool.waitForZotero();
+  // Use safeLoader instead of BasicTool.waitForZotero
+  const isReady = await safeLoader.waitForZotero();
+  if (!isReady) {
+    throw new Error("Zotero initialization timeout");
+  }
   
   const Zotero = BasicTool.getZotero();
   
@@ -31,8 +36,8 @@ export async function startup(
     
     // 设置全局引用
     if (typeof globalThis !== "undefined") {
-      globalThis.addon = addon;
-      globalThis.ztoolkit = addon.ztoolkit;
+      (globalThis as any).addon = addon;
+      (globalThis as any).ztoolkit = addon.ztoolkit;
     }
     
     // 调用启动钩子
@@ -56,8 +61,8 @@ export function shutdown(
     
     // 清理全局引用
     if (typeof globalThis !== "undefined") {
-      delete globalThis.addon;
-      delete globalThis.ztoolkit;
+      delete (globalThis as any).addon;
+      delete (globalThis as any).ztoolkit;
     }
   }
 }

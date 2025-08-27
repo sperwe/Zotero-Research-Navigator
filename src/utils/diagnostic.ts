@@ -3,7 +3,7 @@
  * 提供详细的运行时诊断和验证功能
  */
 
-import { config } from "../../package.json";
+import { config, version } from "../../package.json";
 
 export interface DiagnosticInfo {
   timestamp: number;
@@ -222,7 +222,7 @@ export class DiagnosticTool {
     const report = {
       plugin: {
         name: config.addonName,
-        version: config.version || "unknown",
+        version: version || "unknown",
         id: config.addonID
       },
       environment: {

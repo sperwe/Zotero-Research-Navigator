@@ -27,9 +27,9 @@ export function getSafeZotero(): any {
   }
   
   // Check globalThis.Zotero
-  if (typeof globalThis !== "undefined" && globalThis.Zotero) {
-    cachedZotero = globalThis.Zotero;
-    return globalThis.Zotero;
+  if (typeof globalThis !== "undefined" && (globalThis as any).Zotero) {
+    cachedZotero = (globalThis as any).Zotero;
+    return (globalThis as any).Zotero;
   }
   
   // As last resort, try ChromeUtils but with protection

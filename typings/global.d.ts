@@ -1,6 +1,7 @@
 declare global {
   const Zotero: any;
   const ChromeUtils: any;
+  const Components: any;
   const ztoolkit: any;
   const addon: any;
   const __env__: "development" | "production";

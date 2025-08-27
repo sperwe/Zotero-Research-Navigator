@@ -393,8 +393,8 @@ function updateHistoryDisplay(
     
     // 显示搜索结果
     for (const result of results) {
-      const node = createHistoryNodeElement(doc, result.node, () => {
-        openItem(result.node.itemID);
+      const node = createHistoryNodeElement(doc, result, () => {
+        openItem(result.itemID);
       });
       treeContainer.appendChild(node);
     }

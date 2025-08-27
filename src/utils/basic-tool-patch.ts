@@ -14,9 +14,9 @@ export function patchBasicTool() {
     // In Zotero plugin context, Zotero should be available
     const win = typeof window !== "undefined" ? window : globalThis;
     
-    if (win.Zotero) {
+    if ((win as any).Zotero) {
       // Make sure it's available globally
-      (globalThis as any).Zotero = win.Zotero;
+      (globalThis as any).Zotero = (win as any).Zotero;
       return;
     }
     
