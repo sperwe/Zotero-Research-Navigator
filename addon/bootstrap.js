@@ -128,11 +128,12 @@ var ResearchNavigator = {
   notifierID: null,
   
   // 面板设置
-  panelWidth: 350,
+  panelWidth: 450,
   panelTop: 100,
   panelRight: 10,
   isResizing: false,
   isDragging: false,
+  wrapTitles: false,          // 标题换行显示
   
   // 调试日志
   debug(msg) {
@@ -576,8 +577,8 @@ var ResearchNavigator = {
     
     if (sessions.length === 0) {
       const emptyMsg = doc.createXULElement('label');
-      emptyMsg.setAttribute('value', 'No history yet. Start browsing!');
-      emptyMsg.style.cssText = 'padding: 10px; color: #999; font-size: 0.9em;';
+      emptyMsg.setAttribute('value', 'No history yet. Start browsing items to build your research tree!');
+      emptyMsg.style.cssText = 'padding: 20px; color: #666; text-align: center; white-space: normal;';
       treeContainer.appendChild(emptyMsg);
       return;
     }
@@ -591,40 +592,42 @@ var ResearchNavigator = {
     // 更新统计信息
     const statsLabel = doc.getElementById('research-navigator-stats');
     if (statsLabel) {
-      statsLabel.setAttribute('value', `${this.nodeMap.size} items`);
+      statsLabel.setAttribute('value', `Total: ${this.nodeMap.size} items, ${sessions.length} sessions`);
     }
   },
   
-  // 创建会话元素（紧凑版）
+  // 创建会话元素
   createSessionElement(doc, session, isExpanded) {
     const sessionEl = doc.createXULElement('vbox');
-    sessionEl.style.cssText = 'margin-bottom: 8px;';
+    sessionEl.className = 'tree-session';
+    sessionEl.style.cssText = 'margin-bottom: 15px;';
     
-    // 会话标题（极简）
+    // 会话标题
     const headerEl = doc.createXULElement('hbox');
     headerEl.style.cssText = `
       cursor: pointer; 
-      padding: 4px 8px; 
-      background: #f0f0f0;
-      border-radius: 3px;
+      padding: 8px 12px; 
+      background: linear-gradient(to right, #f5f5f5, #f0f0f0);
+      border-radius: 4px;
+      margin-bottom: 5px;
       align-items: center;
-      min-height: 20px;
+      min-width: 0;
     `;
     
     const toggleEl = doc.createXULElement('label');
-    toggleEl.setAttribute('value', isExpanded ? '▾' : '▸');
-    toggleEl.style.cssText = 'width: 12px; color: #666; font-size: 0.8em;';
+    toggleEl.setAttribute('value', isExpanded ? '▼' : '▶');
+    toggleEl.style.cssText = 'width: 20px; color: #666; flex-shrink: 0;';
     
     const titleEl = doc.createXULElement('label');
     const sessionDate = new Date(session.timestamp);
-    const timeStr = sessionDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    titleEl.setAttribute('value', timeStr);
+    const dateStr = sessionDate.toLocaleDateString() + ' ' + sessionDate.toLocaleTimeString();
+    titleEl.setAttribute('value', `Session - ${dateStr}`);
     titleEl.setAttribute('flex', '1');
-    titleEl.style.cssText = 'font-size: 0.85em; color: #555;';
+    titleEl.style.cssText = 'font-weight: bold; color: #333; overflow: hidden; text-overflow: ellipsis;';
     
     const countEl = doc.createXULElement('label');
-    countEl.setAttribute('value', `${session.roots.length}`);
-    countEl.style.cssText = 'color: #999; font-size: 0.8em;';
+    countEl.setAttribute('value', `(${session.roots.length} paths)`);
+    countEl.style.cssText = 'color: #666; font-size: 0.9em; flex-shrink: 0;';
     
     headerEl.appendChild(toggleEl);
     headerEl.appendChild(titleEl);
@@ -633,17 +636,17 @@ var ResearchNavigator = {
     // 树容器
     const treeEl = doc.createXULElement('vbox');
     treeEl.style.cssText = isExpanded ? 
-      'margin-left: 6px; padding-left: 6px; border-left: 1px solid #ddd;' : 
+      'margin-left: 10px; padding-left: 10px; border-left: 2px solid #e0e0e0;' : 
       'display: none;';
     
     // 点击展开/折叠
     headerEl.addEventListener('click', () => {
       if (treeEl.style.display === 'none') {
         treeEl.style.display = '';
-        toggleEl.setAttribute('value', '▾');
+        toggleEl.setAttribute('value', '▼');
       } else {
         treeEl.style.display = 'none';
-        toggleEl.setAttribute('value', '▸');
+        toggleEl.setAttribute('value', '▶');
       }
     });
     
@@ -659,19 +662,20 @@ var ResearchNavigator = {
     return sessionEl;
   },
   
-  // 创建节点元素（极度紧凑版）
+  // 创建节点元素
   createNodeElement(doc, node, level) {
     const nodeEl = doc.createXULElement('vbox');
-    nodeEl.style.cssText = `margin-left: ${level * 12}px; margin-bottom: 1px;`;
+    nodeEl.style.cssText = `margin-left: ${level * 20}px; margin-bottom: 2px;`;
     
     // 节点内容
     const contentEl = doc.createXULElement('hbox');
     contentEl.style.cssText = `
       cursor: pointer; 
-      padding: 2px 4px; 
+      padding: 4px 8px; 
       align-items: center;
-      border-radius: 2px;
-      min-height: 18px;
+      border-radius: 3px;
+      transition: background 0.2s;
+      min-width: 0;
     `;
     
     // 鼠标悬停效果
@@ -685,15 +689,15 @@ var ResearchNavigator = {
     // 当前节点高亮
     if (node === this.currentNode) {
       contentEl.style.background = '#d2e3fc';
-      contentEl.style.borderLeft = '2px solid #1976d2';
-      contentEl.style.paddingLeft = '2px';
+      contentEl.style.border = '1px solid #1976d2';
+      contentEl.style.padding = '3px 7px';
     }
     
-    // 展开/折叠图标（极小）
+    // 展开/折叠图标
     if (node.children.length > 0) {
       const toggleEl = doc.createXULElement('label');
-      toggleEl.setAttribute('value', node.expanded ? '▾' : '▸');
-      toggleEl.style.cssText = 'width: 10px; cursor: pointer; color: #999; font-size: 0.7em;';
+      toggleEl.setAttribute('value', node.expanded ? '▼' : '▶');
+      toggleEl.style.cssText = 'width: 16px; cursor: pointer; color: #666; flex-shrink: 0; font-size: 0.8em;';
       toggleEl.addEventListener('click', (e) => {
         e.stopPropagation();
         node.expanded = !node.expanded;
@@ -701,33 +705,58 @@ var ResearchNavigator = {
       });
       contentEl.appendChild(toggleEl);
     } else {
-      // 无子节点时用更小的占位
       const spacerEl = doc.createXULElement('label');
       spacerEl.setAttribute('value', '');
-      spacerEl.style.cssText = 'width: 10px;';
+      spacerEl.style.cssText = 'width: 16px; flex-shrink: 0;';
       contentEl.appendChild(spacerEl);
     }
     
-    // 标题（极度精简）
-    const titleEl = doc.createXULElement('label');
-    const displayTitle = node.title || 'Loading...';
+    // 层级深度指示器（用点替代关系图标，节省空间）
+    if (level > 0) {
+      const depthEl = doc.createXULElement('label');
+      depthEl.setAttribute('value', '•');
+      depthEl.style.cssText = 'width: 8px; color: #999; flex-shrink: 0; margin: 0 2px;';
+      contentEl.appendChild(depthEl);
+    }
     
-    // 极限截断
-    const maxLength = Math.max(20, 35 - level * 4);
-    const truncatedTitle = displayTitle.length > maxLength ? 
-      displayTitle.substr(0, maxLength - 1) + '…' : displayTitle;
+    // 文献类型图标
+    const iconEl = doc.createXULElement('label');
+    const icon = this.getItemTypeIcon(node.itemType);
+    iconEl.setAttribute('value', icon);
+    iconEl.style.cssText = 'width: 20px; font-size: 14px; flex-shrink: 0;';
+    contentEl.appendChild(iconEl);
     
-    titleEl.setAttribute('value', truncatedTitle);
-    titleEl.setAttribute('flex', '1');
-    titleEl.setAttribute('tooltiptext', `${node.title}\n${node.creators}\n${node.year}`);
-    titleEl.style.cssText = 'font-size: 0.85em; color: #333; overflow: hidden;';
-    contentEl.appendChild(titleEl);
+    // 标题处理
+    if (this.wrapTitles) {
+      // 换行显示模式
+      const titleEl = doc.createXULElement('description');
+      titleEl.textContent = node.title || 'Loading...';
+      titleEl.setAttribute('flex', '1');
+      titleEl.setAttribute('tooltiptext', `${node.title}\n${node.creators}\n${node.year}`);
+      titleEl.style.cssText = 'color: #333; white-space: normal; word-wrap: break-word;';
+      contentEl.appendChild(titleEl);
+    } else {
+      // 单行显示模式
+      const titleEl = doc.createXULElement('label');
+      const displayTitle = node.title || 'Loading...';
+      
+      // 简单截断
+      const maxLength = Math.max(30, 50 - level * 3);
+      const truncatedTitle = displayTitle.length > maxLength ? 
+        displayTitle.substr(0, maxLength) + '...' : displayTitle;
+      
+      titleEl.setAttribute('value', truncatedTitle);
+      titleEl.setAttribute('flex', '1');
+      titleEl.setAttribute('tooltiptext', `${node.title}\n${node.creators}\n${node.year}\n\nRelation: ${this.getRelationLabel(node.relationType)}`);
+      titleEl.style.cssText = 'color: #333; overflow: hidden; text-overflow: ellipsis; min-width: 0;';
+      contentEl.appendChild(titleEl);
+    }
     
-    // 访问次数（超紧凑）
+    // 访问次数
     if (node.visitCount > 1) {
       const countEl = doc.createXULElement('label');
-      countEl.setAttribute('value', `${node.visitCount}`);
-      countEl.style.cssText = 'color: #aaa; margin-left: 2px; font-size: 0.7em;';
+      countEl.setAttribute('value', `${node.visitCount}x`);
+      countEl.style.cssText = 'color: #999; margin-left: 4px; font-size: 0.8em; flex-shrink: 0;';
       contentEl.appendChild(countEl);
     }
     
@@ -959,7 +988,7 @@ function addUI(window) {
       const items = window.ZoteroPane.getSelectedItems();
       if (items.length > 0) {
         ResearchNavigator.addToTreeHistory(items[0], RelationType.MANUAL);
-        showNotification(window, `Added: ${items[0].getField('title')}`);
+        showNotification(window, `Added to research path: ${items[0].getField('title')}`);
       }
     });
     itemMenu.appendChild(addMenuItem);
@@ -974,7 +1003,7 @@ function addUI(window) {
       if (items.length > 0) {
         ResearchNavigator.currentNode = null;
         ResearchNavigator.addToTreeHistory(items[0], RelationType.MANUAL);
-        showNotification(window, `New path: ${items[0].getField('title')}`);
+        showNotification(window, `Started new research path from: ${items[0].getField('title')}`);
       }
     });
     itemMenu.appendChild(newPathMenuItem);
@@ -1071,7 +1100,7 @@ function addNavigationToolbar(window) {
   }
 }
 
-// 创建树形历史面板（简化版，确保滚动条工作）
+// 创建树形历史面板
 function createTreePanel(window) {
   const doc = window.document;
   
@@ -1079,50 +1108,46 @@ function createTreePanel(window) {
     return;
   }
   
-  // 使用 HTML div 而不是 XUL，以确保滚动条正常工作
-  const panel = doc.createElement('div');
-  panel.id = 'research-navigator-panel';
-  panel.style.cssText = `
+  // 外层容器
+  const panelWrapper = doc.createXULElement('vbox');
+  panelWrapper.id = 'research-navigator-panel';
+  panelWrapper.style.cssText = `
     position: fixed;
     right: ${ResearchNavigator.panelRight}px;
     top: ${ResearchNavigator.panelTop}px;
     width: ${ResearchNavigator.panelWidth}px;
-    height: 500px;
+    height: 600px;
     background: white;
     border: 1px solid #ccc;
-    border-radius: 4px;
+    border-radius: 6px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     z-index: 1000;
     display: none;
-    min-width: 280px;
-    max-width: 600px;
-    display: flex;
-    flex-direction: column;
+    min-width: 300px;
+    max-width: 800px;
   `;
   
-  // 标题栏
-  const header = doc.createElement('div');
+  // 标题栏（可拖动）
+  const header = doc.createXULElement('hbox');
   header.style.cssText = `
     background: linear-gradient(to bottom, #4CAF50, #45a049);
     color: white;
-    padding: 8px 10px;
-    display: flex;
+    padding: 10px 12px;
     align-items: center;
-    border-radius: 4px 4px 0 0;
+    border-radius: 6px 6px 0 0;
     cursor: move;
-    flex-shrink: 0;
   `;
   
   // 拖动功能
   header.addEventListener('mousedown', (e) => {
     if (e.target !== header && e.target.parentNode !== header) return;
-    if (e.button !== 0) return;
+    if (e.button !== 0) return; // 只响应左键
     
     ResearchNavigator.isDragging = true;
     const startX = e.clientX;
     const startY = e.clientY;
-    const startRight = parseInt(panel.style.right);
-    const startTop = parseInt(panel.style.top);
+    const startRight = parseInt(panelWrapper.style.right);
+    const startTop = parseInt(panelWrapper.style.top);
     
     const onMouseMove = (e) => {
       if (!ResearchNavigator.isDragging) return;
@@ -1133,12 +1158,13 @@ function createTreePanel(window) {
       const newRight = startRight - deltaX;
       const newTop = startTop + deltaY;
       
-      if (newRight >= 0 && newRight <= window.innerWidth - panel.clientWidth) {
-        panel.style.right = newRight + 'px';
+      // 限制在窗口内
+      if (newRight >= 0 && newRight <= window.innerWidth - panelWrapper.clientWidth) {
+        panelWrapper.style.right = newRight + 'px';
         ResearchNavigator.panelRight = newRight;
       }
-      if (newTop >= 0 && newTop <= window.innerHeight - panel.clientHeight) {
-        panel.style.top = newTop + 'px';
+      if (newTop >= 0 && newTop <= window.innerHeight - panelWrapper.clientHeight) {
+        panelWrapper.style.top = newTop + 'px';
         ResearchNavigator.panelTop = newTop;
       }
     };
@@ -1153,42 +1179,65 @@ function createTreePanel(window) {
     doc.addEventListener('mouseup', onMouseUp);
   });
   
-  const title = doc.createElement('span');
-  title.textContent = 'Research Tree';
-  title.style.cssText = 'flex: 1; font-weight: bold; font-size: 0.95em;';
+  const title = doc.createXULElement('label');
+  title.setAttribute('value', 'Research Tree History');
+  title.setAttribute('flex', '1');
+  title.style.cssText = 'font-weight: bold; font-size: 1.1em; cursor: move;';
   
-  const closeBtn = doc.createElement('button');
-  closeBtn.textContent = '✕';
+  const closeBtn = doc.createXULElement('toolbarbutton');
+  closeBtn.setAttribute('label', '✕');
   closeBtn.style.cssText = `
-    background: none;
-    border: none;
     color: white;
-    font-size: 16px;
-    cursor: pointer;
-    padding: 0 4px;
+    min-width: 24px;
     margin: 0;
+    padding: 2px 6px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 3px;
+    font-weight: bold;
+    cursor: pointer;
   `;
-  closeBtn.onclick = () => {
-    panel.style.display = 'none';
-  };
+  closeBtn.addEventListener('command', () => {
+    panelWrapper.style.display = 'none';
+  });
   
   header.appendChild(title);
   header.appendChild(closeBtn);
   
   // 工具栏
-  const toolbar = doc.createElement('div');
-  toolbar.style.cssText = 'padding: 6px; border-bottom: 1px solid #e0e0e0; background: #f8f8f8; display: flex; align-items: center; flex-shrink: 0;';
+  const toolbar = doc.createXULElement('hbox');
+  toolbar.style.cssText = 'padding: 8px; border-bottom: 1px solid #e0e0e0; background: #f8f8f8;';
   
-  const statsLabel = doc.createElement('span');
+  // 统计信息
+  const statsLabel = doc.createXULElement('label');
   statsLabel.id = 'research-navigator-stats';
-  statsLabel.textContent = 'Loading...';
-  statsLabel.style.cssText = 'flex: 1; color: #666; font-size: 0.85em;';
+  statsLabel.setAttribute('value', 'Loading...');
+  statsLabel.style.cssText = 'flex: 1; color: #666; font-size: 0.9em;';
   
-  const clearBtn = doc.createElement('button');
-  clearBtn.textContent = 'Clear';
-  clearBtn.style.cssText = 'margin: 0 2px; padding: 2px 8px; font-size: 0.85em;';
-  clearBtn.onclick = () => {
-    if (window.confirm('Clear all history?')) {
+  // 换行模式切换
+  const wrapBtn = doc.createXULElement('button');
+  wrapBtn.setAttribute('label', '↩');
+  wrapBtn.setAttribute('tooltiptext', 'Toggle Title Wrapping');
+  wrapBtn.style.cssText = 'margin: 0 4px; min-width: 28px;';
+  wrapBtn.addEventListener('command', () => {
+    ResearchNavigator.wrapTitles = !ResearchNavigator.wrapTitles;
+    ResearchNavigator.updateTreeDisplay();
+    showNotification(window, ResearchNavigator.wrapTitles ? 'Title wrapping ON' : 'Title wrapping OFF');
+  });
+  
+  const newSessionBtn = doc.createXULElement('button');
+  newSessionBtn.setAttribute('label', 'New Session');
+  newSessionBtn.style.cssText = 'margin: 0 4px;';
+  newSessionBtn.addEventListener('command', () => {
+    ResearchNavigator.initSession();
+    ResearchNavigator.currentNode = null;
+    showNotification(window, 'Started new research session');
+  });
+  
+  const clearBtn = doc.createXULElement('button');
+  clearBtn.setAttribute('label', 'Clear');
+  clearBtn.style.cssText = 'margin: 0 4px;';
+  clearBtn.addEventListener('command', () => {
+    if (window.confirm('Clear all history? This cannot be undone.')) {
       ResearchNavigator.treeRoots = [];
       ResearchNavigator.nodeMap.clear();
       ResearchNavigator.itemNodeMap.clear();
@@ -1199,40 +1248,39 @@ function createTreePanel(window) {
       ResearchNavigator.updateTreeDisplay();
       ResearchNavigator.updateNavigationButtons();
     }
-  };
+  });
   
   toolbar.appendChild(statsLabel);
+  toolbar.appendChild(wrapBtn);
+  toolbar.appendChild(newSessionBtn);
   toolbar.appendChild(clearBtn);
   
-  // 内容区域（可滚动）
-  const contentArea = doc.createElement('div');
-  contentArea.style.cssText = `
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: auto;
-    background: #fafafa;
-    min-height: 0;
-  `;
+  // 内容区域（使用 XUL scrollbox）
+  const scrollbox = doc.createXULElement('scrollbox');
+  scrollbox.setAttribute('flex', '1');
+  scrollbox.setAttribute('orient', 'vertical');
+  scrollbox.style.cssText = 'overflow: auto; background: #fafafa;';
   
   // 树容器
   const treeContainer = doc.createXULElement('vbox');
   treeContainer.id = 'research-navigator-tree-container';
-  treeContainer.style.cssText = 'padding: 6px; min-width: max-content;';
+  treeContainer.style.cssText = 'padding: 10px; min-width: max-content;';
   
-  contentArea.appendChild(treeContainer);
+  scrollbox.appendChild(treeContainer);
   
-  // 调整大小手柄
-  const resizeHandle = doc.createElement('div');
+  // 创建调整大小的分隔条
+  const resizeHandle = doc.createXULElement('box');
   resizeHandle.style.cssText = `
     position: absolute;
     right: 0;
     top: 0;
     bottom: 0;
-    width: 4px;
+    width: 6px;
     cursor: ew-resize;
     background: transparent;
   `;
   
+  // 鼠标悬停时显示
   resizeHandle.addEventListener('mouseenter', () => {
     resizeHandle.style.background = 'rgba(0,0,0,0.1)';
   });
@@ -1243,6 +1291,7 @@ function createTreePanel(window) {
     }
   });
   
+  // 调整大小功能
   resizeHandle.addEventListener('mousedown', (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -1251,7 +1300,7 @@ function createTreePanel(window) {
     resizeHandle.style.background = 'rgba(0,0,0,0.2)';
     
     const startX = e.clientX;
-    const startWidth = panel.clientWidth;
+    const startWidth = panelWrapper.clientWidth;
     
     const onMouseMove = (e) => {
       if (!ResearchNavigator.isResizing) return;
@@ -1259,8 +1308,8 @@ function createTreePanel(window) {
       const deltaX = e.clientX - startX;
       const newWidth = startWidth + deltaX;
       
-      if (newWidth >= 280 && newWidth <= 600) {
-        panel.style.width = newWidth + 'px';
+      if (newWidth >= 300 && newWidth <= 800) {
+        panelWrapper.style.width = newWidth + 'px';
         ResearchNavigator.panelWidth = newWidth;
       }
     };
@@ -1276,19 +1325,20 @@ function createTreePanel(window) {
     doc.addEventListener('mouseup', onMouseUp);
   });
   
-  panel.appendChild(header);
-  panel.appendChild(toolbar);
-  panel.appendChild(contentArea);
-  panel.appendChild(resizeHandle);
+  panelWrapper.appendChild(header);
+  panelWrapper.appendChild(toolbar);
+  panelWrapper.appendChild(scrollbox);
+  panelWrapper.appendChild(resizeHandle);
   
   // 添加到文档
-  doc.body.appendChild(panel);
+  const mainWindow = doc.getElementById('main-window') || doc.documentElement;
+  mainWindow.appendChild(panelWrapper);
   
   ResearchNavigator.addedElementIds.push('research-navigator-panel');
-  ResearchNavigator.historyPanels.set(window, panel);
+  ResearchNavigator.historyPanels.set(window, panelWrapper);
   
   // 初始更新
-  ResearchNavigator.updateTreePanel(window, panel);
+  ResearchNavigator.updateTreePanel(window, panelWrapper);
 }
 
 // 切换树形历史面板
@@ -1300,25 +1350,26 @@ function toggleTreePanel(window) {
     createTreePanel(window);
     const newPanel = doc.getElementById('research-navigator-panel');
     if (newPanel) {
-      newPanel.style.display = 'flex';
+      newPanel.style.display = 'block';
     }
     return;
   }
   
   if (panel.style.display === 'none') {
-    panel.style.display = 'flex';
+    panel.style.display = 'block';
     ResearchNavigator.updateTreePanel(window, panel);
   } else {
     panel.style.display = 'none';
   }
 }
 
-// 显示通知（精简版）
+// 显示通知
 function showNotification(window, message) {
   if (!window) return;
   
   const doc = window.document;
   
+  // 创建通知元素
   const notification = doc.createElement('div');
   notification.textContent = message;
   notification.style.cssText = `
@@ -1327,14 +1378,14 @@ function showNotification(window, message) {
     right: 20px;
     background: #4CAF50;
     color: white;
-    padding: 8px 16px;
-    border-radius: 3px;
+    padding: 12px 20px;
+    border-radius: 4px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     z-index: 99999;
-    font-size: 0.9em;
     animation: slideIn 0.3s ease;
   `;
   
+  // 添加动画
   const style = doc.createElement('style');
   style.textContent = `
     @keyframes slideIn {
@@ -1344,8 +1395,10 @@ function showNotification(window, message) {
   `;
   doc.head.appendChild(style);
   
+  // 添加到文档
   doc.body.appendChild(notification);
   
+  // 3秒后移除
   window.setTimeout(() => {
     notification.style.opacity = '0';
     notification.style.transition = 'opacity 0.3s ease';
@@ -1353,7 +1406,7 @@ function showNotification(window, message) {
       notification.remove();
       style.remove();
     }, 300);
-  }, 2000);
+  }, 3000);
 }
 
 // 移除 UI
