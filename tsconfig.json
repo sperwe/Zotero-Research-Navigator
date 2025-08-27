@@ -1,8 +1,20 @@
 {
-  "extends": "zotero-types/entries/sandbox/",
   "include": ["src", "typings"],
-  "exclude": ["build", "addon"],
+  "exclude": ["build", "addon", "node_modules"],
   "compilerOptions": {
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "module": "esnext",
+    "target": "es2018",
+    "strict": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
+    "moduleResolution": "node",
+    "lib": ["es2018", "dom"],
+    "types": ["node"],
+    "noImplicitAny": false,
+    "allowJs": true,
+    "noEmit": true
   }
 }

@@ -1,18 +1,19 @@
-declare const _globalThis: {
-  [key: string]: any;
-  Zotero: _ZoteroTypes.Zotero;
-  ztoolkit: ZToolkit;
-  addon: typeof addon;
-};
+declare global {
+  const Zotero: any;
+  const ChromeUtils: any;
+  const ztoolkit: any;
+  const addon: any;
+  const __env__: string;
+  
+  interface Window {
+    Zotero?: any;
+    addon?: any;
+    ztoolkit?: any;
+  }
 
-declare type ZToolkit = ReturnType<
-  typeof import("../src/utils/ztoolkit").createZToolkit
->;
+  interface Document {
+    createXULElement?(tagName: string): any;
+  }
+}
 
-declare const ztoolkit: ZToolkit;
-
-declare const rootURI: string;
-
-declare const addon: import("../src/addon").default;
-
-declare const __env__: "production" | "development";
+export {};
