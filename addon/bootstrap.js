@@ -65,6 +65,11 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
   if (!ctx.globalThis.Zotero) {
     ctx.globalThis.Zotero = Zotero;
   }
+  
+  // Also ensure it's available as a direct property for BasicTool
+  if (!ctx.Zotero) {
+    ctx.Zotero = Zotero;
+  }
 
   // Load main script
   const scriptPath = `${rootURI}/content/scripts/researchnavigator.js`;
@@ -83,11 +88,20 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
   }
   
   // The script should have created addon instance
-  if (ctx.addon) {
-    log('Addon instance found in context');
+  log('Checking for addon instance...');
+  log('ctx.addon = ' + (ctx.addon ? 'exists' : 'undefined'));
+  log('ctx._globalThis.addon = ' + (ctx._globalThis && ctx._globalThis.addon ? 'exists' : 'undefined'));
+  
+  // Try multiple locations where addon might be
+  const addon = ctx.addon || (ctx._globalThis && ctx._globalThis.addon) || ctx.globalThis.addon;
+  
+  if (addon) {
+    log('Addon instance found!');
     // Copy to global Zotero object
-    Zotero.ResearchNavigator = ctx.addon;
-    log('Addon copied to Zotero.ResearchNavigator');
+    Zotero.ResearchNavigator = addon;
+    log('Addon registered to Zotero.ResearchNavigator');
+  } else {
+    log('ERROR: No addon instance found in any expected location');
   }
   
   // Initialize plugin
@@ -98,11 +112,12 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
       log('onStartup completed successfully');
     } catch (e) {
       log('ERROR in onStartup: ' + e.toString());
+      log('Stack: ' + (e.stack || 'No stack'));
     }
   } else {
-    log('ERROR: Plugin failed to load properly!');
+    log('ERROR: Plugin failed to initialize properly!');
     log('Zotero.ResearchNavigator = ' + Zotero.ResearchNavigator);
-    log('ctx.addon = ' + ctx.addon);
+    log('Available properties in ctx: ' + Object.keys(ctx).join(', '));
   }
 }
 
