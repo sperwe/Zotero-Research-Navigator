@@ -127,16 +127,6 @@ var ResearchNavigator = {
   // 监听器ID
   notifierID: null,
   
-  // 用户偏好
-  preferences: {
-    openInTab: true,        // true: 在标签页中打开; false: 在文献库中显示
-    panelWidth: 450,        // 面板默认宽度
-    panelPosition: 'right'  // 面板位置: 'right' 或 'left'
-  },
-  
-  // 面板大小调整
-  isResizing: false,
-  
   // 调试日志
   debug(msg) {
     Zotero.debug(`[Research Navigator] ${msg}`);
@@ -359,7 +349,7 @@ var ResearchNavigator = {
     }
   },
   
-  // 从节点打开文献（修复版）
+  // 从节点打开文献
   openItemFromNode(node) {
     if (!node) return;
     
@@ -370,45 +360,25 @@ var ResearchNavigator = {
     if (!win || !win.ZoteroPane) return;
     
     try {
-      if (this.preferences.openInTab) {
-        // 在标签页中打开
-        if (item.isPDFAttachment()) {
-          // 直接打开 PDF
-          Zotero.OpenPDF.openToPage(item, null, null);
-        } else if (item.isRegularItem()) {
-          // 查找 PDF 附件
-          const attachments = item.getAttachments();
-          let pdfOpened = false;
-          
-          for (let id of attachments) {
-            const attachment = Zotero.Items.get(id);
-            if (attachment && attachment.isPDFAttachment()) {
-              Zotero.OpenPDF.openToPage(attachment, null, null);
-              pdfOpened = true;
-              break;
-            }
+      // 使用 ZoteroPane 选择项目
+      win.ZoteroPane.selectItem(item.id);
+      
+      // 如果是 PDF，尝试在阅读器中打开
+      if (item.isPDFAttachment()) {
+        Zotero.Reader.open(item.id);
+      } else if (item.isRegularItem()) {
+        // 获取第一个 PDF 附件
+        const attachments = item.getAttachments();
+        for (let id of attachments) {
+          const attachment = Zotero.Items.get(id);
+          if (attachment && attachment.isPDFAttachment()) {
+            Zotero.Reader.open(attachment.id);
+            break;
           }
-          
-          // 如果没有 PDF，在文献库中选择
-          if (!pdfOpened) {
-            win.ZoteroPane.selectItem(item.id);
-          }
-        } else {
-          // 其他类型，在文献库中选择
-          win.ZoteroPane.selectItem(item.id);
         }
-      } else {
-        // 在文献库中显示
-        win.ZoteroPane.selectItem(item.id);
       }
     } catch (e) {
       this.debug(`Error opening item: ${e}`);
-      // 备用方法
-      try {
-        win.ZoteroPane.selectItem(item.id);
-      } catch (e2) {
-        this.debug(`Error selecting item: ${e2}`);
-      }
     }
   },
   
@@ -592,13 +562,21 @@ var ResearchNavigator = {
       treeContainer.removeChild(treeContainer.firstChild);
     }
     
+    // 显示统计信息
+    const statsEl = doc.createXULElement('hbox');
+    statsEl.style.cssText = 'padding: 5px; border-bottom: 1px solid #ddd;';
+    const statsLabel = doc.createXULElement('label');
+    statsLabel.setAttribute('value', `Total items: ${this.nodeMap.size}, Sessions: ${this.getTreeData().length}`);
+    statsEl.appendChild(statsLabel);
+    treeContainer.appendChild(statsEl);
+    
     // 获取树形数据
     const sessions = this.getTreeData();
     
     if (sessions.length === 0) {
       const emptyMsg = doc.createXULElement('label');
       emptyMsg.setAttribute('value', 'No history yet. Start browsing items to build your research tree!');
-      emptyMsg.style.cssText = 'padding: 20px; color: #666; text-align: center;';
+      emptyMsg.style.cssText = 'padding: 20px; color: #666;';
       treeContainer.appendChild(emptyMsg);
       return;
     }
@@ -614,43 +592,28 @@ var ResearchNavigator = {
   createSessionElement(doc, session, isExpanded) {
     const sessionEl = doc.createXULElement('vbox');
     sessionEl.className = 'tree-session';
-    sessionEl.style.cssText = 'margin-bottom: 15px;';
+    sessionEl.style.cssText = 'margin-bottom: 10px;';
     
     // 会话标题
     const headerEl = doc.createXULElement('hbox');
-    headerEl.style.cssText = `
-      cursor: pointer; 
-      padding: 8px 12px; 
-      background: linear-gradient(to right, #f5f5f5, #f0f0f0);
-      border-radius: 4px;
-      margin-bottom: 5px;
-      align-items: center;
-    `;
+    headerEl.style.cssText = 'cursor: pointer; padding: 5px; background: #f0f0f0;';
     
     const toggleEl = doc.createXULElement('label');
     toggleEl.setAttribute('value', isExpanded ? '▼' : '▶');
-    toggleEl.style.cssText = 'width: 20px; color: #666;';
+    toggleEl.style.width = '20px';
     
     const titleEl = doc.createXULElement('label');
     const sessionDate = new Date(session.timestamp);
     const dateStr = sessionDate.toLocaleDateString() + ' ' + sessionDate.toLocaleTimeString();
-    titleEl.setAttribute('value', `Session - ${dateStr}`);
+    titleEl.setAttribute('value', `Session - ${dateStr} (${session.roots.length} paths)`);
     titleEl.setAttribute('flex', '1');
-    titleEl.style.cssText = 'font-weight: bold; color: #333;';
-    
-    const countEl = doc.createXULElement('label');
-    countEl.setAttribute('value', `(${session.roots.length} paths)`);
-    countEl.style.cssText = 'color: #666; font-size: 0.9em;';
     
     headerEl.appendChild(toggleEl);
     headerEl.appendChild(titleEl);
-    headerEl.appendChild(countEl);
     
     // 树容器
     const treeEl = doc.createXULElement('vbox');
-    treeEl.style.cssText = isExpanded ? 
-      'margin-left: 10px; padding-left: 10px; border-left: 2px solid #e0e0e0;' : 
-      'display: none;';
+    treeEl.style.cssText = isExpanded ? 'margin-left: 20px;' : 'display: none; margin-left: 20px;';
     
     // 点击展开/折叠
     headerEl.addEventListener('click', () => {
@@ -678,38 +641,30 @@ var ResearchNavigator = {
   // 创建节点元素
   createNodeElement(doc, node, level) {
     const nodeEl = doc.createXULElement('vbox');
-    nodeEl.style.cssText = `margin-left: ${level * 25}px; margin-bottom: 2px;`;
+    nodeEl.style.cssText = `margin-left: ${level * 20}px;`;
     
     // 节点内容
     const contentEl = doc.createXULElement('hbox');
-    contentEl.style.cssText = `
-      cursor: pointer; 
-      padding: 4px 8px; 
-      align-items: center;
-      border-radius: 3px;
-      transition: background 0.2s;
-    `;
+    contentEl.style.cssText = 'cursor: pointer; padding: 3px; align-items: center;';
     
     // 鼠标悬停效果
     contentEl.addEventListener('mouseenter', () => {
-      contentEl.style.background = '#e8f0fe';
+      contentEl.style.background = '#e0e0e0';
     });
     contentEl.addEventListener('mouseleave', () => {
-      contentEl.style.background = node === this.currentNode ? '#d2e3fc' : '';
+      contentEl.style.background = node === this.currentNode ? '#d0e0f0' : '';
     });
     
     // 当前节点高亮
     if (node === this.currentNode) {
-      contentEl.style.background = '#d2e3fc';
-      contentEl.style.border = '1px solid #1976d2';
-      contentEl.style.padding = '3px 7px';
+      contentEl.style.background = '#d0e0f0';
     }
     
     // 展开/折叠图标
     if (node.children.length > 0) {
       const toggleEl = doc.createXULElement('label');
       toggleEl.setAttribute('value', node.expanded ? '▼' : '▶');
-      toggleEl.style.cssText = 'width: 20px; cursor: pointer; color: #666;';
+      toggleEl.style.cssText = 'width: 20px; cursor: pointer;';
       toggleEl.addEventListener('click', (e) => {
         e.stopPropagation();
         node.expanded = !node.expanded;
@@ -728,12 +683,12 @@ var ResearchNavigator = {
       const relationEl = doc.createXULElement('label');
       relationEl.setAttribute('value', this.getRelationIcon(node.relationType));
       relationEl.setAttribute('tooltiptext', this.getRelationLabel(node.relationType));
-      relationEl.style.cssText = 'width: 22px; font-size: 14px;';
+      relationEl.style.cssText = 'width: 20px; font-size: 14px;';
       contentEl.appendChild(relationEl);
     } else {
       const spacerEl = doc.createXULElement('label');
       spacerEl.setAttribute('value', '');
-      spacerEl.style.width = '22px';
+      spacerEl.style.width = '20px';
       contentEl.appendChild(spacerEl);
     }
     
@@ -741,26 +696,23 @@ var ResearchNavigator = {
     const iconEl = doc.createXULElement('label');
     const icon = this.getItemTypeIcon(node.itemType);
     iconEl.setAttribute('value', icon);
-    iconEl.style.cssText = 'width: 22px; font-size: 16px;';
+    iconEl.style.cssText = 'width: 20px; font-size: 16px;';
     contentEl.appendChild(iconEl);
     
     // 标题
     const titleEl = doc.createXULElement('label');
     const displayTitle = node.title || 'Loading...';
-    const maxLength = 35 - level * 2; // 层级越深，显示越短
-    const truncatedTitle = displayTitle.length > maxLength ? 
-      displayTitle.substr(0, maxLength) + '...' : displayTitle;
+    const truncatedTitle = displayTitle.length > 40 ? displayTitle.substr(0, 40) + '...' : displayTitle;
     titleEl.setAttribute('value', truncatedTitle);
     titleEl.setAttribute('flex', '1');
     titleEl.setAttribute('tooltiptext', `${node.title}\n${node.creators}\n${node.year}`);
-    titleEl.style.cssText = 'color: #333;';
     contentEl.appendChild(titleEl);
     
     // 访问次数
     if (node.visitCount > 1) {
       const countEl = doc.createXULElement('label');
       countEl.setAttribute('value', `(${node.visitCount})`);
-      countEl.style.cssText = 'color: #999; margin-left: 5px; font-size: 0.85em;';
+      countEl.style.cssText = 'color: #666; margin-left: 5px;';
       contentEl.appendChild(countEl);
     }
     
@@ -770,12 +722,6 @@ var ResearchNavigator = {
       this.openItemFromNode(node);
       this.addToNavigationHistory(node);
       this.updateTreeDisplay();
-    });
-    
-    // 右键菜单
-    contentEl.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      this.showNodeContextMenu(e, node, doc);
     });
     
     nodeEl.appendChild(contentEl);
@@ -791,87 +737,6 @@ var ResearchNavigator = {
     }
     
     return nodeEl;
-  },
-  
-  // 显示节点右键菜单
-  showNodeContextMenu(event, node, doc) {
-    const menu = doc.createXULElement('menupopup');
-    
-    // 在标签页中打开
-    const openInTabItem = doc.createXULElement('menuitem');
-    openInTabItem.setAttribute('label', 'Open in Tab');
-    openInTabItem.addEventListener('command', () => {
-      const oldPref = this.preferences.openInTab;
-      this.preferences.openInTab = true;
-      this.openItemFromNode(node);
-      this.preferences.openInTab = oldPref;
-    });
-    menu.appendChild(openInTabItem);
-    
-    // 在文献库中显示
-    const showInLibraryItem = doc.createXULElement('menuitem');
-    showInLibraryItem.setAttribute('label', 'Show in Library');
-    showInLibraryItem.addEventListener('command', () => {
-      const oldPref = this.preferences.openInTab;
-      this.preferences.openInTab = false;
-      this.openItemFromNode(node);
-      this.preferences.openInTab = oldPref;
-    });
-    menu.appendChild(showInLibraryItem);
-    
-    // 分隔符
-    menu.appendChild(doc.createXULElement('menuseparator'));
-    
-    // 折叠/展开子树
-    if (node.children.length > 0) {
-      const toggleItem = doc.createXULElement('menuitem');
-      toggleItem.setAttribute('label', node.expanded ? 'Collapse' : 'Expand');
-      toggleItem.addEventListener('command', () => {
-        node.expanded = !node.expanded;
-        this.updateTreeDisplay();
-      });
-      menu.appendChild(toggleItem);
-    }
-    
-    // 删除节点
-    const deleteItem = doc.createXULElement('menuitem');
-    deleteItem.setAttribute('label', 'Remove from History');
-    deleteItem.addEventListener('command', () => {
-      this.removeNode(node);
-    });
-    menu.appendChild(deleteItem);
-    
-    // 显示菜单
-    menu.openPopupAtScreen(event.screenX, event.screenY, true);
-  },
-  
-  // 删除节点
-  removeNode(node) {
-    // 从父节点的子节点中移除
-    if (node.parentId) {
-      const parent = this.nodeMap.get(node.parentId);
-      if (parent) {
-        parent.children = parent.children.filter(child => child.id !== node.id);
-      }
-    } else {
-      // 从根节点中移除
-      this.treeRoots = this.treeRoots.filter(root => root.id !== node.id);
-    }
-    
-    // 递归删除所有子节点
-    const deleteRecursive = (n) => {
-      this.nodeMap.delete(n.id);
-      const itemNodes = this.itemNodeMap.get(n.itemId);
-      if (itemNodes) {
-        this.itemNodeMap.set(n.itemId, itemNodes.filter(in => in.id !== n.id));
-      }
-      n.children.forEach(child => deleteRecursive(child));
-    };
-    
-    deleteRecursive(node);
-    
-    // 更新显示
-    this.updateTreeDisplay();
   },
   
   // 获取文献类型图标
@@ -1205,45 +1070,36 @@ function createTreePanel(window) {
     position: fixed;
     right: 10px;
     top: 100px;
-    width: ${ResearchNavigator.preferences.panelWidth}px;
-    height: 600px;
+    width: 450px;
+    max-height: 600px;
     background: white;
     border: 1px solid #ccc;
-    border-radius: 6px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     z-index: 1000;
     display: none;
-    resize: horizontal;
-    overflow: auto;
-    min-width: 300px;
-    max-width: 800px;
   `;
   
   // 标题栏
   const header = doc.createXULElement('hbox');
   header.style.cssText = `
-    background: linear-gradient(to bottom, #4CAF50, #45a049);
+    background: #4CAF50;
     color: white;
-    padding: 10px 12px;
+    padding: 8px;
     align-items: center;
-    border-radius: 6px 6px 0 0;
   `;
   
   const title = doc.createXULElement('label');
   title.setAttribute('value', 'Research Tree History');
   title.setAttribute('flex', '1');
-  title.style.cssText = 'font-weight: bold; font-size: 1.1em;';
+  title.style.fontWeight = 'bold';
   
   const closeBtn = doc.createXULElement('toolbarbutton');
   closeBtn.setAttribute('label', '✕');
   closeBtn.style.cssText = `
     color: white;
-    min-width: 24px;
+    min-width: 20px;
     margin: 0;
-    padding: 2px 6px;
-    background: rgba(255,255,255,0.2);
-    border-radius: 3px;
-    font-weight: bold;
+    padding: 0 4px;
   `;
   closeBtn.addEventListener('command', () => {
     panel.style.display = 'none';
@@ -1254,34 +1110,18 @@ function createTreePanel(window) {
   
   // 工具栏
   const toolbar = doc.createXULElement('hbox');
-  toolbar.style.cssText = 'padding: 8px; border-bottom: 1px solid #e0e0e0; background: #f8f8f8;';
-  
-  // 统计信息
-  const statsLabel = doc.createXULElement('label');
-  statsLabel.id = 'research-navigator-stats';
-  statsLabel.setAttribute('value', `Total: ${ResearchNavigator.nodeMap.size} items, ${ResearchNavigator.getTreeData().length} sessions`);
-  statsLabel.style.cssText = 'flex: 1; color: #666; font-size: 0.9em;';
+  toolbar.style.cssText = 'padding: 5px; border-bottom: 1px solid #ddd;';
   
   const newSessionBtn = doc.createXULElement('button');
   newSessionBtn.setAttribute('label', 'New Session');
-  newSessionBtn.style.cssText = 'margin: 0 4px;';
   newSessionBtn.addEventListener('command', () => {
     ResearchNavigator.initSession();
     ResearchNavigator.currentNode = null;
     showNotification(window, 'Started new research session');
   });
   
-  const settingsBtn = doc.createXULElement('button');
-  settingsBtn.setAttribute('label', '⚙');
-  settingsBtn.setAttribute('tooltiptext', 'Settings');
-  settingsBtn.style.cssText = 'margin: 0 4px; min-width: 28px;';
-  settingsBtn.addEventListener('command', () => {
-    showSettingsDialog(window);
-  });
-  
   const clearBtn = doc.createXULElement('button');
-  clearBtn.setAttribute('label', 'Clear');
-  clearBtn.style.cssText = 'margin: 0 4px;';
+  clearBtn.setAttribute('label', 'Clear All');
   clearBtn.addEventListener('command', () => {
     if (window.confirm('Clear all history? This cannot be undone.')) {
       ResearchNavigator.treeRoots = [];
@@ -1296,62 +1136,40 @@ function createTreePanel(window) {
     }
   });
   
-  toolbar.appendChild(statsLabel);
+  // 关系图例
+  const legendBtn = doc.createXULElement('button');
+  legendBtn.setAttribute('label', 'Legend');
+  legendBtn.addEventListener('command', () => {
+    const legend = `Relation Types:
+${ResearchNavigator.getRelationIcon(RelationType.MANUAL)} Manual navigation
+${ResearchNavigator.getRelationIcon(RelationType.CITATION)} Citation
+${ResearchNavigator.getRelationIcon(RelationType.AUTHOR)} Same author
+${ResearchNavigator.getRelationIcon(RelationType.TAG)} Common tags
+${ResearchNavigator.getRelationIcon(RelationType.COLLECTION)} Same collection
+${ResearchNavigator.getRelationIcon(RelationType.RELATED)} Related item
+${ResearchNavigator.getRelationIcon(RelationType.TEMPORAL)} Time-based
+${ResearchNavigator.getRelationIcon(RelationType.TAB)} Tab navigation`;
+    window.alert(legend);
+  });
+  
   toolbar.appendChild(newSessionBtn);
-  toolbar.appendChild(settingsBtn);
   toolbar.appendChild(clearBtn);
+  toolbar.appendChild(legendBtn);
   
   // 树容器
   const scrollbox = doc.createXULElement('scrollbox');
   scrollbox.setAttribute('flex', '1');
-  scrollbox.style.cssText = 'overflow-y: auto; padding: 10px; background: #fafafa;';
+  scrollbox.style.cssText = 'overflow-y: auto; max-height: 500px;';
   
   const treeContainer = doc.createXULElement('vbox');
   treeContainer.id = 'research-navigator-tree-container';
+  treeContainer.style.cssText = 'padding: 10px;';
   
   scrollbox.appendChild(treeContainer);
-  
-  // 调整大小手柄
-  const resizer = doc.createXULElement('splitter');
-  resizer.setAttribute('orient', 'vertical');
-  resizer.style.cssText = `
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 5px;
-    cursor: ew-resize;
-    background: transparent;
-  `;
-  
-  resizer.addEventListener('mousedown', (e) => {
-    ResearchNavigator.isResizing = true;
-    const startX = e.clientX;
-    const startWidth = panel.clientWidth;
-    
-    const onMouseMove = (e) => {
-      if (!ResearchNavigator.isResizing) return;
-      const newWidth = startWidth - (e.clientX - startX);
-      if (newWidth >= 300 && newWidth <= 800) {
-        panel.style.width = newWidth + 'px';
-        ResearchNavigator.preferences.panelWidth = newWidth;
-      }
-    };
-    
-    const onMouseUp = () => {
-      ResearchNavigator.isResizing = false;
-      doc.removeEventListener('mousemove', onMouseMove);
-      doc.removeEventListener('mouseup', onMouseUp);
-    };
-    
-    doc.addEventListener('mousemove', onMouseMove);
-    doc.addEventListener('mouseup', onMouseUp);
-  });
   
   panel.appendChild(header);
   panel.appendChild(toolbar);
   panel.appendChild(scrollbox);
-  panel.appendChild(resizer);
   
   // 添加到文档
   const mainWindow = doc.getElementById('main-window') || doc.documentElement;
@@ -1362,38 +1180,6 @@ function createTreePanel(window) {
   
   // 初始更新
   ResearchNavigator.updateTreePanel(window, panel);
-}
-
-// 显示设置对话框
-function showSettingsDialog(window) {
-  const dialog = window.openDialog(
-    'chrome://zotero/content/preferences.xul',
-    'research-navigator-settings',
-    'chrome,dialog,centerscreen,modal',
-    {
-      openInTab: ResearchNavigator.preferences.openInTab,
-      onAccept: function(settings) {
-        ResearchNavigator.preferences.openInTab = settings.openInTab;
-        showNotification(window, 'Settings saved');
-      }
-    }
-  );
-  
-  // 简单的设置对话框
-  const msg = `Research Navigator Settings\n\nClick behavior:\n${
-    ResearchNavigator.preferences.openInTab ? 
-    '☑ Open in tab (when possible)' : 
-    '☐ Open in tab (when possible)'
-  }\n\nClick OK to toggle this setting.`;
-  
-  if (window.confirm(msg)) {
-    ResearchNavigator.preferences.openInTab = !ResearchNavigator.preferences.openInTab;
-    showNotification(window, `Click behavior: ${
-      ResearchNavigator.preferences.openInTab ? 
-      'Open in tab' : 
-      'Show in library'
-    }`);
-  }
 }
 
 // 切换树形历史面板
@@ -1409,12 +1195,6 @@ function toggleTreePanel(window) {
   if (panel.style.display === 'none') {
     panel.style.display = 'block';
     ResearchNavigator.updateTreePanel(window, panel);
-    
-    // 更新统计信息
-    const statsLabel = doc.getElementById('research-navigator-stats');
-    if (statsLabel) {
-      statsLabel.setAttribute('value', `Total: ${ResearchNavigator.nodeMap.size} items, ${ResearchNavigator.getTreeData().length} sessions`);
-    }
   } else {
     panel.style.display = 'none';
   }
