@@ -591,20 +591,20 @@ var ResearchNavigator = {
     const sessions = this.getTreeData();
     
     if (sessions.length === 0) {
-      const emptyMsg = doc.createXULElement('vbox');
-      emptyMsg.style.cssText = 'padding: 40px 20px; align-items: center;';
-      
-      const icon = doc.createXULElement('label');
-      icon.setAttribute('value', '🌱');
-      icon.style.cssText = 'font-size: 48px; margin-bottom: 10px;';
-      
-      const text = doc.createXULElement('label');
-      text.setAttribute('value', 'Start exploring to build your research tree');
-      text.style.cssText = 'color: #999; font-size: 0.9em; text-align: center;';
-      
-      emptyMsg.appendChild(icon);
-      emptyMsg.appendChild(text);
-      treeContainer.appendChild(emptyMsg);
+          const emptyMsg = doc.createXULElement('vbox');
+    emptyMsg.style.cssText = 'padding: 30px 20px; align-items: center;';
+    
+    const icon = doc.createXULElement('label');
+    icon.setAttribute('value', '🌱');
+    icon.style.cssText = 'font-size: 42px; margin-bottom: 8px;';
+    
+    const text = doc.createXULElement('label');
+    text.setAttribute('value', 'Start exploring to build your research tree');
+    text.style.cssText = 'color: #999; font-size: 0.9em; text-align: center;';
+    
+    emptyMsg.appendChild(icon);
+    emptyMsg.appendChild(text);
+    treeContainer.appendChild(emptyMsg);
       return;
     }
     
@@ -626,13 +626,13 @@ var ResearchNavigator = {
   // 创建会话元素（美观版）
   createSessionElement(doc, session, isExpanded) {
     const sessionEl = doc.createXULElement('vbox');
-    sessionEl.style.cssText = 'margin-bottom: 8px;';
+    sessionEl.style.cssText = 'margin-bottom: 6px;';
     
     // 会话标题
     const headerEl = doc.createXULElement('hbox');
     headerEl.style.cssText = `
       cursor: pointer; 
-      padding: 6px 10px; 
+      padding: 5px 8px; 
       background: ${isExpanded ? '#f8f9fa' : '#fff'};
       border: 1px solid ${isExpanded ? '#e0e0e0' : '#f0f0f0'};
       border-radius: 6px;
@@ -678,7 +678,7 @@ var ResearchNavigator = {
     // 树容器
     const treeEl = doc.createXULElement('vbox');
     treeEl.style.cssText = isExpanded ? 
-      'margin-top: 4px; padding-left: 20px;' : 
+      'margin-top: 3px; padding-left: 18px;' : 
       'display: none;';
     
     // 点击展开/折叠
@@ -712,13 +712,13 @@ var ResearchNavigator = {
       const connector = doc.createXULElement('box');
       connector.style.cssText = `
         position: absolute;
-        left: ${(level - 1) * 20 + 10}px;
+        left: ${(level - 1) * 18 + 9}px;
         top: 0;
         bottom: 0;
-        width: 20px;
+        width: 18px;
         border-left: 1px solid #e0e0e0;
         border-bottom: 1px solid #e0e0e0;
-        height: 14px;
+        height: 12px;
       `;
       nodeEl.appendChild(connector);
     }
@@ -727,13 +727,13 @@ var ResearchNavigator = {
     const contentEl = doc.createXULElement('hbox');
     contentEl.style.cssText = `
       cursor: pointer; 
-      padding: 4px 8px; 
-      margin-left: ${level * 20}px;
+      padding: 3px 6px; 
+      margin-left: ${level * 18}px;
       align-items: center;
       border-radius: 4px;
       transition: all 0.15s ease;
       position: relative;
-      min-height: 24px;
+      min-height: 22px;
     `;
     
     // 鼠标悬停效果
@@ -748,7 +748,7 @@ var ResearchNavigator = {
     if (node === this.currentNode) {
       contentEl.style.background = 'rgba(33, 150, 243, 0.12)';
       contentEl.style.borderLeft = '3px solid #2196f3';
-      contentEl.style.paddingLeft = '5px';
+      contentEl.style.paddingLeft = '3px';
     }
     
     // 展开/折叠（仅有子节点时显示）
@@ -1200,7 +1200,7 @@ function createTreePanel(window) {
     right: ${ResearchNavigator.panelRight}px;
     top: ${ResearchNavigator.panelTop}px;
     width: ${ResearchNavigator.panelWidth}px;
-    height: 550px;
+    height: 520px;
     background: white;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
@@ -1209,6 +1209,8 @@ function createTreePanel(window) {
     display: none;
     min-width: 320px;
     max-width: 600px;
+    display: flex;
+    flex-direction: column;
   `;
   
   // 标题栏
@@ -1216,10 +1218,11 @@ function createTreePanel(window) {
   header.style.cssText = `
     background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
     color: white;
-    padding: 12px 16px;
+    padding: 10px 14px;
     align-items: center;
     border-radius: 8px 8px 0 0;
     cursor: move;
+    flex: 0 0 auto;
   `;
   
   // 拖动功能
@@ -1315,10 +1318,11 @@ function createTreePanel(window) {
   // 工具栏
   const toolbar = doc.createXULElement('hbox');
   toolbar.style.cssText = `
-    padding: 10px 12px;
+    padding: 8px 10px;
     border-bottom: 1px solid #f0f0f0;
     background: #fafbfc;
     align-items: center;
+    flex: 0 0 auto;
   `;
   
   const statsLabel = doc.createXULElement('label');
@@ -1377,14 +1381,15 @@ function createTreePanel(window) {
   scrollbox.setAttribute('orient', 'vertical');
   scrollbox.style.cssText = `
     overflow: auto;
-    background: #fafbfc;
+    background: white;
     min-height: 0;
+    flex: 1 1 auto;
   `;
   
   // 树容器
   const treeContainer = doc.createXULElement('vbox');
   treeContainer.id = 'research-navigator-tree-container';
-  treeContainer.style.cssText = 'padding: 12px; min-width: max-content;';
+  treeContainer.style.cssText = 'padding: 8px; min-width: max-content;';
   
   scrollbox.appendChild(treeContainer);
   
