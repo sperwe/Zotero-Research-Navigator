@@ -109,8 +109,8 @@ async function onStartup() {
         await moduleManager.initialize();
       });
       
-      // 注意：UI 初始化应该在 onMainWindowLoad 中进行，而不是在这里
-      // 因为插件在 Sandbox 中运行，必须使用 Zotero 传入的 window 参数
+      // 重要：UI 初始化必须在 onMainWindowLoad 中进行
+      // 因为只有在那里才能获得真实的 window 对象
       
       // 标记插件已初始化
       addon.data.initialized = true;
