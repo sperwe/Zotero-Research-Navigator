@@ -64,6 +64,10 @@ export class ResearchNavigator {
       this.registerEventListeners();
       
       this.initialized = true;
+      
+      // 添加调试方法
+      this.addDebugMethods();
+      
       Zotero.log("[Research Navigator] Initialization completed successfully", "info");
     } catch (error) {
       Zotero.logError(error);
@@ -365,6 +369,69 @@ export class ResearchNavigator {
   
   get history(): HistoryService {
     return this.historyService;
+  }
+  
+  /**
+   * 添加调试方法
+   */
+  private addDebugMethods(): void {
+    // 添加到 Zotero 全局对象
+    const zotero = Zotero as any;
+    
+    // 检查历史记录数量
+    zotero.ResearchNavigator = {
+      ...zotero.ResearchNavigator,
+      
+      // 获取历史记录统计
+      getStats: async () => {
+        const sessions = await this.historyService.getAllSessions();
+        const totalNodes = sessions.reduce((sum, session) => sum + session.nodeCount, 0);
+        const closedTabs = this.closedTabsManager?.getClosedTabs() || [];
+        
+        const stats = {
+          sessions: sessions.length,
+          totalNodes,
+          closedTabs: closedTabs.length,
+          currentSessionId: this.historyService.getCurrentSessionId(),
+          latestSession: sessions[0]
+        };
+        
+        console.log("=== Research Navigator Statistics ===");
+        console.log(`Sessions: ${stats.sessions}`);
+        console.log(`Total History Nodes: ${stats.totalNodes}`);
+        console.log(`Closed Tabs: ${stats.closedTabs}`);
+        console.log(`Current Session: ${stats.currentSessionId}`);
+        if (stats.latestSession) {
+          console.log(`Latest Session: ${stats.latestSession.name} (${stats.latestSession.nodeCount} nodes)`);
+        }
+        console.log("=====================================");
+        
+        return stats;
+      },
+      
+      // 手动创建测试历史
+      createTestHistory: async () => {
+        const selected = Zotero.getActiveZoteroPane()?.getSelectedItems();
+        if (selected && selected.length > 0) {
+          await this.handleItemSelect(selected.map(item => item.id));
+          console.log("Created history node for selected item");
+        } else {
+          console.log("No item selected");
+        }
+      },
+      
+      // 显示/隐藏面板
+      togglePanel: () => {
+        this.uiManager?.toggleMainPanel();
+      },
+      
+      // 获取当前选中的项目
+      getSelectedItems: () => {
+        return Zotero.getActiveZoteroPane()?.getSelectedItems();
+      }
+    };
+    
+    Zotero.log("[Research Navigator] Debug methods added. Use Zotero.ResearchNavigator.getStats() in console", "info");
   }
   
 }
