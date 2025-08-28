@@ -74,19 +74,34 @@ export class ClosedTabsManager {
     const Zotero_Tabs = this.getZoteroTabs();
     if (!Zotero_Tabs || !Zotero_Tabs._history) return;
     
-    // 添加一些测试历史
-    Zotero_Tabs._history.push([
-      {
-        index: 1,
-        data: {
-          itemID: 123456789  // 一个不存在的项目，会创建幽灵节点
-        }
+    // 先查看当前标签页
+    Zotero.log(`[ClosedTabsManager] Current tabs: ${Zotero_Tabs._tabs.length}`, "info");
+    if (Zotero_Tabs._tabs.length > 1) {
+      const firstTab = Zotero_Tabs._tabs[1]; // 跳过库标签页
+      Zotero.log(`[ClosedTabsManager] First tab: ${JSON.stringify(firstTab)}`, "info");
+      
+      // 关闭第一个非库标签页来创建真实历史
+      if (firstTab && firstTab.id !== 'zotero-pane') {
+        Zotero.log(`[ClosedTabsManager] Closing tab: ${firstTab.id}`, "info");
+        Zotero_Tabs.close(firstTab.id);
       }
-    ]);
+    } else {
+      // 如果没有打开的标签页，添加测试历史
+      Zotero_Tabs._history.push([
+        {
+          index: 1,
+          data: {
+            itemID: 123456789  // 一个不存在的项目，会创建幽灵节点
+          }
+        }
+      ]);
+    }
     
     // 重新同步
-    await this.syncWithZoteroHistory();
-    this.notifyClosedTabsChanged();
+    setTimeout(async () => {
+      await this.syncWithZoteroHistory();
+      this.notifyClosedTabsChanged();
+    }, 100);
     
     Zotero.log("[ClosedTabsManager] Test history created", "info");
   }
@@ -116,6 +131,33 @@ export class ClosedTabsManager {
     // 检查 Zotero.Session
     if (Zotero.Session) {
       Zotero.log(`[ClosedTabsManager] - Zotero.Session.state: ${JSON.stringify(Zotero.Session.state)}`, "info");
+    }
+    
+    // 显示真实的历史项目
+    if (Zotero_Tabs._history) {
+      let realHistoryCount = 0;
+      Zotero_Tabs._history.forEach((group, i) => {
+        group.forEach((item) => {
+          if (item.data?.itemID !== 123456789) {
+            realHistoryCount++;
+            Zotero.log(`[ClosedTabsManager] - Real history item in group ${i}: itemID=${item.data?.itemID}`, "info");
+            
+            // 尝试获取项目信息
+            if (item.data?.itemID) {
+              try {
+                const zoteroItem = Zotero.Items.get(item.data.itemID);
+                if (zoteroItem) {
+                  Zotero.log(`[ClosedTabsManager]   - Title: ${zoteroItem.getField('title')}`, "info");
+                  Zotero.log(`[ClosedTabsManager]   - Type: ${zoteroItem.itemType}`, "info");
+                }
+              } catch (e) {
+                Zotero.log(`[ClosedTabsManager]   - Item not found in library`, "info");
+              }
+            }
+          }
+        });
+      });
+      Zotero.log(`[ClosedTabsManager] - Total real history items: ${realHistoryCount}`, "info");
     }
   }
 
@@ -428,10 +470,15 @@ export class ClosedTabsManager {
    * 清除所有已关闭的标签页
    */
   async clearAll(): Promise<void> {
-    // 更新数据库中所有已关闭节点的状态
-    for (const closedTab of this.closedTabs) {
-      // 实际上不改变数据库状态，只是从内存中清除
-      // 这样历史记录仍然保留
+    // 清除 Zotero 的历史
+    const Zotero_Tabs = this.getZoteroTabs();
+    if (Zotero_Tabs && Zotero_Tabs._history) {
+      // 清除测试数据（itemID: 123456789）
+      Zotero_Tabs._history = Zotero_Tabs._history.filter(group => {
+        return !group.some(item => item.data?.itemID === 123456789);
+      });
+      
+      Zotero.log(`[ClosedTabsManager] Cleared test data, remaining history: ${Zotero_Tabs._history.length} groups`, "info");
     }
 
     this.closedTabs = [];
