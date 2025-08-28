@@ -216,16 +216,18 @@ export class ClosedTabsManager {
         Zotero.log(`[ClosedTabsManager] History item: ${JSON.stringify(historyItem)}`, "info");
         
         if (tabData && tabData.itemID) {
+          // 跳过测试数据
+          if (tabData.itemID === 123456789) {
+            Zotero.log(`[ClosedTabsManager] Skipping test data item`, "info");
+            continue;
+          }
+          
           // 检查是否已经在我们的历史中
-          // 使用 itemID 和时间戳来避免重复
+          // 使用 itemID 和组索引来识别唯一性
           const exists = this.closedTabs.some(
             (ct) => {
-              // 如果是相同的项目且关闭时间相近（1秒内），认为是重复的
-              if (ct.node.itemId === tabData.itemID) {
-                const timeDiff = Math.abs(ct.closedAt.getTime() - Date.now());
-                return timeDiff < 1000; // 1秒内的认为是重复
-              }
-              return false;
+              // 如果是相同的项目ID和相同的tabData（引用相等），认为是重复的
+              return ct.node.itemId === tabData.itemID && ct.tabData === tabData;
             }
           );
 
@@ -234,10 +236,24 @@ export class ClosedTabsManager {
             const ghostNode = await this.createGhostNode(tabData);
             
             if (ghostNode) {
+              // 尝试从不同来源获取关闭时间
+              let closedAt = new Date();
+              
+              // 如果节点已经有关闭时间，使用它
+              if (ghostNode.closedAt) {
+                closedAt = new Date(ghostNode.closedAt);
+              }
+              // 否则，基于历史组的位置估算时间
+              else {
+                // 假设每个历史组之间间隔约5分钟（这是一个估算）
+                const minutesAgo = groupIndex * 5;
+                closedAt = new Date(Date.now() - minutesAgo * 60 * 1000);
+              }
+              
               this.closedTabs.unshift({
                 node: ghostNode,
                 tabData: tabData,
-                closedAt: new Date(),
+                closedAt: closedAt,
                 windowId: 0,
                 index: historyItem.index,
               });
@@ -326,12 +342,17 @@ export class ClosedTabsManager {
             // 忽略错误
           }
           
-          // 从图标推断类型
-          if (tabData.icon) {
-            if (tabData.icon.includes('PDF')) itemType = 'attachment';
-            else if (tabData.icon.includes('EPUB')) itemType = 'attachment';
-            else if (tabData.icon.includes('Snapshot')) itemType = 'webpage';
-          }
+                        // 从图标推断类型
+              if (tabData.icon) {
+                if (tabData.icon.includes('PDF')) itemType = 'attachment';
+                else if (tabData.icon.includes('EPUB')) itemType = 'attachment';
+                else if (tabData.icon.includes('Snapshot')) itemType = 'webpage';
+              }
+              
+              // 保存原始的标签页标题（如果有）
+              if (!title && tabData.title) {
+                title = tabData.title;
+              }
           
           const ghostNode: HistoryNode = {
             id: `ghost_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -532,15 +553,38 @@ export class ClosedTabsManager {
     // 清除 Zotero 的历史
     const Zotero_Tabs = this.getZoteroTabs();
     if (Zotero_Tabs && Zotero_Tabs._history) {
-      // 清除测试数据（itemID: 123456789）
+      const originalLength = Zotero_Tabs._history.length;
+      
+      // 过滤掉包含测试数据的组
       Zotero_Tabs._history = Zotero_Tabs._history.filter(group => {
-        return !group.some(item => item.data?.itemID === 123456789);
+        // 保留至少有一个真实项目的组
+        return group.some(item => item.data?.itemID !== 123456789);
       });
       
-      Zotero.log(`[ClosedTabsManager] Cleared test data, remaining history: ${Zotero_Tabs._history.length} groups`, "info");
+      // 从每个组中移除测试项目
+      Zotero_Tabs._history = Zotero_Tabs._history.map(group => {
+        return group.filter(item => item.data?.itemID !== 123456789);
+      }).filter(group => group.length > 0); // 移除空组
+      
+      const newLength = Zotero_Tabs._history.length;
+      Zotero.log(`[ClosedTabsManager] Cleared test data: ${originalLength} -> ${newLength} groups`, "info");
     }
 
+    // 清除我们的缓存
     this.closedTabs = [];
+    
+    // 更新数据库中已关闭节点的状态
+    try {
+      const nodes = this.historyService.getAllNodes();
+      for (const node of nodes) {
+        if (node.status === "closed") {
+          await this.databaseService.updateNodeStatus(node.id, "open");
+        }
+      }
+    } catch (error) {
+      Zotero.logError(`[ClosedTabsManager] Error updating node status: ${error}`);
+    }
+    
     this.notifyClosedTabsChanged();
   }
 
