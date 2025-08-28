@@ -27,16 +27,31 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
     ctx,
   );
 
+  // Fallback: ensure global addon registration exists before invoking hooks
+  if (!Zotero.ResearchNavigator || !Zotero.ResearchNavigator.hooks) {
+    try {
+      const candidate =
+        (ctx && (ctx.addon || (ctx._globalThis && ctx._globalThis.addon))) ||
+        (typeof globalThis !== "undefined" &&
+          (globalThis.addon ||
+            (globalThis._globalThis && globalThis._globalThis.addon))) ||
+        null;
+      if (candidate) {
+        Zotero.ResearchNavigator = candidate;
+      }
+    } catch (e) {}
+  }
+
   // Initialize plugin
-  await Zotero.ResearchNavigator.hooks.onStartup();
+  await Zotero.ResearchNavigator?.hooks?.onStartup?.();
 }
 
 async function onMainWindowLoad({ window }, reason) {
-  await Zotero.ResearchNavigator?.hooks.onMainWindowLoad(window);
+  await Zotero.ResearchNavigator?.hooks?.onMainWindowLoad?.(window);
 }
 
 async function onMainWindowUnload({ window }, reason) {
-  await Zotero.ResearchNavigator?.hooks.onMainWindowUnload(window);
+  await Zotero.ResearchNavigator?.hooks?.onMainWindowUnload?.(window);
 }
 
 async function shutdown({ id, version, resourceURI, rootURI }, reason) {
@@ -45,7 +60,7 @@ async function shutdown({ id, version, resourceURI, rootURI }, reason) {
   }
 
   // Shutdown plugin
-  await Zotero.ResearchNavigator?.hooks.onShutdown();
+  await Zotero.ResearchNavigator?.hooks?.onShutdown?.();
 
   // Unregister chrome
   if (chromeHandle) {
