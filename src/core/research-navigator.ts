@@ -433,6 +433,56 @@ export class ResearchNavigator {
         return Zotero.getActiveZoteroPane()?.getSelectedItems();
       },
       
+      // 测试笔记关系
+      testNoteRelations: async () => {
+        const selected = Zotero.getActiveZoteroPane()?.getSelectedItems();
+        if (!selected || selected.length === 0) {
+          Zotero.log("No item selected", "warning");
+          return;
+        }
+        
+        const item = selected[0];
+        Zotero.log(`=== Testing Note Relations for: ${item.getField('title')} ===`, "info");
+        Zotero.log(`Item ID: ${item.id}`, "info");
+        Zotero.log(`Item Type: ${item.itemType}`, "info");
+        Zotero.log(`Is Attachment: ${item.isAttachment()}`, "info");
+        Zotero.log(`Is Note: ${item.isNote()}`, "info");
+        
+        if (item.isAttachment()) {
+          Zotero.log(`Parent ID: ${item.parentID}`, "info");
+          if (item.parentID) {
+            const parent = await Zotero.Items.getAsync(item.parentID);
+            if (parent) {
+              Zotero.log(`Parent Title: ${parent.getField('title')}`, "info");
+              const notes = parent.getNotes();
+              Zotero.log(`Parent has ${notes.length} notes`, "info");
+              for (const noteId of notes) {
+                const note = await Zotero.Items.getAsync(noteId);
+                if (note) {
+                  Zotero.log(`  - Note: ${note.getField('title') || 'Untitled'} (ID: ${noteId})`, "info");
+                }
+              }
+            }
+          }
+        } else {
+          // 是主条目
+          const notes = item.getNotes();
+          Zotero.log(`Item has ${notes.length} notes`, "info");
+          for (const noteId of notes) {
+            const note = await Zotero.Items.getAsync(noteId);
+            if (note) {
+              Zotero.log(`  - Note: ${note.getField('title') || 'Untitled'} (ID: ${noteId})`, "info");
+            }
+          }
+          
+          // 检查附件
+          const attachments = await item.getAttachments();
+          Zotero.log(`Item has ${attachments.length} attachments`, "info");
+        }
+        
+        Zotero.log("=====================================", "info");
+      },
+      
       // 获取导航器实例
       getInstance: () => this,
       
