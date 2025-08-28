@@ -674,9 +674,9 @@ export class HistoryTreeTab {
         return;
       }
       
-      // 为每个项目创建历史节点
+      // 为每个项目创建历史节点 - 不设置父节点，避免外键约束问题
       for (const item of regularItems) {
-        await this.historyService.createOrUpdateNode(item.id);
+        await this.historyService.createOrUpdateNode(item.id, { force: true });
         Zotero.log(`[HistoryTreeTab] Created history node for item: ${item.getField('title')}`, "info");
       }
       
