@@ -29,8 +29,10 @@ export class SidebarManager {
       this.initialized = true;
       Zotero.log("[SidebarManager] Initialized", "info");
     } catch (error) {
-      Zotero.logError(error);
-      throw new Error(`Failed to initialize sidebar: ${error}`);
+      // 侧边栏是可选功能，如果无法初始化就记录警告但不中断
+      Zotero.log(`[SidebarManager] Initialization skipped: ${error}`, "warn");
+      this.initialized = false;
+      // 不抛出错误，让插件继续运行
     }
   }
   

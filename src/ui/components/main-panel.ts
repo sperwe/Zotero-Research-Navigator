@@ -52,7 +52,7 @@ export class MainPanel {
       background: var(--panel-background);
       border: 1px solid var(--panel-border);
       border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
       display: none;
       flex-direction: column;
       z-index: 1000;
@@ -100,9 +100,10 @@ export class MainPanel {
     header.style.cssText = `
       display: flex;
       align-items: center;
-      padding: 8px 12px;
+      padding: 12px 16px;
       border-bottom: 1px solid var(--panel-border);
       cursor: move;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.05), transparent);
     `;
 
     // 标题
@@ -111,9 +112,10 @@ export class MainPanel {
     title.style.cssText = `
       margin: 0;
       flex: 1;
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 600;
       color: var(--text-color);
+      letter-spacing: -0.3px;
     `;
     header.appendChild(title);
 

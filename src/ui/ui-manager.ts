@@ -247,17 +247,23 @@ export class UIManager {
       }
       
       .research-navigator-panel {
-        --panel-background: var(--material-background);
-        --panel-border: var(--material-border-quarternary);
-        --text-color: var(--fill-primary);
-        --text-secondary: var(--fill-secondary);
+        --panel-background: rgba(255, 255, 255, 0.98);
+        --panel-border: rgba(0, 0, 0, 0.12);
+        --text-color: #333333;
+        --text-secondary: #666666;
+        --hover-background: rgba(0, 0, 0, 0.04);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
       }
       
       /* 暗色模式支持 */
       @media (prefers-color-scheme: dark) {
         .research-navigator-panel {
-          --panel-background: #1e1e1e;
-          --panel-border: #404040;
+          --panel-background: rgba(30, 30, 30, 0.95);
+          --panel-border: rgba(255, 255, 255, 0.15);
+          --text-color: #e0e0e0;
+          --text-secondary: #a0a0a0;
+          --hover-background: rgba(255, 255, 255, 0.08);
         }
       }
       
