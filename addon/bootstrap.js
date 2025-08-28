@@ -762,36 +762,36 @@ var ResearchNavigator = {
   },
   
   // 导航：后退
-  navigateBack() {
+  async navigateBack() {
     if (this.navigationIndex > 0) {
       this.navigationIndex--;
       const node = this.navigationHistory[this.navigationIndex];
       this.currentNode = node;
-      this.openItemFromNode(node);
+      await this.openItemFromNode(node);
       this.updateTreeDisplay();
       this.updateNavigationButtons();
     }
   },
   
   // 导航：前进
-  navigateForward() {
+  async navigateForward() {
     if (this.navigationIndex < this.navigationHistory.length - 1) {
       this.navigationIndex++;
       const node = this.navigationHistory[this.navigationIndex];
       this.currentNode = node;
-      this.openItemFromNode(node);
+      await this.openItemFromNode(node);
       this.updateTreeDisplay();
       this.updateNavigationButtons();
     }
   },
   
   // 导航：到父节点
-  navigateToParent() {
+  async navigateToParent() {
     if (this.currentNode && this.currentNode.parentId) {
       const parentNode = this.nodeMap.get(this.currentNode.parentId);
       if (parentNode) {
         this.currentNode = parentNode;
-        this.openItemFromNode(parentNode);
+        await this.openItemFromNode(parentNode);
         this.addToNavigationHistory(parentNode);
         this.updateTreeDisplay();
       }
@@ -824,7 +824,7 @@ var ResearchNavigator = {
   },
   
   // 从节点打开文献
-  openItemFromNode(node) {
+  async openItemFromNode(node) {
     if (!node) return;
     
     const item = Zotero.Items.get(node.itemId);
@@ -834,57 +834,29 @@ var ResearchNavigator = {
     if (!win || !win.ZoteroPane) return;
     
     try {
+      // 先在库中选择项目
       win.ZoteroPane.selectItem(item.id);
       
-      if (item.isPDFAttachment()) {
-        // PDF 附件直接打开
-        Zotero.OpenPDF.openToPage(item, null, null);
-      } else if (item.isAttachment()) {
-        // 处理其他类型的附件
-        const contentType = item.attachmentContentType;
-        const linkMode = item.attachmentLinkMode;
-        
-        if (contentType === 'text/html' || contentType === 'application/xhtml+xml') {
-          // HTML 快照 - 在新标签页打开
-          if (win.Zotero_Tabs) {
-            win.Zotero_Tabs.open('reader', {
-              itemID: item.id
-            });
-          } else {
-            // 后备方案：使用默认方式打开
-            item.openAttachment();
-          }
-        } else if (contentType === 'application/epub+zip') {
-          // EPUB 电子书 - 在新标签页打开
-          if (win.Zotero_Tabs) {
-            win.Zotero_Tabs.open('reader', {
-              itemID: item.id
-            });
-          } else {
-            // 后备方案：使用默认方式打开
-            item.openAttachment();
-          }
-        } else {
-          // 其他附件类型，使用默认处理
-          item.openAttachment();
-        }
+      if (item.isAttachment()) {
+        // 如果是附件，处理打开逻辑
+        await this.openOrSwitchToAttachment(win, item);
       } else if (item.isRegularItem()) {
-        // 常规项目，按优先级尝试打开附件
+        // 如果是常规项目，尝试打开最佳附件
         const attachments = item.getAttachments();
         let attachmentOpened = false;
         
         // 优先级：PDF > EPUB > HTML
-        const attachmentPriority = [
-          { check: (att) => att.isPDFAttachment(), open: (att) => Zotero.OpenPDF.openToPage(att, null, null) },
-          { check: (att) => att.attachmentContentType === 'application/epub+zip', open: (att) => this.openAttachmentInTab(win, att) },
-          { check: (att) => att.attachmentContentType === 'text/html' || att.attachmentContentType === 'application/xhtml+xml', open: (att) => this.openAttachmentInTab(win, att) }
+        const priorities = [
+          { type: 'pdf', check: (att) => att.isPDFAttachment() },
+          { type: 'epub', check: (att) => att.attachmentContentType === 'application/epub+zip' },
+          { type: 'html', check: (att) => att.attachmentContentType === 'text/html' }
         ];
         
-        for (let priority of attachmentPriority) {
+        for (let priority of priorities) {
           for (let id of attachments) {
             const attachment = Zotero.Items.get(id);
             if (attachment && priority.check(attachment)) {
-              priority.open(attachment);
+              await this.openOrSwitchToAttachment(win, attachment);
               attachmentOpened = true;
               break;
             }
@@ -897,13 +869,41 @@ var ResearchNavigator = {
     }
   },
   
-  // 辅助函数：在标签页中打开附件
-  openAttachmentInTab(win, attachment) {
-    if (win.Zotero_Tabs) {
-      win.Zotero_Tabs.open('reader', {
-        itemID: attachment.id
-      });
+  // 打开或切换到附件
+  async openOrSwitchToAttachment(win, attachment) {
+    if (!attachment || !attachment.isAttachment()) return;
+    
+    // 检查标签页是否已经打开
+    if (win.Zotero_Tabs && win.Zotero_Tabs.getTabIDByItemID) {
+      const existingTabID = win.Zotero_Tabs.getTabIDByItemID(attachment.id);
+      
+      if (existingTabID) {
+        // 标签页已存在，切换到该标签页
+        this.debug(`Switching to existing tab for item ${attachment.id}`);
+        win.Zotero_Tabs.select(existingTabID);
+        return;
+      }
+    }
+    
+    // 标签页不存在，需要打开新的
+    this.debug(`Opening new tab for item ${attachment.id}`);
+    
+    // 检查附件类型
+    if (attachment.attachmentReaderType) {
+      // PDF、EPUB、HTML 快照可以在内部阅读器打开
+      try {
+        await Zotero.Reader.open(attachment.id);
+      } catch (e) {
+        this.debug(`Error opening in reader: ${e}`);
+        // 如果 Reader API 失败，尝试旧的方式
+        if (attachment.isPDFAttachment()) {
+          Zotero.OpenPDF.openToPage(attachment, null, null);
+        } else {
+          attachment.openAttachment();
+        }
+      }
     } else {
+      // 其他类型使用默认处理
       attachment.openAttachment();
     }
   },
@@ -1326,8 +1326,8 @@ var ResearchNavigator = {
         item.style.background = '';
       });
       
-      item.addEventListener('click', () => {
-        this.openItemFromNode(rec.node);
+      item.addEventListener('click', async () => {
+        await this.openItemFromNode(rec.node);
       });
       
       const title = doc.createXULElement('label');
@@ -1578,9 +1578,9 @@ var ResearchNavigator = {
     }
     
     // 点击打开文献
-    contentEl.addEventListener('click', () => {
+    contentEl.addEventListener('click', async () => {
       this.currentNode = node;
-      this.openItemFromNode(node);
+      await this.openItemFromNode(node);
       this.addToNavigationHistory(node);
       this.updateTreeDisplay();
     });
@@ -1654,9 +1654,9 @@ var ResearchNavigator = {
     item.appendChild(info);
     item.appendChild(relation);
     
-    item.addEventListener('click', () => {
+    item.addEventListener('click', async () => {
       this.currentNode = node;
-      this.openItemFromNode(node);
+      await this.openItemFromNode(node);
       this.addToNavigationHistory(node);
     });
     
@@ -1714,9 +1714,9 @@ var ResearchNavigator = {
       item.appendChild(time);
       item.appendChild(title);
       
-      item.addEventListener('click', () => {
+      item.addEventListener('click', async () => {
         this.currentNode = node;
-        this.openItemFromNode(node);
+        await this.openItemFromNode(node);
         this.addToNavigationHistory(node);
       });
       
