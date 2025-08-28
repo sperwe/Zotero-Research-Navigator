@@ -72,59 +72,21 @@ export class MainPanel {
     // 创建调整大小的手柄
     this.createResizers(doc);
 
-    // 等待添加到文档
-    const attachToDOM = async () => {
-      return new Promise<void>((resolve) => {
-        let attempts = 0;
-        const maxAttempts = 100; // 最多尝试 5 秒
-        
-        const tryAttach = async () => {
-          attempts++;
-          
-          // 尝试多种方式获取可用的 document 和 body
-          let targetDoc = doc;
-          let targetBody = targetDoc.body;
-          
-          // 如果当前文档没有 body，尝试获取主窗口的文档
-          if (!targetBody && this.window !== Zotero.getMainWindow()) {
-            const mainWindow = Zotero.getMainWindow();
-            if (mainWindow && mainWindow.document && mainWindow.document.body) {
-              targetDoc = mainWindow.document;
-              targetBody = mainWindow.document.body;
-              Zotero.log("[MainPanel] Using main window document", "info");
-            }
-          }
-          
-          if (targetBody) {
-            targetBody.appendChild(this.container);
-            
-            // 初始化标签页
-            await this.initializeTabs();
-            
-            // 加载保存的状态
-            this.loadState();
-            
-            Zotero.log("[MainPanel] Successfully attached to DOM", "info");
-            resolve();
-          } else if (attempts < maxAttempts) {
-            Zotero.log(`[MainPanel] Waiting for document.body... ${attempts}`, "info");
-            this.window.setTimeout(tryAttach, 50);
-          } else {
-            // 超时后，强制完成创建流程
-            Zotero.log("[MainPanel] Timeout waiting for body, completing creation anyway", "warning");
-            
-            // 初始化标签页（即使没有附加到 DOM）
-            await this.initializeTabs();
-            
-            // 标记面板已创建，稍后可以尝试附加
-            resolve();
-          }
-        };
-        tryAttach();
-      });
-    };
-    
-    await attachToDOM();
+    // 添加到文档
+    if (doc.body) {
+      doc.body.appendChild(this.container);
+    } else {
+      // 如果 body 还不存在，添加到根元素
+      const root = doc.documentElement || doc;
+      root.appendChild(this.container);
+    }
+
+    // 初始化标签页
+    await this.initializeTabs();
+
+    // 加载保存的状态
+    this.loadState();
+
     Zotero.log("[MainPanel] Created successfully", "info");
   }
 
