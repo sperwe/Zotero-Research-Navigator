@@ -837,19 +837,74 @@ var ResearchNavigator = {
       win.ZoteroPane.selectItem(item.id);
       
       if (item.isPDFAttachment()) {
+        // PDF 附件直接打开
         Zotero.OpenPDF.openToPage(item, null, null);
-      } else if (item.isRegularItem()) {
-        const attachments = item.getAttachments();
-        for (let id of attachments) {
-          const attachment = Zotero.Items.get(id);
-          if (attachment && attachment.isPDFAttachment()) {
-            Zotero.OpenPDF.openToPage(attachment, null, null);
-            break;
+      } else if (item.isAttachment()) {
+        // 处理其他类型的附件
+        const contentType = item.attachmentContentType;
+        const linkMode = item.attachmentLinkMode;
+        
+        if (contentType === 'text/html' || contentType === 'application/xhtml+xml') {
+          // HTML 快照 - 在新标签页打开
+          if (win.Zotero_Tabs) {
+            win.Zotero_Tabs.open('reader', {
+              itemID: item.id
+            });
+          } else {
+            // 后备方案：使用默认方式打开
+            item.openAttachment();
           }
+        } else if (contentType === 'application/epub+zip') {
+          // EPUB 电子书 - 在新标签页打开
+          if (win.Zotero_Tabs) {
+            win.Zotero_Tabs.open('reader', {
+              itemID: item.id
+            });
+          } else {
+            // 后备方案：使用默认方式打开
+            item.openAttachment();
+          }
+        } else {
+          // 其他附件类型，使用默认处理
+          item.openAttachment();
+        }
+      } else if (item.isRegularItem()) {
+        // 常规项目，按优先级尝试打开附件
+        const attachments = item.getAttachments();
+        let attachmentOpened = false;
+        
+        // 优先级：PDF > EPUB > HTML
+        const attachmentPriority = [
+          { check: (att) => att.isPDFAttachment(), open: (att) => Zotero.OpenPDF.openToPage(att, null, null) },
+          { check: (att) => att.attachmentContentType === 'application/epub+zip', open: (att) => this.openAttachmentInTab(win, att) },
+          { check: (att) => att.attachmentContentType === 'text/html' || att.attachmentContentType === 'application/xhtml+xml', open: (att) => this.openAttachmentInTab(win, att) }
+        ];
+        
+        for (let priority of attachmentPriority) {
+          for (let id of attachments) {
+            const attachment = Zotero.Items.get(id);
+            if (attachment && priority.check(attachment)) {
+              priority.open(attachment);
+              attachmentOpened = true;
+              break;
+            }
+          }
+          if (attachmentOpened) break;
         }
       }
     } catch (e) {
       this.debug(`Error opening item: ${e}`);
+    }
+  },
+  
+  // 辅助函数：在标签页中打开附件
+  openAttachmentInTab(win, attachment) {
+    if (win.Zotero_Tabs) {
+      win.Zotero_Tabs.open('reader', {
+        itemID: attachment.id
+      });
+    } else {
+      attachment.openAttachment();
     }
   },
   
