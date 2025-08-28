@@ -474,6 +474,16 @@ export class UIManager {
       }, 5000);
     }
   }
+  
+  /**
+   * 刷新历史标签页
+   */
+  refreshHistoryTab(): void {
+    if (this.mainPanel) {
+      // TODO: 实现刷新逻辑
+      Zotero.log("[UIManager] Refreshing history tab", "info");
+    }
+  }
 
   async destroy(): Promise<void> {
     // 移除窗口监听器

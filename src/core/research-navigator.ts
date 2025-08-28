@@ -120,14 +120,23 @@ export class ResearchNavigator {
     // 监听 Zotero 事件
     const notifierID = Zotero.Notifier.registerObserver({
       notify: async (event: string, type: string, ids: number[] | string[], extraData?: any) => {
-        // 处理标签页事件
-        if (type === "tab") {
-          await this.handleTabEvent(event, ids, extraData);
-        }
-        
-        // 处理笔记事件
-        if (type === "item" && event === "add") {
-          await this.handleItemEvent(event, ids);
+        try {
+          // 处理标签页事件
+          if (type === "tab") {
+            await this.handleTabEvent(event, ids, extraData);
+          }
+          
+          // 处理文献选择事件 - 这是主要的历史记录触发器
+          if (type === "item" && event === "select") {
+            await this.handleItemSelect(ids);
+          }
+          
+          // 处理笔记事件
+          if (type === "item" && event === "add") {
+            await this.handleItemEvent(event, ids);
+          }
+        } catch (error) {
+          Zotero.logError(`Error handling ${type} ${event}: ${error}`);
         }
       }
     }, ["tab", "item"], "ResearchNavigator");
@@ -148,6 +157,30 @@ export class ResearchNavigator {
     } else if (event === "select") {
       // 标签页切换时，更新当前历史节点
       await this.historyService.handleTabSelect(ids[0]);
+    }
+  }
+  
+  /**
+   * 处理文献选择事件
+   */
+  private async handleItemSelect(ids: number[] | string[]): Promise<void> {
+    if (ids.length === 0) return;
+    
+    // 获取选中的第一个项目
+    const itemId = Number(ids[0]);
+    const item = await Zotero.Items.getAsync(itemId);
+    
+    if (!item) return;
+    
+    // 记录到历史
+    Zotero.log(`[Research Navigator] Item selected: ${item.getField('title')}`, "info");
+    
+    // 创建或更新历史节点
+    await this.historyService.createOrUpdateNode(itemId);
+    
+    // 刷新 UI
+    if (this.uiManager) {
+      this.uiManager.refreshHistoryTab();
     }
   }
   
