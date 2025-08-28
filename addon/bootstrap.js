@@ -463,6 +463,7 @@ var ResearchNavigator = {
   viewMode: ViewMode.TREE,
   compactMode: false,
   showRecommendations: false,
+  openOnStartup: false,
   
   // 过滤设置
   filterRelationType: null,
@@ -499,6 +500,8 @@ var ResearchNavigator = {
     } catch (e) {
       this.debug(`DB init/load skipped due to error: ${e}`);
     }
+    // Load preferences
+    this.loadPreferences();
     this.setupShortcuts();
   },
   
@@ -564,6 +567,50 @@ var ResearchNavigator = {
       }
     }
   },
+
+  // Preferences load/save
+  loadPreferences() {
+    // View & flags
+    const vm = safeGetPref(`${PREF_NS}.viewMode`, this.viewMode);
+    if (Object.values(ViewMode).includes(vm)) this.viewMode = vm;
+    this.compactMode = !!safeGetPref(`${PREF_NS}.compactMode`, this.compactMode);
+    this.showRecommendations = !!safeGetPref(`${PREF_NS}.showRecommendations`, this.showRecommendations);
+    this.openOnStartup = !!safeGetPref(`${PREF_NS}.openOnStartup`, this.openOnStartup);
+
+    // Panel geometry
+    const w = parseInt(safeGetPref(`${PREF_NS}.panelWidth`, this.panelWidth), 10);
+    const h = parseInt(safeGetPref(`${PREF_NS}.panelHeight`, this.panelHeight), 10);
+    const t = parseInt(safeGetPref(`${PREF_NS}.panelTop`, this.panelTop), 10);
+    const r = parseInt(safeGetPref(`${PREF_NS}.panelRight`, this.panelRight), 10);
+    if (!isNaN(w)) this.panelWidth = w;
+    if (!isNaN(h)) this.panelHeight = h;
+    if (!isNaN(t)) this.panelTop = t;
+    if (!isNaN(r)) this.panelRight = r;
+
+    // Shortcuts
+    const defaults = {
+      togglePanel: 'Alt+H',
+      navigateBack: 'Alt+Left',
+      navigateForward: 'Alt+Right',
+      navigateParent: 'Alt+Up',
+      switchView: 'Alt+V',
+      search: 'Ctrl+F'
+    };
+    Object.keys(defaults).forEach((k) => {
+      const v = safeGetPref(`${PREF_NS}.shortcut.${k}`, this.shortcuts[k] || defaults[k]);
+      if (typeof v === 'string' && v) this.shortcuts[k] = v;
+    });
+  },
+
+  savePanelState() {
+    safeSetPref(`${PREF_NS}.viewMode`, this.viewMode);
+    safeSetPref(`${PREF_NS}.compactMode`, !!this.compactMode);
+    safeSetPref(`${PREF_NS}.showRecommendations`, !!this.showRecommendations);
+    safeSetPref(`${PREF_NS}.panelWidth`, this.panelWidth);
+    safeSetPref(`${PREF_NS}.panelHeight`, this.panelHeight);
+    safeSetPref(`${PREF_NS}.panelTop`, this.panelTop);
+    safeSetPref(`${PREF_NS}.panelRight`, this.panelRight);
+  },
   
   // 处理快捷键
   handleShortcut(event) {
@@ -600,6 +647,8 @@ var ResearchNavigator = {
     var win = Services.wm.getMostRecentWindow("navigator:browser");
     if (win) {
       toggleTreePanel(win);
+      // Save latest state after toggle
+      this.savePanelState();
     }
   },
   
@@ -2005,6 +2054,25 @@ const ADDON_UNINSTALL = 6;
 const ADDON_UPGRADE = 7;
 const ADDON_DOWNGRADE = 8;
 
+// Preferences namespace and helpers
+const PREF_NS = 'extensions.zotero.researchnavigator';
+function safeGetPref(key, fallback) {
+  try {
+    if (Zotero && Zotero.Prefs && typeof Zotero.Prefs.get !== 'undefined') {
+      const val = Zotero.Prefs.get(key);
+      return typeof val === 'undefined' ? fallback : val;
+    }
+  } catch (e) {}
+  return fallback;
+}
+function safeSetPref(key, value) {
+  try {
+    if (Zotero && Zotero.Prefs && typeof Zotero.Prefs.set !== 'undefined') {
+      Zotero.Prefs.set(key, value);
+    }
+  } catch (e) {}
+}
+
 function install(data, reason) {}
 
 async function startup({ id, version, resourceURI, rootURI }, reason) {
@@ -2066,6 +2134,19 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
     }
     
     ResearchNavigator.debug('Research Navigator started successfully');
+    
+    // Auto-open panel if preference enabled
+    try {
+      if (ResearchNavigator.openOnStartup && typeof Services !== 'undefined' && Services.wm) {
+        const w = Services.wm.getMostRecentWindow('navigator:browser');
+        if (w) {
+          const existing = w.document.getElementById('research-navigator-panel');
+          if (!existing || existing.style.display === 'none') {
+            toggleTreePanel(w);
+          }
+        }
+      }
+    } catch (e) {}
   } catch (e) {
     ResearchNavigator.debug(`Startup error: ${e}`);
     ResearchNavigator.debug(`Stack: ${e.stack}`);
@@ -2212,6 +2293,35 @@ function addUI(window) {
     toolsMenu.appendChild(menuitem);
     ResearchNavigator.addedElementIds.push("research-navigator-tools-menu");
     
+    // 推荐开关
+    const toggleRecommend = doc.createXULElement("menuitem");
+    toggleRecommend.id = "research-navigator-toggle-recommend";
+    toggleRecommend.setAttribute("type", "checkbox");
+    toggleRecommend.setAttribute("label", "Show Recommendations");
+    toggleRecommend.setAttribute("checked", ResearchNavigator.showRecommendations ? "true" : "false");
+    toggleRecommend.addEventListener("command", function() {
+      ResearchNavigator.showRecommendations = !ResearchNavigator.showRecommendations;
+      ResearchNavigator.savePanelState();
+      // 更新所有窗口视图
+      ResearchNavigator.updateTreeDisplay();
+    });
+    toolsMenu.appendChild(toggleRecommend);
+    ResearchNavigator.addedElementIds.push("research-navigator-toggle-recommend");
+
+    // 紧凑模式开关
+    const toggleCompact = doc.createXULElement("menuitem");
+    toggleCompact.id = "research-navigator-toggle-compact";
+    toggleCompact.setAttribute("type", "checkbox");
+    toggleCompact.setAttribute("label", "Compact Mode");
+    toggleCompact.setAttribute("checked", ResearchNavigator.compactMode ? "true" : "false");
+    toggleCompact.addEventListener("command", function() {
+      ResearchNavigator.compactMode = !ResearchNavigator.compactMode;
+      ResearchNavigator.savePanelState();
+      ResearchNavigator.updateTreeDisplay();
+    });
+    toolsMenu.appendChild(toggleCompact);
+    ResearchNavigator.addedElementIds.push("research-navigator-toggle-compact");
+
     // 导出菜单项
     const exportMenuItem = doc.createXULElement("menuitem");
     exportMenuItem.id = "research-navigator-export-menu";
