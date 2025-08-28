@@ -252,10 +252,11 @@ export class MainPanel {
     this.tabs.set("closed", closedTab);
 
     // 笔记关联标签页
-    const notesTab = new NoteRelationsTab(this.window, {
-      noteAssociationSystem: this.options.noteAssociationSystem,
-      historyService: this.options.historyService,
-    });
+    const notesTab = new NoteRelationsTab(
+      this.window,
+      this.options.historyService,
+      this.options.noteAssociationSystem
+    );
     this.tabs.set("notes", notesTab);
 
     // 初始化所有标签页
