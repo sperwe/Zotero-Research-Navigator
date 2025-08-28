@@ -109,3 +109,5 @@ temp/
 ehthumbs.db
 Thumbs.db.scaffold/
 core
+*-temp/
+tmp/
