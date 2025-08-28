@@ -93,6 +93,18 @@ export class HistoryTreeTab {
     });
     toolbar.appendChild(testHistoryBtn);
     
+    // 调试按钮 - 显示 Zotero 状态
+    const debugBtn = doc.createElement("button");
+    debugBtn.textContent = "Debug State";
+    debugBtn.style.cssText = `
+      background: #FF5722;
+      color: white;
+    `;
+    debugBtn.addEventListener("click", () => {
+      this.closedTabsManager.debugZoteroState();
+    });
+    toolbar.appendChild(debugBtn);
+    
     // 清除已关闭标签页按钮
     const clearClosedBtn = doc.createElement("button");
     clearClosedBtn.textContent = "Clear Closed Tabs";

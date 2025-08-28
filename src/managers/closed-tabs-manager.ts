@@ -90,6 +90,34 @@ export class ClosedTabsManager {
     
     Zotero.log("[ClosedTabsManager] Test history created", "info");
   }
+  
+  /**
+   * 调试：显示 Zotero 的完整状态
+   */
+  debugZoteroState(): void {
+    const Zotero_Tabs = this.getZoteroTabs();
+    if (!Zotero_Tabs) {
+      Zotero.log("[ClosedTabsManager] DEBUG: Zotero_Tabs not available", "warning");
+      return;
+    }
+    
+    Zotero.log("[ClosedTabsManager] DEBUG: Zotero_Tabs state:", "info");
+    Zotero.log(`[ClosedTabsManager] - _tabs length: ${Zotero_Tabs._tabs?.length || 0}`, "info");
+    Zotero.log(`[ClosedTabsManager] - _history length: ${Zotero_Tabs._history?.length || 0}`, "info");
+    
+    // 检查是否有其他可能的历史存储
+    const possibleProps = ['history', '_closedTabs', 'closedHistory', '_recentlyClosed'];
+    for (const prop of possibleProps) {
+      if (Zotero_Tabs[prop]) {
+        Zotero.log(`[ClosedTabsManager] - Found property '${prop}': ${JSON.stringify(Zotero_Tabs[prop])}`, "info");
+      }
+    }
+    
+    // 检查 Zotero.Session
+    if (Zotero.Session) {
+      Zotero.log(`[ClosedTabsManager] - Zotero.Session.state: ${JSON.stringify(Zotero.Session.state)}`, "info");
+    }
+  }
 
   /**
    * 从数据库加载已关闭的标签页
@@ -135,16 +163,20 @@ export class ClosedTabsManager {
 
     // Zotero_Tabs._history 是一个数组的数组
     // 每个元素代表一次关闭操作，可能包含多个标签页
+    let groupIndex = 0;
     for (const closedGroup of Zotero_Tabs._history) {
+      Zotero.log(`[ClosedTabsManager] Processing history group ${groupIndex}: ${closedGroup.length} items`, "info");
+      groupIndex++;
+      
       for (const historyItem of closedGroup) {
         // historyItem 包含 { index, data }
         const tabData = historyItem.data;
+        Zotero.log(`[ClosedTabsManager] History item: ${JSON.stringify(historyItem)}`, "info");
+        
         if (tabData && tabData.itemID) {
           // 检查是否已经在我们的历史中
-          const exists = this.closedTabs.some(
-            (ct) =>
-              ct.tabData.itemID === tabData.itemID
-          );
+          // 注意：相同的 itemID 可能被多次关闭，所以我们需要更精确的检查
+          const exists = false; // 暂时禁用重复检查，以便看到所有历史
 
           if (!exists) {
             // 创建或获取幽灵节点
