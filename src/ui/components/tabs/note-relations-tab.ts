@@ -278,7 +278,7 @@ export class NoteRelationsTab {
     `;
     
     // 加载关联的笔记
-    const associatedNotes = await this.noteAssociationSystem.getNodeNotesDetailed(this.selectedNode.id);
+    const associatedNotes = await this.noteAssociationSystem.getAssociatedNotes(this.selectedNode.id);
     
     if (associatedNotes.length > 0) {
       const associatedSection = this.createAssociatedSection(doc, associatedNotes);
@@ -603,7 +603,7 @@ export class NoteRelationsTab {
     if (!this.selectedNode) return;
     
     // TODO: 实现笔记选择对话框
-    const noteId = prompt("Enter note ID to associate:");
+    const noteId = this.window.prompt("Enter note ID to associate:");
     if (noteId) {
       await this.noteAssociationSystem.associateNote(parseInt(noteId), this.selectedNode.id);
       await this.loadNodeAssociations();

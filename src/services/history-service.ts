@@ -146,7 +146,7 @@ export class HistoryService {
       timestamp: new Date(),
       lastVisit: new Date(),
       visitCount: 1,
-      title: item.getField("title") as string,
+      title: this.getItemTitle(item),
       itemType: item.itemType,
       status: "open",
       hasNotes: false,
@@ -316,6 +316,74 @@ export class HistoryService {
    */
   private generateNodeId(): string {
     return `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+  
+  /**
+   * 获取项目标题
+   */
+  private getItemTitle(item: any): string {
+    try {
+      // 尝试获取标题
+      let title = item.getField("title");
+      
+      // 如果标题为空，尝试其他字段
+      if (!title) {
+        // 对于附件，使用文件名
+        if (item.isAttachment()) {
+          title = item.getField("filename") || item.getField("title") || "Attachment";
+        } 
+        // 对于笔记，使用前50个字符
+        else if (item.isNote()) {
+          const noteContent = item.getNote();
+          const plainText = noteContent.replace(/<[^>]*>/g, '').trim();
+          title = plainText.substring(0, 50) + (plainText.length > 50 ? "..." : "");
+          if (!title) title = "Note";
+        }
+        // 其他类型尝试获取创作者和年份
+        else {
+          const creators = item.getCreators();
+          const year = item.getField("date");
+          if (creators && creators.length > 0) {
+            const firstCreator = creators[0];
+            title = firstCreator.lastName || firstCreator.name || "";
+            if (year) {
+              title += ` (${year.substring(0, 4)})`;
+            }
+          }
+        }
+      }
+      
+      return title || `Item ${item.id}`;
+    } catch (error) {
+      Zotero.logError(`[HistoryService] Error getting item title: ${error}`);
+      return `Item ${item.id}`;
+    }
+  }
+
+  /**
+   * 删除节点
+   */
+  async deleteNode(nodeId: string): Promise<void> {
+    // 从缓存中删除
+    const node = this.nodeCache.get(nodeId);
+    if (node) {
+      this.nodeCache.delete(nodeId);
+      
+      // 从 itemNodeMap 中删除
+      const nodeIds = this.itemNodeMap.get(node.itemId);
+      if (nodeIds) {
+        const index = nodeIds.indexOf(nodeId);
+        if (index > -1) {
+          nodeIds.splice(index, 1);
+        }
+        if (nodeIds.length === 0) {
+          this.itemNodeMap.delete(node.itemId);
+        }
+      }
+    }
+    
+    // 从数据库中删除
+    await this.databaseService.deleteHistoryNode(nodeId);
   }
 
   /**

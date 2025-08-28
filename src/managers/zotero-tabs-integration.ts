@@ -42,8 +42,30 @@ export class ZoteroTabsIntegration {
    * 获取 Zotero_Tabs 对象
    */
   private getZoteroTabs(): any {
-    const win = Zotero.getMainWindow();
-    return win?.Zotero_Tabs || null;
+    try {
+      const win = Zotero.getMainWindow();
+      if (!win) return null;
+      
+      // 尝试多种方式获取 Zotero_Tabs
+      if (win.Zotero_Tabs) {
+        return win.Zotero_Tabs;
+      }
+      
+      // 尝试从全局 Zotero 对象获取
+      if ((Zotero as any).Tabs) {
+        return (Zotero as any).Tabs;
+      }
+      
+      // 尝试从 ZoteroPane 获取
+      if (win.ZoteroPane && (win.ZoteroPane as any).tabs) {
+        return (win.ZoteroPane as any).tabs;
+      }
+      
+      return null;
+    } catch (error) {
+      Zotero.logError(`[ZoteroTabsIntegration] Error getting Zotero_Tabs: ${error}`);
+      return null;
+    }
   }
   
   /**

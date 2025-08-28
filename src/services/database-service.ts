@@ -111,6 +111,16 @@ export class DatabaseService {
   }
 
   /**
+   * 删除历史节点
+   */
+  async deleteHistoryNode(nodeId: string): Promise<void> {
+    await Zotero.DB.queryAsync(
+      `DELETE FROM ${this.HISTORY_TABLE} WHERE id = ?`,
+      [nodeId]
+    );
+  }
+
+  /**
    * 保存历史节点
    */
   async saveHistoryNode(node: HistoryNode): Promise<void> {

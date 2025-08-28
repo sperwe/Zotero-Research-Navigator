@@ -352,8 +352,31 @@ export class HistoryTreeTab {
     header.appendChild(icon);
     
     const title = doc.createElement("span");
-    title.textContent = `Session ${session.id} - ${new Date(session.startTime).toLocaleDateString()}`;
+    title.style.flex = "1";
+    title.textContent = `${session.name || 'Session'} (${session.nodes.length} items)`;
     header.appendChild(title);
+    
+    // 删除按钮
+    const deleteBtn = doc.createElement("button");
+    deleteBtn.textContent = "×";
+    deleteBtn.title = "Delete session";
+    deleteBtn.style.cssText = `
+      background: #ff4444;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      padding: 2px 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+    `;
+    deleteBtn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (this.window.confirm(`Delete session "${session.name}"?`)) {
+        await this.deleteSession(session.id);
+      }
+    });
+    header.appendChild(deleteBtn);
     
     li.appendChild(header);
     
@@ -557,6 +580,29 @@ export class HistoryTreeTab {
     if (this.window.confirm("Clear all closed tabs history?")) {
       this.tabsIntegration.clearHistory();
       this.refresh();
+    }
+  }
+  
+  /**
+   * 删除会话
+   */
+  private async deleteSession(sessionId: string): Promise<void> {
+    try {
+      // 获取该会话的所有节点
+      const nodes = this.historyService.getSessionNodes(sessionId);
+      
+      // 删除每个节点
+      for (const node of nodes) {
+        await this.historyService.deleteNode(node.id);
+      }
+      
+      Zotero.log(`[HistoryTreeTab] Deleted session ${sessionId} with ${nodes.length} nodes`, "info");
+      
+      // 刷新显示
+      this.refresh();
+    } catch (error) {
+      Zotero.logError(`[HistoryTreeTab] Failed to delete session: ${error}`);
+      this.window.alert(`Failed to delete session: ${error}`);
     }
   }
   
