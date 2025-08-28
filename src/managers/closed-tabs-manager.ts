@@ -37,13 +37,31 @@ export class ClosedTabsManager {
     
     // 如果初始同步失败，延迟重试
     if (this.closedTabs.length === 0) {
-      setTimeout(async () => {
-        Zotero.log("[ClosedTabsManager] Retrying sync after delay...", "info");
-        await this.syncWithZoteroHistory();
-        if (this.closedTabs.length > 0) {
-          this.notifyClosedTabsChanged();
+      // 多次重试，以防 Zotero_Tabs 初始化较晚
+      let retryCount = 0;
+      const retryInterval = setInterval(async () => {
+        retryCount++;
+        Zotero.log(`[ClosedTabsManager] Retry attempt ${retryCount}...`, "info");
+        
+        const Zotero_Tabs = this.getZoteroTabs();
+        if (Zotero_Tabs && Zotero_Tabs._history) {
+          Zotero.log(`[ClosedTabsManager] Found _history with ${Zotero_Tabs._history.length} groups`, "info");
+          
+          // 打印历史内容进行调试
+          if (Zotero_Tabs._history.length > 0) {
+            Zotero.log(`[ClosedTabsManager] First history group: ${JSON.stringify(Zotero_Tabs._history[0])}`, "info");
+          }
         }
-      }, 2000); // 2秒后重试
+        
+        await this.syncWithZoteroHistory();
+        
+        if (this.closedTabs.length > 0 || retryCount >= 5) {
+          clearInterval(retryInterval);
+          if (this.closedTabs.length > 0) {
+            this.notifyClosedTabsChanged();
+          }
+        }
+      }, 2000); // 每2秒重试一次，最多5次
     }
 
     Zotero.log("[ClosedTabsManager] Initialized", "info");
