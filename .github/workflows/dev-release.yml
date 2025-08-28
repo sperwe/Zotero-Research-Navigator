@@ -26,9 +26,28 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
-      - name: Build Development XPI
+      - name: Build Development XPI with Auto-Update URL
         run: |
-          cp addon/manifest-dev.json addon/manifest.json
+          # 创建带有开发更新 URL 的 manifest
+          cat > addon/manifest.json << EOF
+          {
+            "manifest_version": 2,
+            "name": "Zotero Research Navigator (Dev)",
+            "version": "$(node -p "require('./package.json').version")",
+            "description": "Track research history and enhance note navigation in Zotero",
+            "homepage_url": "https://github.com/sperwe/Zotero-Research-Navigator",
+            "applications": {
+              "zotero": {
+                "id": "research-navigator@zotero.org",
+                "update_url": "https://raw.githubusercontent.com/sperwe/Zotero-Research-Navigator/fix/typescript-errors-and-functionality/update-dev.json",
+                "strict_min_version": "7.0",
+                "strict_max_version": "7.1.*"
+              }
+            }
+          }
+          EOF
+          
+          # 构建 XPI
           npm run build-prod
       
       - name: Get version
