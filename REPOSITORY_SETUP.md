@@ -5,7 +5,7 @@
 ## ✅ 已完成的步骤
 
 - ✅ GitHub仓库创建完成
-- ✅ 代码已推送到远程仓库  
+- ✅ 代码已推送到远程仓库
 - ✅ 本地和远程仓库已连接
 
 ## 🔧 推荐的下一步操作
@@ -13,6 +13,7 @@
 ### 1️⃣ **验证仓库状态**
 
 在您的本地仓库中运行：
+
 ```bash
 git remote -v
 git branch -a
@@ -24,16 +25,19 @@ git log --oneline -5
 在 GitHub 网页端：
 
 **仓库描述**:
+
 ```
 🔍 A powerful Zotero plugin for tracking research history with tree-style navigation and enhanced note management
 ```
 
 **标签 (Topics)**:
+
 ```
 zotero-plugin, research-tool, history-tracking, note-management, academic-research, typescript, javascript
 ```
 
 **README 徽章** (添加到 README.md 顶部):
+
 ```markdown
 [![GitHub release](https://img.shields.io/github/v/release/sperwe/Zotero-Research-Navigator)](https://github.com/sperwe/Zotero-Research-Navigator/releases)
 [![Download](https://img.shields.io/github/downloads/sperwe/Zotero-Research-Navigator/total)](https://github.com/sperwe/Zotero-Research-Navigator/releases)
@@ -43,7 +47,8 @@ zotero-plugin, research-tool, history-tracking, note-management, academic-resear
 
 ### 3️⃣ **创建 GitHub Release**
 
-1. **进入 Releases 页面**: 
+1. **进入 Releases 页面**:
+
    ```
    https://github.com/sperwe/Zotero-Research-Navigator/releases
    ```
@@ -51,39 +56,46 @@ zotero-plugin, research-tool, history-tracking, note-management, academic-resear
 2. **点击 "Create a new release"**
 
 3. **Release 配置**:
+
    ```
    Tag version: v1.0.0
    Release title: 🎉 Zotero Research Navigator v1.0.0
    ```
 
 4. **Release 描述**:
+
    ```markdown
    ## 🚀 首次发布：Zotero Research Navigator v1.0.0
-   
+
    ### ✨ 核心功能
+
    - 🌳 **树状历史追踪** - 可视化您的研究路径
    - 🔍 **智能搜索** - 模糊搜索快速定位
    - 📋 **侧边栏面板** - 现代化的交互界面
    - ⏰ **时间分组** - 今天/昨天/更早的智能分类
    - 🎯 **一键访问** - 直接从历史记录打开文献
    - 💾 **持久存储** - 使用Zotero首选项保存数据
-   
+
    ### 📦 安装方法
+
    1. 下载下面的 `zotero-research-navigator-v1.0.0.xpi` 文件
    2. 在Zotero中：工具 → 插件 → 从文件安装插件
    3. 选择下载的XPI文件并安装
    4. 重启Zotero
-   
+
    ### 🔧 系统要求
+
    - Zotero 6.0.27 或更高版本
    - 支持 Windows / macOS / Linux
-   
+
    ### 📚 文档
+
    - [安装指南](INSTALL.md)
    - [使用说明](README.md)
    - [开发文档](DEPLOYMENT.md)
-   
+
    ### 🙏 致谢
+
    基于 [Tree Style History](https://github.com/turanszkij/tree-style-history) 浏览器扩展改造
    使用 [Zotero Plugin Template](https://github.com/windingwind/zotero-plugin-template) 开发框架
    ```
@@ -100,38 +112,44 @@ zotero-plugin, research-tool, history-tracking, note-management, academic-resear
 在 **Settings** 页面：
 
 **General → Features**:
+
 - ✅ Issues
 - ✅ Discussions (推荐)
 - ✅ Releases
 
 **General → Pull Requests**:
+
 - ✅ Allow squash merging
 - ✅ Allow rebase merging
 
 **Pages** (可选):
+
 - Source: Deploy from a branch → gh-pages 或 main
 
 ### 5️⃣ **社区推广**
 
 **Zotero论坛发帖**:
+
 ```
 标题: [Plugin] Zotero Research Navigator - Tree-style History Tracking
 链接: https://forums.zotero.org/discussion/
 ```
 
 **发帖内容模板**:
+
 ```markdown
 Hi Zotero community! 👋
 
 I'm excited to share a new plugin: **Zotero Research Navigator**
 
-🔍 **What it does**: 
+🔍 **What it does**:
 Provides tree-style history tracking for your research, similar to browser history but for Zotero items and collections.
 
 🌟 **Key features**:
+
 - Visual tree-style navigation of your research path
 - Real-time search and filtering
-- Time-based grouping (Today/Yesterday/Earlier)  
+- Time-based grouping (Today/Yesterday/Earlier)
 - One-click access to previously viewed items
 - Persistent storage of your research trails
 
@@ -156,7 +174,7 @@ git checkout -b feature/new-feature
 # ... 开发代码 ...
 git commit -m "feat: add new feature"
 
-# 合并到主分支  
+# 合并到主分支
 git checkout main
 git merge feature/new-feature
 

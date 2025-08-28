@@ -51,8 +51,8 @@ export class SafeLoader {
         typeof Zotero !== "undefined" &&
         Zotero !== null &&
         Zotero.Schema !== undefined &&
-        (!Zotero.Schema.schemaUpdatePromise || 
-         (typeof Zotero.Schema.schemaUpdatePromise.then === "function"))
+        (!Zotero.Schema.schemaUpdatePromise ||
+          typeof Zotero.Schema.schemaUpdatePromise.then === "function")
       );
     } catch (e) {
       return false;
@@ -97,7 +97,7 @@ export class SafeLoader {
 
         try {
           const hasRequiredElements = this.checkRequiredElements(win.document);
-          
+
           if (hasRequiredElements) {
             resolve(true);
           } else if (attempts >= maxAttempts) {
@@ -122,10 +122,7 @@ export class SafeLoader {
    * 检查必需的 UI 元素
    */
   private checkRequiredElements(doc: Document): boolean {
-    const requiredElements = [
-      "zotero-pane",
-      "zotero-items-tree"
-    ];
+    const requiredElements = ["zotero-pane", "zotero-items-tree"];
 
     for (const id of requiredElements) {
       if (!doc.getElementById(id)) {
@@ -153,9 +150,10 @@ export class SafeLoader {
       // 尝试从 Services 获取
       if (typeof Services !== "undefined") {
         const wm = Services.wm;
-        const win = wm.getMostRecentWindow("navigator:browser") ||
-                   wm.getMostRecentWindow("zotero:main") ||
-                   wm.getMostRecentWindow(null);
+        const win =
+          wm.getMostRecentWindow("navigator:browser") ||
+          wm.getMostRecentWindow("zotero:main") ||
+          wm.getMostRecentWindow(null);
         return win;
       }
 
@@ -171,7 +169,7 @@ export class SafeLoader {
   async safeExecute<T>(
     fn: () => T | Promise<T>,
     fallback?: T,
-    errorHandler?: (error: Error) => void
+    errorHandler?: (error: Error) => void,
   ): Promise<T | undefined> {
     try {
       return await fn();

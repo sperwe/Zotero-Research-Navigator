@@ -17,7 +17,7 @@ class Addon {
       window: Window | null;
     };
   };
-  
+
   // Lifecycle hooks
   public hooks: typeof hooks;
 
@@ -26,7 +26,7 @@ class Addon {
       alive: true,
       config: config,
       env: __env__,
-      initialized: false
+      initialized: false,
       // ztoolkit will be created on demand
     };
     this.hooks = hooks;

@@ -8,41 +8,43 @@ import { createElement } from "../../utils/ui-helper";
 
 export async function createToolbarButton(
   win: Window,
-  onClick: () => void
+  onClick: () => void,
 ): Promise<Element | null> {
   const doc = win.document;
-  
+
   // 查找合适的工具栏位置
   const toolbarLocations = [
     { id: "zotero-tb-advanced-search", desc: "search toolbar" },
     { id: "zotero-items-toolbar", desc: "items toolbar" },
     { id: "zotero-toolbar", desc: "main toolbar" },
     { id: "zotero-tb-actions", desc: "actions toolbar" },
-    { id: "nav-bar", desc: "navigation bar" }
+    { id: "nav-bar", desc: "navigation bar" },
   ];
-  
+
   for (const location of toolbarLocations) {
     const toolbar = doc.getElementById(location.id);
     if (toolbar) {
       // 检查是否已存在
-      const existingButton = doc.getElementById(`${config.addonRef}-toolbar-button`);
+      const existingButton = doc.getElementById(
+        `${config.addonRef}-toolbar-button`,
+      );
       if (existingButton) {
         addon.ztoolkit.log("Toolbar button already exists");
         return existingButton;
       }
-      
+
       // 创建按钮
       const button = createButton(doc, onClick);
-      
+
       // 添加到工具栏
       toolbar.appendChild(button);
-      
+
       addon.ztoolkit.log(`Toolbar button added to ${location.desc}`);
       return button;
     }
   }
-  
-  addon.ztoolkit.log("No suitable toolbar found", 'warn');
+
+  addon.ztoolkit.log("No suitable toolbar found", "warn");
   return null;
 }
 
@@ -56,12 +58,12 @@ function createButton(doc: Document, onClick: () => void): Element {
       -moz-appearance: none;
       margin: 0 2px;
       padding: 2px;
-    `
+    `,
   };
-  
+
   // 尝试创建 XUL 元素，如果失败则创建 HTML 元素
   let button: Element;
-  
+
   if (doc.createXULElement) {
     button = doc.createXULElement("toolbarbutton");
     Object.assign(button, props);
@@ -71,7 +73,7 @@ function createButton(doc: Document, onClick: () => void): Element {
       id: props.id,
       classList: [props.class],
       properties: {
-        title: props.tooltiptext
+        title: props.tooltiptext,
       },
       styles: {
         backgroundImage: `url(chrome://${config.addonRef}/content/icons/icon.svg)`,
@@ -84,25 +86,25 @@ function createButton(doc: Document, onClick: () => void): Element {
         background: "transparent",
         cursor: "pointer",
         margin: "0 2px",
-        padding: "2px"
-      }
+        padding: "2px",
+      },
     });
   }
-  
+
   // 添加点击事件
   button.addEventListener("click", (e) => {
     e.preventDefault();
     onClick();
   });
-  
+
   // 添加悬停效果
   button.addEventListener("mouseenter", () => {
     (button as HTMLElement).style.opacity = "0.8";
   });
-  
+
   button.addEventListener("mouseleave", () => {
     (button as HTMLElement).style.opacity = "1";
   });
-  
+
   return button;
 }

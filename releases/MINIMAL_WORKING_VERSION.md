@@ -41,6 +41,7 @@
 ## 如果这个版本也不工作
 
 可能的原因：
+
 1. Zotero 版本问题（需要确认是 Zotero 7）
 2. 插件没有正确加载（检查错误控制台）
 3. 权限或安全限制
@@ -53,25 +54,29 @@
 4. 查看是否有任何错误消息
 
 5. 在控制台底部输入：
+
    ```javascript
-   Zotero.ResearchNavigator
+   Zotero.ResearchNavigator;
    ```
+
    如果返回对象，说明插件已加载
 
 6. 检查 DOM：
    ```javascript
-   document.getElementById("research-navigator-float-button")
+   document.getElementById("research-navigator-float-button");
    ```
    如果返回元素，说明按钮已添加但可能被隐藏
 
 ## 基于的理解
 
 这个版本基于：
+
 - zotero-style 的插件结构
 - 使用原生 JavaScript 而非 TypeScript
 - 直接的 DOM 操作
 - 窗口监听器模式
 
 ---
+
 版本：v2.0.3-minimal-working
 日期：2025-01-27

@@ -4,43 +4,44 @@
  */
 
 export function setupConsolePolyfill() {
-  const Zotero = (globalThis as any).Zotero || (globalThis as any).window?.Zotero;
-  
+  const Zotero =
+    (globalThis as any).Zotero || (globalThis as any).window?.Zotero;
+
   const consolePolyfill = {
     log: (message?: any, ...args: any[]) => {
       if (Zotero && Zotero.debug) {
-        const msg = [message, ...args].filter(x => x !== undefined).join(' ');
+        const msg = [message, ...args].filter((x) => x !== undefined).join(" ");
         if (msg) Zotero.debug(`[Console.log] ${msg}`);
       }
     },
     error: (message?: any, ...args: any[]) => {
       if (Zotero && Zotero.debug) {
-        const msg = [message, ...args].filter(x => x !== undefined).join(' ');
+        const msg = [message, ...args].filter((x) => x !== undefined).join(" ");
         if (msg) Zotero.debug(`[Console.error] ${msg}`, 1);
       }
     },
     warn: (message?: any, ...args: any[]) => {
       if (Zotero && Zotero.debug) {
-        const msg = [message, ...args].filter(x => x !== undefined).join(' ');
+        const msg = [message, ...args].filter((x) => x !== undefined).join(" ");
         if (msg) Zotero.debug(`[Console.warn] ${msg}`, 2);
       }
     },
     info: (message?: any, ...args: any[]) => {
       if (Zotero && Zotero.debug) {
-        const msg = [message, ...args].filter(x => x !== undefined).join(' ');
+        const msg = [message, ...args].filter((x) => x !== undefined).join(" ");
         if (msg) Zotero.debug(`[Console.info] ${msg}`);
       }
     },
     debug: (message?: any, ...args: any[]) => {
       if (Zotero && Zotero.debug) {
-        const msg = [message, ...args].filter(x => x !== undefined).join(' ');
+        const msg = [message, ...args].filter((x) => x !== undefined).join(" ");
         if (msg) Zotero.debug(`[Console.debug] ${msg}`);
       }
     },
     group: (...args: any[]) => {
       // No-op for group, but log the group label
       if (args.length > 0 && Zotero && Zotero.debug) {
-        const msg = args.filter(x => x !== undefined).join(' ');
+        const msg = args.filter((x) => x !== undefined).join(" ");
         if (msg) Zotero.debug(`[Console.group] ${msg}`);
       }
     },
@@ -50,7 +51,7 @@ export function setupConsolePolyfill() {
     groupCollapsed: (...args: any[]) => {
       // No-op for groupCollapsed, but log the group label
       if (args.length > 0 && Zotero && Zotero.debug) {
-        const msg = args.filter(x => x !== undefined).join(' ');
+        const msg = args.filter((x) => x !== undefined).join(" ");
         if (msg) Zotero.debug(`[Console.groupCollapsed] ${msg}`);
       }
     },
@@ -75,7 +76,7 @@ export function setupConsolePolyfill() {
     assert: (condition?: boolean, ...data: any[]) => {
       // No-op for assert
       if (!condition && Zotero && Zotero.debug) {
-        const msg = data.filter(x => x !== undefined).join(' ');
+        const msg = data.filter((x) => x !== undefined).join(" ");
         Zotero.debug(`[Console.assert] Assertion failed: ${msg}`);
       }
     },
@@ -108,19 +109,19 @@ export function setupConsolePolyfill() {
     },
     profileEnd: (label?: string) => {
       // No-op for profileEnd
-    }
+    },
   };
-  
+
   // 设置全局 console 和 _console
   (globalThis as any).console = consolePolyfill;
   (globalThis as any)._console = consolePolyfill;
-  
+
   // 也设置在 window 对象上（如果存在）
   if ((globalThis as any).window) {
     (globalThis as any).window.console = consolePolyfill;
     (globalThis as any).window._console = consolePolyfill;
   }
-  
+
   if (Zotero && Zotero.debug) {
     Zotero.debug("[Research Navigator] Console polyfill installed");
   }

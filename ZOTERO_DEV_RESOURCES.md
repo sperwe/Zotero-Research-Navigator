@@ -5,6 +5,7 @@
 ## 📚 核心开发资源
 
 ### 官方文档
+
 - **[📖 Zotero 7 插件开发文档](https://www.zotero.org/support/dev/zotero_7_for_developers)**
   - Zotero 7 的重要变化和迁移指南
   - 新的插件架构说明
@@ -44,23 +45,27 @@
 ### 在我们的项目中使用这些工具
 
 1. **Zotero Plugin Toolkit**
+
    ```bash
    # 已经在 package.json 中配置
    npm install zotero-plugin-toolkit
    ```
-   
+
    在代码中使用：
+
    ```typescript
    import { BasicTool, UITool, PreferenceTool } from "zotero-plugin-toolkit";
    ```
 
 2. **Zotero Types**
+
    ```bash
    # 已经安装
    npm install --save-dev zotero-types
    ```
-   
+
    在 tsconfig.json 中配置：
+
    ```json
    {
      "compilerOptions": {
@@ -93,12 +98,14 @@
 ### 调试技巧
 
 1. **开发者工具**
+
    ```javascript
    // 在 Zotero 中打开开发者工具
    Zotero.openInViewer("chrome://devtools/content/devtools.xhtml");
    ```
 
 2. **调试日志**
+
    ```javascript
    Zotero.debug("Your debug message");
    Zotero.log("Your log message", "warning");
@@ -111,21 +118,25 @@
 ## 🚀 最佳实践
 
 ### 1. 使用 TypeScript
+
 - 利用 zotero-types 获得完整的类型支持
 - 避免运行时错误
 - 提高代码可维护性
 
 ### 2. 模块化开发
+
 - 将功能拆分为独立模块
 - 使用 ES6 模块语法
 - 保持代码整洁和可测试
 
 ### 3. 性能优化
+
 - 避免阻塞主线程
 - 使用异步操作
 - 缓存频繁使用的数据
 
 ### 4. 兼容性考虑
+
 - 测试不同 Zotero 版本
 - 处理 API 变化
 - 提供优雅降级
@@ -133,15 +144,18 @@
 ## 🔗 其他有用资源
 
 ### 社区资源
+
 - [Zotero 论坛开发板块](https://forums.zotero.org/categories/dev)
 - [Zotero 插件开发 Discord](https://discord.gg/zotero)
 
 ### 优秀插件示例
+
 - [Better BibTeX](https://github.com/retorquere/zotero-better-bibtex)
 - [Zotfile](https://github.com/jlegewie/zotfile)
 - [Zotero PDF Translate](https://github.com/windingwind/zotero-pdf-translate)
 
 ### 开发博客和教程
+
 - [Zotero 插件开发系列教程](https://zotero.yuque.com/books/share/8d230829-6004-4934-b4c6-685a7001bfa0)
 - [使用 React 开发 Zotero 插件](https://github.com/windingwind/zotero-plugin-template/discussions/34)
 

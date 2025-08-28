@@ -27,7 +27,7 @@ interface Statistics {
 export class StatisticsView {
   private container: HTMLDivElement | null = null;
   private stats: Statistics | null = null;
-  
+
   constructor(private addon: any) {}
 
   /**
@@ -43,7 +43,7 @@ export class StatisticsView {
    */
   public async render(): Promise<HTMLElement> {
     const doc = this.addon.data.ztoolkit.getGlobal("document");
-    
+
     this.container = this.addon.data.ztoolkit.UI.createElement(doc, "div", {
       classList: ["statistics-view"],
       styles: {
@@ -83,29 +83,37 @@ export class StatisticsView {
     });
 
     // 总览卡片
-    grid.appendChild(this.createStatCard(
-      getString("stat-total-nodes"),
-      this.stats!.totalNodes.toString(),
-      "📊"
-    ));
+    grid.appendChild(
+      this.createStatCard(
+        getString("stat-total-nodes"),
+        this.stats!.totalNodes.toString(),
+        "📊",
+      ),
+    );
 
-    grid.appendChild(this.createStatCard(
-      getString("stat-total-sessions"),
-      this.stats!.totalSessions.toString(),
-      "🔄"
-    ));
+    grid.appendChild(
+      this.createStatCard(
+        getString("stat-total-sessions"),
+        this.stats!.totalSessions.toString(),
+        "🔄",
+      ),
+    );
 
-    grid.appendChild(this.createStatCard(
-      getString("stat-total-notes"),
-      this.stats!.totalNotes.toString(),
-      "📝"
-    ));
+    grid.appendChild(
+      this.createStatCard(
+        getString("stat-total-notes"),
+        this.stats!.totalNotes.toString(),
+        "📝",
+      ),
+    );
 
-    grid.appendChild(this.createStatCard(
-      getString("stat-avg-path-length"),
-      this.stats!.averagePathLength.toFixed(1),
-      "🛤️"
-    ));
+    grid.appendChild(
+      this.createStatCard(
+        getString("stat-avg-path-length"),
+        this.stats!.averagePathLength.toFixed(1),
+        "🛤️",
+      ),
+    );
 
     this.container.appendChild(grid);
 
@@ -158,9 +166,13 @@ export class StatisticsView {
   /**
    * 创建统计卡片
    */
-  private createStatCard(label: string, value: string, icon: string): HTMLElement {
+  private createStatCard(
+    label: string,
+    value: string,
+    icon: string,
+  ): HTMLElement {
     const doc = this.addon.data.ztoolkit.getGlobal("document");
-    
+
     return this.addon.data.ztoolkit.UI.createElement(doc, "div", {
       classList: ["stat-card"],
       styles: {
@@ -211,7 +223,7 @@ export class StatisticsView {
    */
   private createMostVisitedSection(): HTMLElement {
     const doc = this.addon.data.ztoolkit.getGlobal("document");
-    
+
     const section = this.addon.data.ztoolkit.UI.createElement(doc, "div", {
       classList: ["most-visited-section"],
     });
@@ -239,61 +251,65 @@ export class StatisticsView {
     });
 
     this.stats!.mostVisitedItems.slice(0, 10).forEach((item, index) => {
-      const itemElement = this.addon.data.ztoolkit.UI.createElement(doc, "div", {
-        styles: {
-          display: "flex",
-          alignItems: "center",
-          padding: "8px",
-          backgroundColor: "var(--material-sidepane)",
-          borderRadius: "4px",
-          cursor: "pointer",
+      const itemElement = this.addon.data.ztoolkit.UI.createElement(
+        doc,
+        "div",
+        {
+          styles: {
+            display: "flex",
+            alignItems: "center",
+            padding: "8px",
+            backgroundColor: "var(--material-sidepane)",
+            borderRadius: "4px",
+            cursor: "pointer",
+          },
+          listeners: [
+            {
+              type: "click",
+              listener: () => this.addon.hooks.onOpenItem(item.item.id),
+            },
+          ],
+          children: [
+            {
+              tag: "span",
+              styles: {
+                marginRight: "12px",
+                fontWeight: "bold",
+                color: "var(--fill-secondary)",
+              },
+              properties: {
+                textContent: `${index + 1}.`,
+              },
+            },
+            {
+              tag: "span",
+              styles: {
+                flex: "1",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              },
+              properties: {
+                textContent: item.item.getField("title"),
+              },
+            },
+            {
+              tag: "span",
+              styles: {
+                marginLeft: "12px",
+                padding: "2px 8px",
+                backgroundColor: "var(--accent-blue)",
+                color: "white",
+                borderRadius: "12px",
+                fontSize: "12px",
+              },
+              properties: {
+                textContent: item.count.toString(),
+              },
+            },
+          ],
         },
-        listeners: [
-          {
-            type: "click",
-            listener: () => this.addon.hooks.onOpenItem(item.item.id),
-          },
-        ],
-        children: [
-          {
-            tag: "span",
-            styles: {
-              marginRight: "12px",
-              fontWeight: "bold",
-              color: "var(--fill-secondary)",
-            },
-            properties: {
-              textContent: `${index + 1}.`,
-            },
-          },
-          {
-            tag: "span",
-            styles: {
-              flex: "1",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            },
-            properties: {
-              textContent: item.item.getField("title"),
-            },
-          },
-          {
-            tag: "span",
-            styles: {
-              marginLeft: "12px",
-              padding: "2px 8px",
-              backgroundColor: "var(--accent-blue)",
-              color: "white",
-              borderRadius: "12px",
-              fontSize: "12px",
-            },
-            properties: {
-              textContent: item.count.toString(),
-            },
-          },
-        ],
-      });
+      );
       list.appendChild(itemElement);
     });
 
@@ -306,7 +322,7 @@ export class StatisticsView {
    */
   private createDailyActivitySection(): HTMLElement {
     const doc = this.addon.data.ztoolkit.getGlobal("document");
-    
+
     const section = this.addon.data.ztoolkit.UI.createElement(doc, "div", {
       classList: ["daily-activity-section"],
     });
@@ -339,9 +355,9 @@ export class StatisticsView {
 
     // 获取最近30天的数据
     const recentDays = this.stats!.dailyActivity.slice(-30);
-    const maxCount = Math.max(...recentDays.map(d => d.count));
+    const maxCount = Math.max(...recentDays.map((d) => d.count));
 
-    recentDays.forEach(day => {
+    recentDays.forEach((day) => {
       const height = maxCount > 0 ? (day.count / maxCount) * 80 : 0;
       const bar = this.addon.data.ztoolkit.UI.createElement(doc, "div", {
         styles: {
@@ -367,7 +383,7 @@ export class StatisticsView {
    */
   private createTagDistributionSection(): HTMLElement {
     const doc = this.addon.data.ztoolkit.getGlobal("document");
-    
+
     const section = this.addon.data.ztoolkit.UI.createElement(doc, "div", {
       classList: ["tag-distribution-section"],
     });
@@ -398,28 +414,34 @@ export class StatisticsView {
     });
 
     // 计算标签大小
-    const maxCount = Math.max(...this.stats!.tagDistribution.map(t => t.count));
-    
-    this.stats!.tagDistribution.slice(0, 20).forEach(tag => {
+    const maxCount = Math.max(
+      ...this.stats!.tagDistribution.map((t) => t.count),
+    );
+
+    this.stats!.tagDistribution.slice(0, 20).forEach((tag) => {
       const size = 12 + (tag.count / maxCount) * 12; // 12-24px
-      const tagElement = this.addon.data.ztoolkit.UI.createElement(doc, "span", {
-        styles: {
-          padding: "4px 8px",
-          backgroundColor: "var(--material-button)",
-          borderRadius: "4px",
-          fontSize: `${size}px`,
-          cursor: "pointer",
-        },
-        properties: {
-          textContent: `${tag.tag} (${tag.count})`,
-        },
-        listeners: [
-          {
-            type: "click",
-            listener: () => this.filterByTag(tag.tag),
+      const tagElement = this.addon.data.ztoolkit.UI.createElement(
+        doc,
+        "span",
+        {
+          styles: {
+            padding: "4px 8px",
+            backgroundColor: "var(--material-button)",
+            borderRadius: "4px",
+            fontSize: `${size}px`,
+            cursor: "pointer",
           },
-        ],
-      });
+          properties: {
+            textContent: `${tag.tag} (${tag.count})`,
+          },
+          listeners: [
+            {
+              type: "click",
+              listener: () => this.filterByTag(tag.tag),
+            },
+          ],
+        },
+      );
       tagCloud.appendChild(tagElement);
     });
 
@@ -432,11 +454,11 @@ export class StatisticsView {
    */
   private async calculateStatistics() {
     const nodes = this.addon.data.researchNavigator.getAllNodes();
-    const sessions = new Set(nodes.map(n => n.sessionId));
-    
+    const sessions = new Set(nodes.map((n) => n.sessionId));
+
     // 计算访问次数
     const visitCounts = new Map<number, number>();
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       const count = visitCounts.get(node.itemId) || 0;
       visitCounts.set(node.itemId, count + node.visitCount);
     });
@@ -449,22 +471,25 @@ export class StatisticsView {
         item: Zotero.Items.get(itemId),
         count,
       }))
-      .filter(item => item.item); // 过滤掉已删除的项目
+      .filter((item) => item.item); // 过滤掉已删除的项目
 
     // 计算平均路径长度
-    const pathLengths = nodes.map(node => {
+    const pathLengths = nodes.map((node) => {
       let depth = 0;
       let current = node;
       while (current.parentId) {
         depth++;
-        current = this.addon.data.researchNavigator.nodeMap.get(current.parentId);
+        current = this.addon.data.researchNavigator.nodeMap.get(
+          current.parentId,
+        );
         if (!current || depth > 100) break; // 防止循环
       }
       return depth;
     });
-    const avgPathLength = pathLengths.length > 0 
-      ? pathLengths.reduce((a, b) => a + b, 0) / pathLengths.length 
-      : 0;
+    const avgPathLength =
+      pathLengths.length > 0
+        ? pathLengths.reduce((a, b) => a + b, 0) / pathLengths.length
+        : 0;
 
     // 计算每日活动
     const dailyActivity = this.calculateDailyActivity(nodes);
@@ -473,8 +498,9 @@ export class StatisticsView {
     const tagDistribution = this.calculateTagDistribution(nodes);
 
     // 计算关联的笔记数
-    const noteRelations = await this.addon.data.researchNavigator.db.getAllNoteRelations();
-    const uniqueNotes = new Set(noteRelations.map(r => r.noteId));
+    const noteRelations =
+      await this.addon.data.researchNavigator.db.getAllNoteRelations();
+    const uniqueNotes = new Set(noteRelations.map((r) => r.noteId));
 
     this.stats = {
       totalNodes: nodes.length,
@@ -490,28 +516,30 @@ export class StatisticsView {
   /**
    * 计算每日活动
    */
-  private calculateDailyActivity(nodes: HistoryNode[]): Array<{date: Date, count: number}> {
+  private calculateDailyActivity(
+    nodes: HistoryNode[],
+  ): Array<{ date: Date; count: number }> {
     const activityMap = new Map<string, number>();
-    
-    nodes.forEach(node => {
+
+    nodes.forEach((node) => {
       const date = new Date(node.timestamp);
       date.setHours(0, 0, 0, 0);
-      const dateKey = date.toISOString().split('T')[0];
-      
+      const dateKey = date.toISOString().split("T")[0];
+
       const count = activityMap.get(dateKey) || 0;
       activityMap.set(dateKey, count + 1);
     });
 
     // 填充最近30天的数据
-    const result: Array<{date: Date, count: number}> = [];
+    const result: Array<{ date: Date; count: number }> = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     for (let i = 29; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
-      const dateKey = date.toISOString().split('T')[0];
-      
+      const dateKey = date.toISOString().split("T")[0];
+
       result.push({
         date,
         count: activityMap.get(dateKey) || 0,
@@ -524,11 +552,13 @@ export class StatisticsView {
   /**
    * 计算标签分布
    */
-  private calculateTagDistribution(nodes: HistoryNode[]): Array<{tag: string, count: number}> {
+  private calculateTagDistribution(
+    nodes: HistoryNode[],
+  ): Array<{ tag: string; count: number }> {
     const tagCounts = new Map<string, number>();
-    
-    nodes.forEach(node => {
-      node.tags.forEach(tag => {
+
+    nodes.forEach((node) => {
+      node.tags.forEach((tag) => {
         const count = tagCounts.get(tag) || 0;
         tagCounts.set(tag, count + 1);
       });
@@ -560,13 +590,16 @@ export class StatisticsView {
     };
 
     const jsonStr = JSON.stringify(report, null, 2);
-    
+
     // 使用 Zotero 的文件选择器
     const fp = new FilePickerUtil();
     const file = await fp.save(
       getString("export-statistics-title"),
-      `research-navigator-stats-${new Date().toISOString().split('T')[0]}.json`,
-      [["JSON Files", "*.json"], ["All Files", "*.*"]]
+      `research-navigator-stats-${new Date().toISOString().split("T")[0]}.json`,
+      [
+        ["JSON Files", "*.json"],
+        ["All Files", "*.*"],
+      ],
     );
 
     if (file) {
@@ -601,17 +634,22 @@ export class StatisticsView {
 
 // 文件选择器工具类
 class FilePickerUtil {
-  async save(title: string, defaultName: string, filters: Array<[string, string]>): Promise<string | null> {
-    const fp = Components.classes["@mozilla.org/filepicker;1"]
-      .createInstance(Components.interfaces.nsIFilePicker);
-    
+  async save(
+    title: string,
+    defaultName: string,
+    filters: Array<[string, string]>,
+  ): Promise<string | null> {
+    const fp = Components.classes["@mozilla.org/filepicker;1"].createInstance(
+      Components.interfaces.nsIFilePicker,
+    );
+
     fp.init(window, title, Components.interfaces.nsIFilePicker.modeSave);
     fp.defaultString = defaultName;
-    
+
     filters.forEach(([name, ext]) => {
       fp.appendFilter(name, ext);
     });
-    
+
     return new Promise((resolve) => {
       fp.open((result: number) => {
         if (result === Components.interfaces.nsIFilePicker.returnOK) {

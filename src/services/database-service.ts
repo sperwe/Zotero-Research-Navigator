@@ -14,7 +14,7 @@ export interface HistoryNode {
   visitCount: number;
   title: string;
   itemType: string;
-  status: 'open' | 'closed';
+  status: "open" | "closed";
   closedAt?: Date;
   closedContext?: any;
   hasNotes: boolean;
@@ -26,7 +26,12 @@ export interface NoteRelation {
   id?: number;
   noteId: number;
   nodeId: string;
-  relationType: 'created_during' | 'inspired_by' | 'summarizes' | 'questions' | 'manual';
+  relationType:
+    | "created_during"
+    | "inspired_by"
+    | "summarizes"
+    | "questions"
+    | "manual";
   createdAt: Date;
   context: {
     sessionId: string;
@@ -37,13 +42,13 @@ export interface NoteRelation {
 
 export class DatabaseService {
   private readonly DB_VERSION = 1;
-  private readonly HISTORY_TABLE = 'research_navigator_history';
-  private readonly RELATIONS_TABLE = 'research_navigator_note_relations';
+  private readonly HISTORY_TABLE = "research_navigator_history";
+  private readonly RELATIONS_TABLE = "research_navigator_note_relations";
   private initialized = false;
-  
+
   async initialize(): Promise<void> {
     if (this.initialized) return;
-    
+
     try {
       // 创建历史表
       await Zotero.DB.queryAsync(`
@@ -72,7 +77,7 @@ export class DatabaseService {
           INDEX idx_timestamp (timestamp)
         )
       `);
-      
+
       // 创建笔记关联表
       await Zotero.DB.queryAsync(`
         CREATE TABLE IF NOT EXISTS ${this.RELATIONS_TABLE} (
@@ -88,7 +93,7 @@ export class DatabaseService {
           INDEX idx_nodeId (nodeId)
         )
       `);
-      
+
       this.initialized = true;
       Zotero.log("[DatabaseService] Database initialized", "info");
     } catch (error) {
@@ -96,7 +101,7 @@ export class DatabaseService {
       throw new Error(`Failed to initialize database: ${error}`);
     }
   }
-  
+
   /**
    * 保存历史节点
    */
@@ -105,9 +110,9 @@ export class DatabaseService {
       title: node.title,
       itemType: node.itemType,
       depth: node.depth,
-      hasNotes: node.hasNotes
+      hasNotes: node.hasNotes,
     };
-    
+
     await Zotero.DB.queryAsync(
       `INSERT OR REPLACE INTO ${this.HISTORY_TABLE} 
        (id, itemId, libraryId, parentId, sessionId, timestamp, lastVisit, 
@@ -131,36 +136,36 @@ export class DatabaseService {
         node.hasNotes ? 1 : 0,
         node.depth,
         JSON.stringify(node.path),
-        JSON.stringify(data)
-      ]
+        JSON.stringify(data),
+      ],
     );
   }
-  
+
   /**
    * 获取历史节点
    */
   async getHistoryNode(id: string): Promise<HistoryNode | null> {
     const results = await Zotero.DB.queryAsync(
       `SELECT * FROM ${this.HISTORY_TABLE} WHERE id = ?`,
-      [id]
+      [id],
     );
-    
+
     if (results.length === 0) return null;
-    
+
     return this.rowToHistoryNode(results[0]);
   }
-  
+
   /**
    * 获取所有历史节点
    */
   async getAllHistoryNodes(): Promise<HistoryNode[]> {
     const results = await Zotero.DB.queryAsync(
-      `SELECT * FROM ${this.HISTORY_TABLE} ORDER BY timestamp DESC`
+      `SELECT * FROM ${this.HISTORY_TABLE} ORDER BY timestamp DESC`,
     );
-    
-    return results.map(row => this.rowToHistoryNode(row));
+
+    return results.map((row) => this.rowToHistoryNode(row));
   }
-  
+
   /**
    * 获取会话的历史节点
    */
@@ -169,12 +174,12 @@ export class DatabaseService {
       `SELECT * FROM ${this.HISTORY_TABLE} 
        WHERE sessionId = ? 
        ORDER BY timestamp ASC`,
-      [sessionId]
+      [sessionId],
     );
-    
-    return results.map(row => this.rowToHistoryNode(row));
+
+    return results.map((row) => this.rowToHistoryNode(row));
   }
-  
+
   /**
    * 获取已关闭的标签页
    */
@@ -184,20 +189,20 @@ export class DatabaseService {
        WHERE status = 'closed' 
        ORDER BY closedAt DESC 
        LIMIT ?`,
-      [limit]
+      [limit],
     );
-    
-    return results.map(row => this.rowToHistoryNode(row));
+
+    return results.map((row) => this.rowToHistoryNode(row));
   }
-  
+
   /**
    * 更新节点状态
    */
   async updateNodeStatus(
-    nodeId: string, 
-    status: 'open' | 'closed', 
+    nodeId: string,
+    status: "open" | "closed",
     closedAt?: Date,
-    closedContext?: any
+    closedContext?: any,
   ): Promise<void> {
     await Zotero.DB.queryAsync(
       `UPDATE ${this.HISTORY_TABLE} 
@@ -207,11 +212,11 @@ export class DatabaseService {
         status,
         closedAt?.getTime() || null,
         closedContext ? JSON.stringify(closedContext) : null,
-        nodeId
-      ]
+        nodeId,
+      ],
     );
   }
-  
+
   /**
    * 创建笔记关联
    */
@@ -225,17 +230,17 @@ export class DatabaseService {
         relation.nodeId,
         relation.relationType,
         relation.createdAt.getTime(),
-        JSON.stringify(relation.context)
-      ]
+        JSON.stringify(relation.context),
+      ],
     );
-    
+
     // 更新节点的 hasNotes 标记
     await Zotero.DB.queryAsync(
       `UPDATE ${this.HISTORY_TABLE} SET hasNotes = 1 WHERE id = ?`,
-      [relation.nodeId]
+      [relation.nodeId],
     );
   }
-  
+
   /**
    * 获取节点的笔记关联
    */
@@ -244,19 +249,19 @@ export class DatabaseService {
       `SELECT * FROM ${this.RELATIONS_TABLE} 
        WHERE nodeId = ? 
        ORDER BY createdAt DESC`,
-      [nodeId]
+      [nodeId],
     );
-    
-    return results.map(row => ({
+
+    return results.map((row) => ({
       id: row.id,
       noteId: row.noteId,
       nodeId: row.nodeId,
       relationType: row.relationType,
       createdAt: new Date(row.createdAt),
-      context: JSON.parse(row.context || '{}')
+      context: JSON.parse(row.context || "{}"),
     }));
   }
-  
+
   /**
    * 获取笔记的所有关联
    */
@@ -265,19 +270,19 @@ export class DatabaseService {
       `SELECT * FROM ${this.RELATIONS_TABLE} 
        WHERE noteId = ? 
        ORDER BY createdAt DESC`,
-      [noteId]
+      [noteId],
     );
-    
-    return results.map(row => ({
+
+    return results.map((row) => ({
       id: row.id,
       noteId: row.noteId,
       nodeId: row.nodeId,
       relationType: row.relationType,
       createdAt: new Date(row.createdAt),
-      context: JSON.parse(row.context || '{}')
+      context: JSON.parse(row.context || "{}"),
     }));
   }
-  
+
   /**
    * 删除笔记关联
    */
@@ -285,23 +290,23 @@ export class DatabaseService {
     await Zotero.DB.queryAsync(
       `DELETE FROM ${this.RELATIONS_TABLE} 
        WHERE noteId = ? AND nodeId = ?`,
-      [noteId, nodeId]
+      [noteId, nodeId],
     );
-    
+
     // 检查节点是否还有其他笔记关联
     const remaining = await Zotero.DB.queryAsync(
       `SELECT COUNT(*) as count FROM ${this.RELATIONS_TABLE} WHERE nodeId = ?`,
-      [nodeId]
+      [nodeId],
     );
-    
+
     if (remaining[0].count === 0) {
       await Zotero.DB.queryAsync(
         `UPDATE ${this.HISTORY_TABLE} SET hasNotes = 0 WHERE id = ?`,
-        [nodeId]
+        [nodeId],
       );
     }
   }
-  
+
   /**
    * 清理数据库
    */
@@ -309,7 +314,7 @@ export class DatabaseService {
     await Zotero.DB.queryAsync(`DELETE FROM ${this.RELATIONS_TABLE}`);
     await Zotero.DB.queryAsync(`DELETE FROM ${this.HISTORY_TABLE}`);
   }
-  
+
   /**
    * 行数据转换为历史节点
    */
@@ -327,13 +332,15 @@ export class DatabaseService {
       itemType: row.itemType,
       status: row.status,
       closedAt: row.closedAt ? new Date(row.closedAt) : undefined,
-      closedContext: row.closedContext ? JSON.parse(row.closedContext) : undefined,
+      closedContext: row.closedContext
+        ? JSON.parse(row.closedContext)
+        : undefined,
       hasNotes: row.hasNotes === 1,
       depth: row.depth,
-      path: JSON.parse(row.path || '[]')
+      path: JSON.parse(row.path || "[]"),
     };
   }
-  
+
   async destroy(): Promise<void> {
     // 数据库连接由 Zotero 管理，不需要手动关闭
     this.initialized = false;

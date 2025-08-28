@@ -5,12 +5,14 @@
 ## 📋 前置要求
 
 ### 开发环境
-- **Node.js**: 16.0+ 
+
+- **Node.js**: 16.0+
 - **npm**: 8.0+
 - **Git**: 2.0+
 - **代码编辑器**: VS Code (推荐) 或其他支持 TypeScript 的编辑器
 
-### 目标环境  
+### 目标环境
+
 - **Zotero**: 6.0.27+ (支持最新的插件 API)
 - **操作系统**: Windows 10+, macOS 10.15+, Linux (Ubuntu 20.04+)
 
@@ -19,6 +21,7 @@
 ### 步骤 1: 创建新 GitHub 仓库
 
 1. **登录 GitHub** 并创建新仓库
+
    ```
    仓库名: zotero-research-navigator
    描述: A Zotero plugin for tracking research history and enhanced note navigation
@@ -27,11 +30,12 @@
    ```
 
 2. **克隆现有代码**
+
    ```bash
    # 在本地创建新目录
    mkdir zotero-research-navigator
    cd zotero-research-navigator
-   
+
    # 复制项目文件 (从 /workspace/zotero-research-navigator/)
    # 您需要手动复制以下文件和目录:
    # ├── src/
@@ -58,6 +62,7 @@
 
 1. **更新项目信息**
    编辑 `package.json`:
+
    ```json
    {
      "repository": {
@@ -73,6 +78,7 @@
 
 2. **更新 Webpack 配置**
    编辑 `webpack.config.js` 中的替换规则:
+
    ```javascript
    {
      search: /YOUR_USERNAME/g,
@@ -100,11 +106,13 @@
 ### 步骤 3: 安装和构建
 
 1. **安装依赖**
+
    ```bash
    npm install
    ```
 
 2. **开发构建**
+
    ```bash
    npm run build
    ```
@@ -119,11 +127,13 @@
 ### 本地开发
 
 1. **启动开发模式**
+
    ```bash
    npm run watch  # 监听文件变化，自动重建
    ```
 
 2. **代码规范检查**
+
    ```bash
    npm run lint      # 检查代码规范
    npm run lint:fix  # 自动修复问题
@@ -144,18 +154,19 @@
    - `1.0.1`: 补丁版本 (Bug 修复)
 
 2. **发布流程**
+
    ```bash
    # 更新版本号
    npm version patch  # 或 minor/major
-   
+
    # 构建生产版本
    npm run build-prod
-   
+
    # 创建发布包
    cd build
    zip -r ../zotero-research-navigator-v1.0.0.xpi .
    cd ..
-   
+
    # 提交和标签
    git add .
    git commit -m "Release v1.0.0"
@@ -169,43 +180,44 @@
 
 1. **创建 GitHub Actions 工作流**
    创建 `.github/workflows/release.yml`:
+
    ```yaml
    name: Release
-   
+
    on:
      push:
        tags:
-         - 'v*'
-   
+         - "v*"
+
    jobs:
      release:
        runs-on: ubuntu-latest
        steps:
-       - uses: actions/checkout@v3
-       
-       - name: Setup Node.js
-         uses: actions/setup-node@v3
-         with:
-           node-version: '18'
-           
-       - name: Install dependencies
-         run: npm ci
-         
-       - name: Build plugin
-         run: npm run build-prod
-         
-       - name: Create XPI package
-         run: |
-           cd build
-           zip -r ../zotero-research-navigator-${{ github.ref_name }}.xpi .
-           
-       - name: Create Release
-         uses: softprops/action-gh-release@v1
-         with:
-           files: zotero-research-navigator-${{ github.ref_name }}.xpi
-           generate_release_notes: true
-         env:
-           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+         - uses: actions/checkout@v3
+
+         - name: Setup Node.js
+           uses: actions/setup-node@v3
+           with:
+             node-version: "18"
+
+         - name: Install dependencies
+           run: npm ci
+
+         - name: Build plugin
+           run: npm run build-prod
+
+         - name: Create XPI package
+           run: |
+             cd build
+             zip -r ../zotero-research-navigator-${{ github.ref_name }}.xpi .
+
+         - name: Create Release
+           uses: softprops/action-gh-release@v1
+           with:
+             files: zotero-research-navigator-${{ github.ref_name }}.xpi
+             generate_release_notes: true
+           env:
+             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
    ```
 
 2. **创建发布**
@@ -240,23 +252,25 @@
 使用 GitHub Pages 创建插件文档网站:
 
 1. **创建 `docs/` 目录**
+
    ```bash
    mkdir docs
    cd docs
    ```
 
 2. **创建简单的 HTML 页面**
+
    ```html
    <!DOCTYPE html>
    <html lang="zh-CN">
-   <head>
-     <meta charset="UTF-8">
-     <title>Zotero Research Navigator</title>
-   </head>
-   <body>
-     <h1>Zotero Research Navigator</h1>
-     <!-- 插件介绍和使用指南 -->
-   </body>
+     <head>
+       <meta charset="UTF-8" />
+       <title>Zotero Research Navigator</title>
+     </head>
+     <body>
+       <h1>Zotero Research Navigator</h1>
+       <!-- 插件介绍和使用指南 -->
+     </body>
    </html>
    ```
 
@@ -270,16 +284,18 @@
 ### 常见构建问题
 
 1. **Node.js 版本不兼容**
+
    ```bash
    # 检查版本
    node --version
    npm --version
-   
+
    # 升级到推荐版本
    npm install -g npm@latest
    ```
 
 2. **依赖安装失败**
+
    ```bash
    # 清除缓存并重新安装
    rm -rf node_modules package-lock.json
@@ -287,10 +303,11 @@
    ```
 
 3. **TypeScript 编译错误**
+
    ```bash
    # 检查 TypeScript 配置
    npx tsc --noEmit
-   
+
    # 更新类型定义
    npm update @types/*
    ```

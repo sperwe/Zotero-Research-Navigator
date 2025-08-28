@@ -9,7 +9,7 @@ import { HistoryNode } from "./historyTree";
 export class ToolbarManager {
   private button: XUL.ToolBarButton | null = null;
   private popup: XUL.MenuPopup | null = null;
-  
+
   constructor(private addon: any) {}
 
   /**
@@ -25,38 +25,45 @@ export class ToolbarManager {
    */
   private createToolbarButton() {
     const doc = this.addon.data.ztoolkit.getGlobal("document");
-    
+
     // 查找参考位置
     const referenceNode = doc.getElementById("zotero-tb-advanced-search");
     if (!referenceNode) return;
 
     // 创建按钮
-    this.button = this.addon.data.ztoolkit.UI.createElement(doc, "toolbarbutton", {
-      id: "research-navigator-toolbar-button",
-      classList: ["zotero-tb-button"],
-      attributes: {
-        tooltiptext: "Research Navigator",
-        type: "menu-button",
-        removable: "true",
-      },
-      styles: {
-        listStyleImage: `url(chrome://${config.addonRef}/content/icons/icon.png)`,
-      },
-      listeners: [
-        {
-          type: "command",
-          listener: (event: Event) => {
-            if (event.target === this.button) {
-              // 点击按钮主体，切换面板显示
-              this.addon.hooks.onTogglePanel();
-            }
-          },
+    this.button = this.addon.data.ztoolkit.UI.createElement(
+      doc,
+      "toolbarbutton",
+      {
+        id: "research-navigator-toolbar-button",
+        classList: ["zotero-tb-button"],
+        attributes: {
+          tooltiptext: "Research Navigator",
+          type: "menu-button",
+          removable: "true",
         },
-      ],
-    }) as XUL.ToolBarButton;
+        styles: {
+          listStyleImage: `url(chrome://${config.addonRef}/content/icons/icon.png)`,
+        },
+        listeners: [
+          {
+            type: "command",
+            listener: (event: Event) => {
+              if (event.target === this.button) {
+                // 点击按钮主体，切换面板显示
+                this.addon.hooks.onTogglePanel();
+              }
+            },
+          },
+        ],
+      },
+    ) as XUL.ToolBarButton;
 
     // 插入到工具栏
-    referenceNode.parentNode?.insertBefore(this.button, referenceNode.nextSibling);
+    referenceNode.parentNode?.insertBefore(
+      this.button,
+      referenceNode.nextSibling,
+    );
   }
 
   /**
@@ -66,16 +73,21 @@ export class ToolbarManager {
     if (!this.button) return;
 
     const doc = this.addon.data.ztoolkit.getGlobal("document");
-    
+
     this.popup = this.addon.data.ztoolkit.UI.createElement(doc, "menupopup", {
       id: "research-navigator-popup",
       classList: ["research-navigator-popup"],
     }) as XUL.MenuPopup;
 
     // 添加菜单项
-    this.addMenuItem("togglePanel", getString("toolbar-toggle-panel"), "Alt+H", () => {
-      this.addon.hooks.onTogglePanel();
-    });
+    this.addMenuItem(
+      "togglePanel",
+      getString("toolbar-toggle-panel"),
+      "Alt+H",
+      () => {
+        this.addon.hooks.onTogglePanel();
+      },
+    );
 
     this.addMenuSeparator();
 
@@ -85,13 +97,23 @@ export class ToolbarManager {
     this.addMenuSeparator();
 
     // 快速操作
-    this.addMenuItem("quickNote", getString("toolbar-quick-note"), "Alt+N", () => {
-      this.addon.hooks.onQuickNote();
-    });
+    this.addMenuItem(
+      "quickNote",
+      getString("toolbar-quick-note"),
+      "Alt+N",
+      () => {
+        this.addon.hooks.onQuickNote();
+      },
+    );
 
-    this.addMenuItem("searchHistory", getString("toolbar-search-history"), "Ctrl+Shift+H", () => {
-      this.addon.hooks.onSearchHistory();
-    });
+    this.addMenuItem(
+      "searchHistory",
+      getString("toolbar-search-history"),
+      "Ctrl+Shift+H",
+      () => {
+        this.addon.hooks.onSearchHistory();
+      },
+    );
 
     this.addMenuSeparator();
 
@@ -115,24 +137,28 @@ export class ToolbarManager {
     id: string,
     label: string,
     acceltext: string,
-    oncommand: () => void
+    oncommand: () => void,
   ) {
     if (!this.popup) return;
 
     const doc = this.addon.data.ztoolkit.getGlobal("document");
-    const menuitem = this.addon.data.ztoolkit.UI.createElement(doc, "menuitem", {
-      id: `research-navigator-menu-${id}`,
-      attributes: {
-        label,
-        acceltext,
-      },
-      listeners: [
-        {
-          type: "command",
-          listener: oncommand,
+    const menuitem = this.addon.data.ztoolkit.UI.createElement(
+      doc,
+      "menuitem",
+      {
+        id: `research-navigator-menu-${id}`,
+        attributes: {
+          label,
+          acceltext,
         },
-      ],
-    });
+        listeners: [
+          {
+            type: "command",
+            listener: oncommand,
+          },
+        ],
+      },
+    );
 
     this.popup.appendChild(menuitem);
   }
@@ -162,7 +188,7 @@ export class ToolbarManager {
         "no-closed-tabs",
         getString("toolbar-no-closed-tabs"),
         "",
-        () => {}
+        () => {},
       );
       return;
     }
@@ -186,7 +212,7 @@ export class ToolbarManager {
         "",
         () => {
           this.addon.hooks.onRestoreTab(tab.id);
-        }
+        },
       );
     });
 
@@ -198,7 +224,7 @@ export class ToolbarManager {
         "",
         () => {
           this.addon.hooks.onShowClosedTabs();
-        }
+        },
       );
     }
   }
@@ -210,13 +236,13 @@ export class ToolbarManager {
     if (!this.popup) return;
 
     const recentItems = this.getRecentItems();
-    
+
     if (recentItems.length === 0) {
       this.addMenuItem(
         "no-recent-items",
         getString("toolbar-no-recent-items"),
         "",
-        () => {}
+        () => {},
       );
       return;
     }
@@ -241,7 +267,7 @@ export class ToolbarManager {
         "",
         () => {
           this.addon.hooks.onOpenItem(item.itemId);
-        }
+        },
       );
     });
   }
@@ -286,7 +312,7 @@ export class ToolbarManager {
     try {
       const nodes = this.addon.data.researchNavigator.getAllNodes();
       return nodes
-        .filter(node => node.lastVisit)
+        .filter((node) => node.lastVisit)
         .sort((a, b) => b.lastVisit.getTime() - a.lastVisit.getTime())
         .slice(0, 10);
     } catch (e) {
@@ -308,11 +334,19 @@ export class ToolbarManager {
    */
   private getTimeAgo(date: Date): string {
     const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-    
+
     if (seconds < 60) return getString("time-just-now");
-    if (seconds < 3600) return getString("time-minutes-ago", { args: { count: Math.floor(seconds / 60) } });
-    if (seconds < 86400) return getString("time-hours-ago", { args: { count: Math.floor(seconds / 3600) } });
-    return getString("time-days-ago", { args: { count: Math.floor(seconds / 86400) } });
+    if (seconds < 3600)
+      return getString("time-minutes-ago", {
+        args: { count: Math.floor(seconds / 60) },
+      });
+    if (seconds < 86400)
+      return getString("time-hours-ago", {
+        args: { count: Math.floor(seconds / 3600) },
+      });
+    return getString("time-days-ago", {
+      args: { count: Math.floor(seconds / 86400) },
+    });
   }
 
   /**

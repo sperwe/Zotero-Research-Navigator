@@ -21,11 +21,11 @@ class ModuleManager {
       this.historyTracker = new HistoryTracker();
       this.searchEngine = new SearchEngine(this.historyTracker);
       this.uiManager = new UIManager(this.historyTracker, this.searchEngine);
-      
+
       this.initialized = true;
       addon.ztoolkit.log("Core modules initialized successfully");
     } catch (error) {
-      addon.ztoolkit.log(`Failed to initialize modules: ${error}`, 'error');
+      addon.ztoolkit.log(`Failed to initialize modules: ${error}`, "error");
       throw error;
     }
   }
@@ -51,7 +51,7 @@ class ModuleManager {
     return {
       historyTracker: this.historyTracker,
       searchEngine: this.searchEngine,
-      uiManager: this.uiManager
+      uiManager: this.uiManager,
     };
   }
 }
@@ -78,60 +78,65 @@ async function onStartup() {
       // 使用安全加载器等待 Zotero
       diagnostic.log("Waiting for Zotero", true, { phase: "wait" });
       const zoteroReady = await safeLoader.waitForZotero(30000);
-      
+
       if (!zoteroReady) {
         throw new Error("Zotero initialization timeout");
       }
-      
+
       // 等待 Schema 更新完成
       if (Zotero.Schema && Zotero.Schema.schemaUpdatePromise) {
         try {
           await Zotero.Schema.schemaUpdatePromise;
           diagnostic.log("Schema update completed", true, { phase: "schema" });
         } catch (e) {
-          diagnostic.log("Schema update failed", false, { 
+          diagnostic.log("Schema update failed", false, {
             phase: "schema",
-            error: e.message 
+            error: e.message,
           });
           // 继续执行，Schema 更新失败不应阻止插件加载
         }
       }
-      
-      diagnostic.log("Zotero ready", true, { 
+
+      diagnostic.log("Zotero ready", true, {
         version: Zotero.version,
         platform: Zotero.platform,
-        locale: Zotero.locale
+        locale: Zotero.locale,
       });
-      
+
       // 初始化模块
       diagnostic.log("Initializing modules", true, { phase: "modules" });
       await diagnostic.measurePerformance("Module initialization", async () => {
         await moduleManager.initialize();
       });
-      
+
       // 重要：UI 初始化必须在 onMainWindowLoad 中进行
       // 因为只有在那里才能获得真实的 window 对象
-      
+
       // 标记插件已初始化
       addon.data.initialized = true;
-      diagnostic.log("Plugin startup completed", true, { 
+      diagnostic.log("Plugin startup completed", true, {
         phase: "complete",
-        totalTime: `${Date.now()}ms`
+        totalTime: `${Date.now()}ms`,
       });
-      
+
       addon.ztoolkit.log("Research Navigator startup completed");
     } catch (error) {
-      diagnostic.log("Plugin startup failed", false, { 
-        phase: "error",
-        error: error.message,
-        stack: error.stack
-      }, error);
-      addon.ztoolkit.log(`Startup failed: ${error}`, 'error');
-      
+      diagnostic.log(
+        "Plugin startup failed",
+        false,
+        {
+          phase: "error",
+          error: error.message,
+          stack: error.stack,
+        },
+        error,
+      );
+      addon.ztoolkit.log(`Startup failed: ${error}`, "error");
+
       // 生成诊断报告
       const report = diagnostic.generateReport();
       addon.ztoolkit.log(`Diagnostic report: ${report}`);
-      
+
       throw error;
     }
   });
@@ -145,8 +150,10 @@ async function onMainWindowLoad(win: Window) {
   addon.ztoolkit.log("[DEBUG] onMainWindowLoad called");
   addon.ztoolkit.log(`[DEBUG] Window type: ${win.constructor.name}`);
   addon.ztoolkit.log(`[DEBUG] Window location: ${win.location?.href}`);
-  addon.ztoolkit.log(`[DEBUG] Document ready state: ${win.document?.readyState}`);
-  
+  addon.ztoolkit.log(
+    `[DEBUG] Document ready state: ${win.document?.readyState}`,
+  );
+
   // 验证窗口对象
   const windowValid = diagnostic.validateWindow(win);
   if (!windowValid) {
@@ -154,20 +161,30 @@ async function onMainWindowLoad(win: Window) {
     addon.ztoolkit.log("[DEBUG] Window validation failed!");
     return;
   }
-  
+
   // 等待窗口完全加载
   if (win.document.readyState !== "complete") {
-    diagnostic.log("Waiting for window load", true, { readyState: win.document.readyState });
-    addon.ztoolkit.log(`[DEBUG] Document not ready, waiting... (state: ${win.document.readyState})`);
+    diagnostic.log("Waiting for window load", true, {
+      readyState: win.document.readyState,
+    });
+    addon.ztoolkit.log(
+      `[DEBUG] Document not ready, waiting... (state: ${win.document.readyState})`,
+    );
     await new Promise<void>((resolve) => {
-      win.addEventListener("load", () => {
-        diagnostic.log("Window load event fired", true, { readyState: "complete" });
-        addon.ztoolkit.log("[DEBUG] Window load event fired");
-        resolve();
-      }, { once: true });
+      win.addEventListener(
+        "load",
+        () => {
+          diagnostic.log("Window load event fired", true, {
+            readyState: "complete",
+          });
+          addon.ztoolkit.log("[DEBUG] Window load event fired");
+          resolve();
+        },
+        { once: true },
+      );
     });
   }
-  
+
   // 等待 Zotero UI 元素
   diagnostic.log("Waiting for Zotero UI", true, { phase: "ui-wait" });
   await new Promise<void>((resolve) => {
@@ -175,23 +192,24 @@ async function onMainWindowLoad(win: Window) {
     const checkUI = () => {
       attempts++;
       const doc = win.document;
-      
+
       // 检查关键 UI 元素
       const hasItemsTree = doc.getElementById("zotero-items-tree") !== null;
       const hasPane = doc.getElementById("zotero-pane") !== null;
-      
+
       if (hasItemsTree && hasPane) {
-        diagnostic.log("Zotero UI ready", true, { 
+        diagnostic.log("Zotero UI ready", true, {
           attempts,
           hasItemsTree,
-          hasPane 
+          hasPane,
         });
         resolve();
-      } else if (attempts > 50) { // 5秒超时
-        diagnostic.log("Zotero UI timeout", false, { 
+      } else if (attempts > 50) {
+        // 5秒超时
+        diagnostic.log("Zotero UI timeout", false, {
           attempts,
           hasItemsTree,
-          hasPane 
+          hasPane,
         });
         resolve();
       } else {
@@ -200,70 +218,77 @@ async function onMainWindowLoad(win: Window) {
     };
     checkUI();
   });
-  
+
   try {
     // 确保模块已初始化
     await moduleManager.initialize();
-    
+
     // 检查是否是主 Zotero 窗口
     if (win.location.href !== "chrome://zotero/content/zotero.xhtml") {
-      diagnostic.log("Not main window", true, { 
+      diagnostic.log("Not main window", true, {
         location: win.location.href,
-        action: "skip" 
+        action: "skip",
       });
       return;
     }
-    
+
     // 验证 UI 元素
     diagnostic.validateUIElements(win.document);
-    
+
     // 初始化UI
     diagnostic.log("Initializing UI", true, { phase: "ui-init" });
     addon.ztoolkit.log("[DEBUG] Starting UI initialization...");
-    addon.ztoolkit.log(`[DEBUG] Module manager initialized: ${!!moduleManager}`);
-    
+    addon.ztoolkit.log(
+      `[DEBUG] Module manager initialized: ${!!moduleManager}`,
+    );
+
     try {
       await diagnostic.measurePerformance("UI initialization", async () => {
         await moduleManager.initializeUI(win);
       });
       addon.ztoolkit.log("[DEBUG] UI initialization completed successfully");
     } catch (error) {
-      addon.ztoolkit.log(`[DEBUG] UI initialization error: ${error}`, 'error');
-      addon.ztoolkit.log(`[DEBUG] Error stack: ${error.stack}`, 'error');
+      addon.ztoolkit.log(`[DEBUG] UI initialization error: ${error}`, "error");
+      addon.ztoolkit.log(`[DEBUG] Error stack: ${error.stack}`, "error");
       throw error;
     }
-    
+
     // 显示加载成功提示（仅在开发模式）
     if (addon.data.env === "development") {
       showWelcomeMessage(win);
     }
-    
-    diagnostic.log("Main window load completed", true, { 
+
+    diagnostic.log("Main window load completed", true, {
       phase: "complete",
-      report: diagnostic.generateReport()
+      report: diagnostic.generateReport(),
     });
-    
+
     addon.ztoolkit.log("UI initialization completed successfully");
   } catch (error) {
-    diagnostic.log("UI initialization failed", false, { 
-      phase: "error",
-      error: error.message 
-    }, error);
-    
-    addon.ztoolkit.log(`Failed to initialize UI: ${error}`, 'error');
-    
+    diagnostic.log(
+      "UI initialization failed",
+      false,
+      {
+        phase: "error",
+        error: error.message,
+      },
+      error,
+    );
+
+    addon.ztoolkit.log(`Failed to initialize UI: ${error}`, "error");
+
     // 只在主窗口显示错误
     if (win.location.href === "chrome://zotero/content/zotero.xhtml") {
       try {
         new ProgressWindowHelper(config.addonName)
           .createLine({
             text: "Failed to initialize Research Navigator",
-            type: "error"
+            type: "error",
           })
           .show();
       } catch (e) {
-        diagnostic.log("Could not show error notification", false, { 
-          error: e.message 
+        diagnostic.log("Could not show error notification", false, {
+          error: e.message,
         });
       }
     }
@@ -275,7 +300,7 @@ async function onMainWindowLoad(win: Window) {
  */
 async function onMainWindowUnload(win: Window) {
   addon.ztoolkit.log("Main window unloading");
-  
+
   // UI 清理会在 UIManager 中自动处理
 }
 
@@ -284,18 +309,18 @@ async function onMainWindowUnload(win: Window) {
  */
 function onShutdown() {
   addon.ztoolkit.log("Shutting down Research Navigator");
-  
+
   try {
     // 清理模块
     moduleManager.destroy();
-    
+
     // 标记插件已关闭
     addon.data.alive = false;
     addon.data.initialized = false;
-    
+
     // 清理工具包
     addon.ztoolkit.unregisterAll();
-    
+
     addon.ztoolkit.log("Shutdown completed");
   } catch (error) {
     console.error("Error during shutdown:", error);
@@ -329,10 +354,10 @@ function showWelcomeMessage(win: Window) {
           .createLine({
             text: "Research Navigator loaded successfully!",
             type: "success",
-            progress: 100
+            progress: 100,
           })
           .show();
-        
+
         // 3秒后自动关闭
         win.setTimeout(() => {
           try {
@@ -342,7 +367,7 @@ function showWelcomeMessage(win: Window) {
           }
         }, 3000);
       } catch (error) {
-        addon.ztoolkit.log("Could not show welcome message", 'warn');
+        addon.ztoolkit.log("Could not show welcome message", "warn");
       }
     }, 1000);
   }

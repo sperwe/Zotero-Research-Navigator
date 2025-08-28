@@ -7,7 +7,7 @@ import { config } from "../../package.json";
 
 export interface AccessRecord {
   timestamp: number;
-  action: 'open' | 'view' | 'edit';
+  action: "open" | "view" | "edit";
 }
 
 export interface HistoryNode {
@@ -36,52 +36,69 @@ export class HistoryTracker {
     this.loadHistory();
 
     // 注册 Zotero 事件监听器
-    this.observerID = Zotero.Notifier.registerObserver({
-      notify: async (event: string, type: string, ids: string[] | number[], _extraData: any) => {
-        if (type === 'item' || type === 'collection') {
-          for (const id of ids) {
-            const itemID = String(id);
-            if (event === 'select' || event === 'open') {
-              await this.trackAccess(itemID, 'open');
-            } else if (event === 'modify') {
-              await this.trackAccess(itemID, 'edit');
+    this.observerID = Zotero.Notifier.registerObserver(
+      {
+        notify: async (
+          event: string,
+          type: string,
+          ids: string[] | number[],
+          _extraData: any,
+        ) => {
+          if (type === "item" || type === "collection") {
+            for (const id of ids) {
+              const itemID = String(id);
+              if (event === "select" || event === "open") {
+                await this.trackAccess(itemID, "open");
+              } else if (event === "modify") {
+                await this.trackAccess(itemID, "edit");
+              }
             }
           }
-        }
-      }
-    }, ['item', 'collection'], 'researchNavigator');
+        },
+      },
+      ["item", "collection"],
+      "researchNavigator",
+    );
 
-    ztoolkit.log('[Research Navigator] History tracker initialized');
+    ztoolkit.log("[Research Navigator] History tracker initialized");
   }
 
-  async trackAccess(itemID: string, action: 'open' | 'view' | 'edit'): Promise<void> {
+  async trackAccess(
+    itemID: string,
+    action: "open" | "view" | "edit",
+  ): Promise<void> {
     try {
       const item = await Zotero.Items.getAsync(parseInt(itemID));
       if (!item) return;
 
       const node = this.getOrCreateNode(itemID, item);
-      
+
       // 添加访问记录
       node.accessRecords.push({
         timestamp: Date.now(),
-        action
+        action,
       });
       node.lastAccessed = Date.now();
 
       // 设置父子关系
       if (this.currentNode && this.currentNode.itemID !== itemID) {
         node.parentID = this.currentNode.itemID;
-        if (!this.currentNode.children.find(child => child.itemID === itemID)) {
+        if (
+          !this.currentNode.children.find((child) => child.itemID === itemID)
+        ) {
           this.currentNode.children.push(node);
         }
       }
 
       this.currentNode = node;
       this.saveHistory();
-      
+
       ztoolkit.log(`[Research Navigator] Tracked ${action} for item ${itemID}`);
     } catch (error) {
-      ztoolkit.log(`[Research Navigator] Error tracking access: ${error}`, 'error');
+      ztoolkit.log(
+        `[Research Navigator] Error tracking access: ${error}`,
+        "error",
+      );
     }
   }
 
@@ -92,12 +109,12 @@ export class HistoryTracker {
 
     const node: HistoryNode = {
       itemID,
-      title: item.getField('title') || 'Untitled',
+      title: item.getField("title") || "Untitled",
       itemType: item.itemType,
       children: [],
       accessRecords: [],
       lastAccessed: Date.now(),
-      expanded: true
+      expanded: true,
     };
 
     this.historyTree.set(itemID, node);
@@ -106,7 +123,7 @@ export class HistoryTracker {
 
   getHistory(): HistoryNode[] {
     const rootNodes: HistoryNode[] = [];
-    
+
     for (const node of this.historyTree.values()) {
       if (!node.parentID || !this.historyTree.has(node.parentID)) {
         rootNodes.push(node);
@@ -115,7 +132,7 @@ export class HistoryTracker {
 
     // 按最后访问时间排序
     rootNodes.sort((a, b) => b.lastAccessed - a.lastAccessed);
-    
+
     return rootNodes;
   }
 
@@ -123,7 +140,7 @@ export class HistoryTracker {
     this.historyTree.clear();
     this.currentNode = null;
     this.saveHistory();
-    ztoolkit.log('[Research Navigator] History cleared');
+    ztoolkit.log("[Research Navigator] History cleared");
   }
 
   private loadHistory(): void {
@@ -131,11 +148,16 @@ export class HistoryTracker {
       const saved = Zotero.Prefs.get(`${config.prefsPrefix}.history`);
       if (saved) {
         const data = JSON.parse(saved);
-        this.historyTree = new Map(data.map((node: HistoryNode) => [node.itemID, node]));
-        ztoolkit.log('[Research Navigator] History loaded');
+        this.historyTree = new Map(
+          data.map((node: HistoryNode) => [node.itemID, node]),
+        );
+        ztoolkit.log("[Research Navigator] History loaded");
       }
     } catch (error) {
-      ztoolkit.log(`[Research Navigator] Error loading history: ${error}`, 'error');
+      ztoolkit.log(
+        `[Research Navigator] Error loading history: ${error}`,
+        "error",
+      );
     }
   }
 
@@ -144,7 +166,10 @@ export class HistoryTracker {
       const data = Array.from(this.historyTree.values());
       Zotero.Prefs.set(`${config.prefsPrefix}.history`, JSON.stringify(data));
     } catch (error) {
-      ztoolkit.log(`[Research Navigator] Error saving history: ${error}`, 'error');
+      ztoolkit.log(
+        `[Research Navigator] Error saving history: ${error}`,
+        "error",
+      );
     }
   }
 
@@ -154,7 +179,7 @@ export class HistoryTracker {
       this.observerID = null;
     }
     this.saveHistory();
-    ztoolkit.log('[Research Navigator] History tracker destroyed');
+    ztoolkit.log("[Research Navigator] History tracker destroyed");
   }
 
   getHistoryTree(): HistoryNode[] {
@@ -165,7 +190,7 @@ export class HistoryTracker {
     return {
       version: "1.0",
       exportDate: new Date().toISOString(),
-      items: Array.from(this.historyTree.values())
+      items: Array.from(this.historyTree.values()),
     };
   }
 }

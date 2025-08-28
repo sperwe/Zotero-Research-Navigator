@@ -8,29 +8,31 @@
    - 打开 Zotero
    - 进入 Tools → Developer → Run JavaScript
    - 运行以下代码：
+
    ```javascript
-   console.log('ResearchNavigator loaded:', typeof Zotero.ResearchNavigator);
+   console.log("ResearchNavigator loaded:", typeof Zotero.ResearchNavigator);
    if (Zotero.ResearchNavigator) {
-     console.log('Has hooks:', !!Zotero.ResearchNavigator.hooks);
-     console.log('Has data:', !!Zotero.ResearchNavigator.data);
+     console.log("Has hooks:", !!Zotero.ResearchNavigator.hooks);
+     console.log("Has data:", !!Zotero.ResearchNavigator.data);
    }
    ```
 
 2. **检查可用的工具栏**
    运行以下代码查看哪些工具栏存在：
+
    ```javascript
    const toolbars = [
-     'zotero-items-toolbar',
-     'zotero-tb-advanced-search',
-     'zotero-toolbar',
-     'zotero-tb-actions',
-     'nav-bar',
-     'zotero-collections-toolbar'
+     "zotero-items-toolbar",
+     "zotero-tb-advanced-search",
+     "zotero-toolbar",
+     "zotero-tb-actions",
+     "nav-bar",
+     "zotero-collections-toolbar",
    ];
-   
-   toolbars.forEach(id => {
+
+   toolbars.forEach((id) => {
      const tb = document.getElementById(id);
-     console.log(`${id}: ${tb ? 'EXISTS' : 'NOT FOUND'}`);
+     console.log(`${id}: ${tb ? "EXISTS" : "NOT FOUND"}`);
      if (tb) {
        console.log(`  - Children: ${tb.children.length}`);
      }
@@ -40,16 +42,17 @@
 3. **手动创建测试按钮**
    如果工具栏存在但按钮没有显示，尝试手动创建：
    ```javascript
-   const toolbar = document.getElementById('zotero-items-toolbar');
+   const toolbar = document.getElementById("zotero-items-toolbar");
    if (toolbar) {
-     const button = document.createXULElement('toolbarbutton');
-     button.id = 'test-rn-button';
-     button.label = 'RN Test';
-     button.tooltipText = 'Research Navigator Test';
-     button.style.listStyleImage = 'url(chrome://zotero/skin/16/universal/add.svg)';
-     button.addEventListener('command', () => alert('Button clicked!'));
+     const button = document.createXULElement("toolbarbutton");
+     button.id = "test-rn-button";
+     button.label = "RN Test";
+     button.tooltipText = "Research Navigator Test";
+     button.style.listStyleImage =
+       "url(chrome://zotero/skin/16/universal/add.svg)";
+     button.addEventListener("command", () => alert("Button clicked!"));
      toolbar.appendChild(button);
-     console.log('Test button added');
+     console.log("Test button added");
    }
    ```
 
@@ -111,6 +114,7 @@
 ### 技术说明
 
 Zotero 7 的 UI 结构与之前版本有较大变化：
+
 - 工具栏 ID 可能不同
 - XUL 元素逐渐被 HTML 元素替代
 - Chrome URL 注册机制可能有变化

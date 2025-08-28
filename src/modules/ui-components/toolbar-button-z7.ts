@@ -7,42 +7,44 @@ import { config } from "../../../package.json";
 
 export async function createToolbarButtonZ7(
   win: Window,
-  onClick: () => void
+  onClick: () => void,
 ): Promise<Element | null> {
   const doc = win.document;
-  
+
   addon.ztoolkit.log("Creating toolbar button for Zotero 7...");
-  
+
   // 检查是否已存在
-  const existingButton = doc.getElementById(`${config.addonRef}-toolbar-button`);
+  const existingButton = doc.getElementById(
+    `${config.addonRef}-toolbar-button`,
+  );
   if (existingButton) {
     addon.ztoolkit.log("Toolbar button already exists");
     return existingButton;
   }
-  
+
   // Zotero 7 的工具栏位置（按优先级排序）
   const toolbarConfigs = [
     {
       id: "zotero-items-toolbar",
       desc: "items toolbar",
-      position: "end" // 添加到末尾
+      position: "end", // 添加到末尾
     },
     {
-      id: "zotero-tb-advanced-search", 
+      id: "zotero-tb-advanced-search",
       desc: "search toolbar",
       position: "before",
-      referenceId: "zotero-tb-search-dropmarker"
+      referenceId: "zotero-tb-search-dropmarker",
     },
     {
       id: "zotero-collections-toolbar",
-      desc: "collections toolbar", 
-      position: "end"
-    }
+      desc: "collections toolbar",
+      position: "end",
+    },
   ];
-  
+
   // 创建按钮元素
   const button = createButtonElement(doc, onClick);
-  
+
   // 尝试添加到工具栏
   for (const config of toolbarConfigs) {
     const toolbar = doc.getElementById(config.id);
@@ -50,7 +52,7 @@ export async function createToolbarButtonZ7(
       addon.ztoolkit.log(`Toolbar ${config.id} not found`);
       continue;
     }
-    
+
     try {
       // 根据配置决定插入位置
       if (config.position === "before" && config.referenceId) {
@@ -63,40 +65,43 @@ export async function createToolbarButtonZ7(
       } else {
         toolbar.appendChild(button);
       }
-      
+
       addon.ztoolkit.log(`Toolbar button added to ${config.desc}`);
-      
+
       // 强制刷新工具栏
       if (toolbar.parentElement) {
-        toolbar.parentElement.style.display = 'none';
+        toolbar.parentElement.style.display = "none";
         toolbar.parentElement.offsetHeight; // 触发重排
-        toolbar.parentElement.style.display = '';
+        toolbar.parentElement.style.display = "";
       }
-      
+
       return button;
     } catch (e) {
-      addon.ztoolkit.log(`Failed to add button to ${config.desc}: ${e}`, 'warn');
+      addon.ztoolkit.log(
+        `Failed to add button to ${config.desc}: ${e}`,
+        "warn",
+      );
     }
   }
-  
+
   // 如果所有工具栏都失败，尝试创建浮动按钮
-  addon.ztoolkit.log("All toolbars failed, creating floating button", 'warn');
+  addon.ztoolkit.log("All toolbars failed, creating floating button", "warn");
   return createFloatingButton(doc, onClick);
 }
 
 function createButtonElement(doc: Document, onClick: () => void): Element {
   // 使用 XUL 元素（Zotero 7 仍支持）
   const button = doc.createXULElement("toolbarbutton");
-  
+
   button.id = `${config.addonRef}-toolbar-button`;
   button.className = "zotero-tb-button";
   button.setAttribute("tooltiptext", "Open Research Navigator (Ctrl+Shift+H)");
   button.setAttribute("type", "button");
-  
+
   // 设置图标 - 使用多种方式确保显示
   const iconUrl = `chrome://${config.addonRef}/content/icons/icon.svg`;
   button.style.listStyleImage = `url('${iconUrl}')`;
-  
+
   // 添加额外的样式
   button.style.cssText += `
     -moz-appearance: none;
@@ -105,25 +110,28 @@ function createButtonElement(doc: Document, onClick: () => void): Element {
     min-width: 24px;
     min-height: 24px;
   `;
-  
+
   // 为按钮添加图像元素作为后备
   const image = doc.createXULElement("image");
   image.setAttribute("src", iconUrl);
   image.style.width = "16px";
   image.style.height = "16px";
   button.appendChild(image);
-  
+
   // 添加点击事件
   button.addEventListener("command", onClick);
   button.addEventListener("click", (e) => {
     e.preventDefault();
     onClick();
   });
-  
+
   return button;
 }
 
-function createFloatingButton(doc: Document, onClick: () => void): Element | null {
+function createFloatingButton(
+  doc: Document,
+  onClick: () => void,
+): Element | null {
   try {
     // 创建一个固定位置的按钮作为后备方案
     const container = doc.createElement("div");
@@ -144,7 +152,7 @@ function createFloatingButton(doc: Document, onClick: () => void): Element | nul
       justify-content: center;
       transition: all 0.3s;
     `;
-    
+
     const icon = doc.createElement("img");
     icon.src = `chrome://${config.addonRef}/content/icons/icon.svg`;
     icon.style.cssText = `
@@ -152,30 +160,30 @@ function createFloatingButton(doc: Document, onClick: () => void): Element | nul
       height: 24px;
       filter: brightness(0) invert(1);
     `;
-    
+
     container.appendChild(icon);
-    
+
     // 悬停效果
     container.addEventListener("mouseenter", () => {
       container.style.transform = "scale(1.1)";
       container.style.background = "#2563eb";
     });
-    
+
     container.addEventListener("mouseleave", () => {
       container.style.transform = "scale(1)";
       container.style.background = "#3182ce";
     });
-    
+
     container.addEventListener("click", onClick);
-    
+
     // 添加到文档主体
     const mainWindow = doc.getElementById("main-window") || doc.body;
     mainWindow.appendChild(container);
-    
+
     addon.ztoolkit.log("Created floating button as fallback");
     return container;
   } catch (e) {
-    addon.ztoolkit.log(`Failed to create floating button: ${e}`, 'error');
+    addon.ztoolkit.log(`Failed to create floating button: ${e}`, "error");
     return null;
   }
 }

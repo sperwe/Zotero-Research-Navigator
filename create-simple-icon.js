@@ -1,5 +1,5 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
 // 创建一个简单但醒目的图标 - 使用 Canvas API
 // 由于环境限制，我们使用预制的 base64 图标

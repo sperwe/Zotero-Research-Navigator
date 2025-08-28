@@ -9,7 +9,7 @@ export class HistoryTreeView {
   private container: HTMLDivElement | null = null;
   private treeContainer: HTMLDivElement | null = null;
   private searchInput: HTMLInputElement | null = null;
-  
+
   constructor(private addon: any) {}
 
   /**
@@ -25,7 +25,7 @@ export class HistoryTreeView {
    */
   public async render(): Promise<HTMLElement> {
     const doc = this.addon.data.ztoolkit.getGlobal("document");
-    
+
     // 创建容器
     this.container = this.addon.data.ztoolkit.UI.createElement(doc, "div", {
       classList: ["history-tree-view"],
@@ -66,7 +66,7 @@ export class HistoryTreeView {
    */
   private createSearchBar(): HTMLElement {
     const doc = this.addon.data.ztoolkit.getGlobal("document");
-    
+
     const searchBar = this.addon.data.ztoolkit.UI.createElement(doc, "div", {
       classList: ["search-bar"],
       styles: {
@@ -105,7 +105,7 @@ export class HistoryTreeView {
    */
   private createToolbar(): HTMLElement {
     const doc = this.addon.data.ztoolkit.getGlobal("document");
-    
+
     const toolbar = this.addon.data.ztoolkit.UI.createElement(doc, "div", {
       classList: ["tree-toolbar"],
       styles: {
@@ -118,43 +118,51 @@ export class HistoryTreeView {
     });
 
     // 展开/折叠按钮
-    const expandBtn = this.createToolbarButton("expand-all", () => this.expandAll());
-    const collapseBtn = this.createToolbarButton("collapse-all", () => this.collapseAll());
-    
+    const expandBtn = this.createToolbarButton("expand-all", () =>
+      this.expandAll(),
+    );
+    const collapseBtn = this.createToolbarButton("collapse-all", () =>
+      this.collapseAll(),
+    );
+
     // 显示选项
-    const showClosedCheckbox = this.addon.data.ztoolkit.UI.createElement(doc, "label", {
-      styles: {
-        display: "flex",
-        alignItems: "center",
-        gap: "4px",
-        marginLeft: "auto",
-        fontSize: "12px",
-      },
-      children: [
-        {
-          tag: "input",
-          attributes: {
-            type: "checkbox",
-            checked: "true",
-          },
-          listeners: [
-            {
-              type: "change",
-              listener: (e: Event) => {
-                this.showClosedTabs = (e.target as HTMLInputElement).checked;
-                this.renderTree();
-              },
+    const showClosedCheckbox = this.addon.data.ztoolkit.UI.createElement(
+      doc,
+      "label",
+      {
+        styles: {
+          display: "flex",
+          alignItems: "center",
+          gap: "4px",
+          marginLeft: "auto",
+          fontSize: "12px",
+        },
+        children: [
+          {
+            tag: "input",
+            attributes: {
+              type: "checkbox",
+              checked: "true",
             },
-          ],
-        },
-        {
-          tag: "span",
-          properties: {
-            textContent: getString("show-closed-tabs"),
+            listeners: [
+              {
+                type: "change",
+                listener: (e: Event) => {
+                  this.showClosedTabs = (e.target as HTMLInputElement).checked;
+                  this.renderTree();
+                },
+              },
+            ],
           },
-        },
-      ],
-    });
+          {
+            tag: "span",
+            properties: {
+              textContent: getString("show-closed-tabs"),
+            },
+          },
+        ],
+      },
+    );
 
     toolbar.appendChild(expandBtn);
     toolbar.appendChild(collapseBtn);
@@ -166,9 +174,12 @@ export class HistoryTreeView {
   /**
    * 创建工具栏按钮
    */
-  private createToolbarButton(action: string, onclick: () => void): HTMLElement {
+  private createToolbarButton(
+    action: string,
+    onclick: () => void,
+  ): HTMLElement {
     const doc = this.addon.data.ztoolkit.getGlobal("document");
-    
+
     return this.addon.data.ztoolkit.UI.createElement(doc, "button", {
       classList: ["toolbar-button"],
       attributes: {
@@ -205,7 +216,7 @@ export class HistoryTreeView {
 
     // 获取历史数据
     const nodes = await this.getHistoryNodes();
-    
+
     // 按日期分组
     const groupedNodes = this.groupNodesByDate(nodes);
 
@@ -221,15 +232,15 @@ export class HistoryTreeView {
    */
   private async getHistoryNodes(): Promise<HistoryNode[]> {
     const nodes = this.addon.data.researchNavigator.getAllNodes();
-    
+
     // 添加已关闭标签页状态
     await this.markClosedTabs(nodes);
-    
+
     // 根据搜索词过滤
     if (this.searchInput?.value) {
       return this.filterNodes(nodes, this.searchInput.value);
     }
-    
+
     return nodes;
   }
 
@@ -238,7 +249,7 @@ export class HistoryTreeView {
    */
   private async markClosedTabs(nodes: HistoryNode[]) {
     const Zotero_Tabs = this.addon.data.ztoolkit.getGlobal("Zotero_Tabs");
-    
+
     // 获取当前打开的标签页ID
     const openTabIds = new Set<number>();
     if (Zotero_Tabs && Zotero_Tabs._tabs) {
@@ -250,7 +261,7 @@ export class HistoryTreeView {
     }
 
     // 标记节点状态
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       if (node.itemId) {
         node.isClosed = !openTabIds.has(node.itemId);
       }
@@ -259,7 +270,7 @@ export class HistoryTreeView {
     // 从 Zotero_Tabs._history 获取关闭时间
     if (Zotero_Tabs && Zotero_Tabs._history) {
       const closedTabsMap = new Map<number, number>();
-      
+
       Zotero_Tabs._history.forEach((entry: any[]) => {
         entry.forEach((tab: any) => {
           if (tab.data?.itemID) {
@@ -268,7 +279,7 @@ export class HistoryTreeView {
         });
       });
 
-      nodes.forEach(node => {
+      nodes.forEach((node) => {
         if (node.isClosed && closedTabsMap.has(node.itemId)) {
           node.closedAt = new Date(closedTabsMap.get(node.itemId)!);
         }
@@ -279,17 +290,19 @@ export class HistoryTreeView {
   /**
    * 按日期分组节点
    */
-  private groupNodesByDate(nodes: HistoryNode[]): Record<string, HistoryNode[]> {
+  private groupNodesByDate(
+    nodes: HistoryNode[],
+  ): Record<string, HistoryNode[]> {
     const groups: Record<string, HistoryNode[]> = {};
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       let dateKey: string;
       const nodeDate = node.lastVisit || node.timestamp;
-      
+
       if (nodeDate >= today) {
         dateKey = getString("date-today");
       } else if (nodeDate >= yesterday) {
@@ -313,10 +326,13 @@ export class HistoryTreeView {
         if (b === getString("date-yesterday")) return 1;
         return new Date(b).getTime() - new Date(a).getTime();
       })
-      .reduce((acc, key) => {
-        acc[key] = groups[key];
-        return acc;
-      }, {} as Record<string, HistoryNode[]>);
+      .reduce(
+        (acc, key) => {
+          acc[key] = groups[key];
+          return acc;
+        },
+        {} as Record<string, HistoryNode[]>,
+      );
   }
 
   /**
@@ -324,7 +340,7 @@ export class HistoryTreeView {
    */
   private renderDateGroup(date: string, nodes: HistoryNode[]): HTMLElement {
     const doc = this.addon.data.ztoolkit.getGlobal("document");
-    
+
     const group = this.addon.data.ztoolkit.UI.createElement(doc, "div", {
       classList: ["date-group"],
       styles: {
@@ -359,7 +375,7 @@ export class HistoryTreeView {
    */
   private renderNodeTree(nodes: HistoryNode[]): HTMLElement {
     const doc = this.addon.data.ztoolkit.getGlobal("document");
-    
+
     const tree = this.addon.data.ztoolkit.UI.createElement(doc, "div", {
       classList: ["node-tree"],
       styles: {
@@ -368,8 +384,8 @@ export class HistoryTreeView {
     });
 
     // 构建树结构
-    const rootNodes = nodes.filter(node => !node.parentId);
-    rootNodes.forEach(node => {
+    const rootNodes = nodes.filter((node) => !node.parentId);
+    rootNodes.forEach((node) => {
       const nodeElement = this.renderNode(node, nodes);
       tree.appendChild(nodeElement);
     });
@@ -382,7 +398,7 @@ export class HistoryTreeView {
    */
   private renderNode(node: HistoryNode, allNodes: HistoryNode[]): HTMLElement {
     const doc = this.addon.data.ztoolkit.getGlobal("document");
-    
+
     const nodeElement = this.addon.data.ztoolkit.UI.createElement(doc, "div", {
       classList: ["tree-node", node.isClosed ? "closed" : ""],
       attributes: {
@@ -445,49 +461,61 @@ export class HistoryTreeView {
 
     // 关闭时间
     if (node.isClosed && node.closedAt) {
-      const closedTime = this.addon.data.ztoolkit.UI.createElement(doc, "span", {
-        classList: ["closed-time"],
-        styles: {
-          marginLeft: "8px",
-          fontSize: "11px",
-          color: "var(--fill-secondary)",
+      const closedTime = this.addon.data.ztoolkit.UI.createElement(
+        doc,
+        "span",
+        {
+          classList: ["closed-time"],
+          styles: {
+            marginLeft: "8px",
+            fontSize: "11px",
+            color: "var(--fill-secondary)",
+          },
+          properties: {
+            textContent: `(${node.closedAt.toLocaleTimeString()})`,
+          },
         },
-        properties: {
-          textContent: `(${node.closedAt.toLocaleTimeString()})`,
-        },
-      });
+      );
       content.appendChild(closedTime);
     }
 
     // 笔记标记
     if (node.hasNotes) {
-      const noteIndicator = this.addon.data.ztoolkit.UI.createElement(doc, "span", {
-        classList: ["note-indicator"],
-        styles: {
-          marginLeft: "8px",
-          fontSize: "12px",
+      const noteIndicator = this.addon.data.ztoolkit.UI.createElement(
+        doc,
+        "span",
+        {
+          classList: ["note-indicator"],
+          styles: {
+            marginLeft: "8px",
+            fontSize: "12px",
+          },
+          properties: {
+            textContent: "📝",
+          },
         },
-        properties: {
-          textContent: "📝",
-        },
-      });
+      );
       content.appendChild(noteIndicator);
     }
 
     nodeElement.appendChild(content);
 
     // 子节点
-    const children = allNodes.filter(n => n.parentId === node.id);
+    const children = allNodes.filter((n) => n.parentId === node.id);
     if (children.length > 0) {
-      const childrenContainer = this.addon.data.ztoolkit.UI.createElement(doc, "div", {
-        classList: ["node-children"],
-        styles: {
-          paddingLeft: "20px",
-          marginTop: "4px",
+      const childrenContainer = this.addon.data.ztoolkit.UI.createElement(
+        doc,
+        "div",
+        {
+          classList: ["node-children"],
+          styles: {
+            paddingLeft: "20px",
+            marginTop: "4px",
+          },
         },
-      });
+      );
 
-      children.forEach(child => {
+      children.forEach((child) => {
         const childElement = this.renderNode(child, allNodes);
         childrenContainer.appendChild(childElement);
       });
@@ -516,7 +544,7 @@ export class HistoryTreeView {
    */
   private onNodeRightClick(event: MouseEvent, node: HistoryNode) {
     event.preventDefault();
-    
+
     // 创建右键菜单
     const menu = this.createContextMenu(node);
     menu.openPopupAtScreen(event.screenX, event.screenY);
@@ -527,12 +555,17 @@ export class HistoryTreeView {
    */
   private createContextMenu(node: HistoryNode): any {
     const doc = this.addon.data.ztoolkit.getGlobal("document");
-    
+
     const menupopup = doc.createXULElement("menupopup");
-    
+
     // 打开/恢复
     const openItem = doc.createXULElement("menuitem");
-    openItem.setAttribute("label", node.isClosed ? getString("menu-restore-tab") : getString("menu-open-tab"));
+    openItem.setAttribute(
+      "label",
+      node.isClosed
+        ? getString("menu-restore-tab")
+        : getString("menu-open-tab"),
+    );
     openItem.addEventListener("command", () => {
       if (node.isClosed) {
         this.restoreTab(node);
@@ -583,7 +616,7 @@ export class HistoryTreeView {
   private async restoreTab(node: HistoryNode) {
     try {
       const Zotero_Tabs = this.addon.data.ztoolkit.getGlobal("Zotero_Tabs");
-      
+
       // 尝试使用 Zotero 的恢复功能
       if (Zotero_Tabs && Zotero_Tabs.undoClose) {
         await Zotero_Tabs.undoClose();
@@ -595,7 +628,7 @@ export class HistoryTreeView {
       // 更新节点状态
       node.isClosed = false;
       node.closedAt = undefined;
-      
+
       // 刷新视图
       await this.renderTree();
     } catch (e) {
@@ -616,9 +649,10 @@ export class HistoryTreeView {
    */
   private filterNodes(nodes: HistoryNode[], query: string): HistoryNode[] {
     const lowerQuery = query.toLowerCase();
-    return nodes.filter(node => 
-      node.title.toLowerCase().includes(lowerQuery) ||
-      node.tags.some(tag => tag.toLowerCase().includes(lowerQuery))
+    return nodes.filter(
+      (node) =>
+        node.title.toLowerCase().includes(lowerQuery) ||
+        node.tags.some((tag) => tag.toLowerCase().includes(lowerQuery)),
     );
   }
 
@@ -627,7 +661,7 @@ export class HistoryTreeView {
    */
   private expandAll() {
     const nodes = this.treeContainer?.querySelectorAll(".node-children");
-    nodes?.forEach(node => {
+    nodes?.forEach((node) => {
       (node as HTMLElement).style.display = "block";
     });
   }
@@ -637,7 +671,7 @@ export class HistoryTreeView {
    */
   private collapseAll() {
     const nodes = this.treeContainer?.querySelectorAll(".node-children");
-    nodes?.forEach(node => {
+    nodes?.forEach((node) => {
       (node as HTMLElement).style.display = "none";
     });
   }
@@ -646,14 +680,18 @@ export class HistoryTreeView {
    * 监听标签页关闭事件
    */
   private registerTabCloseListener() {
-    const notifierID = Zotero.Notifier.registerObserver({
-      notify: (event: string, type: string, ids: number[]) => {
-        if (type === "tab" && event === "close") {
-          // 刷新视图以更新已关闭的标签页
-          this.renderTree();
-        }
+    const notifierID = Zotero.Notifier.registerObserver(
+      {
+        notify: (event: string, type: string, ids: number[]) => {
+          if (type === "tab" && event === "close") {
+            // 刷新视图以更新已关闭的标签页
+            this.renderTree();
+          }
+        },
       },
-    }, ["tab"], "HistoryTreeView");
+      ["tab"],
+      "HistoryTreeView",
+    );
 
     // 保存 notifierID 以便销毁时注销
     this.addon.data._historyTreeNotifierID = notifierID;
@@ -665,7 +703,9 @@ export class HistoryTreeView {
   public destroy() {
     // 注销监听器
     if (this.addon.data._historyTreeNotifierID) {
-      Zotero.Notifier.unregisterObserver(this.addon.data._historyTreeNotifierID);
+      Zotero.Notifier.unregisterObserver(
+        this.addon.data._historyTreeNotifierID,
+      );
     }
 
     // 清理 DOM

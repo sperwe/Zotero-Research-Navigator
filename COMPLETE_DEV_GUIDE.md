@@ -7,23 +7,30 @@
 ## 🛠️ 核心工具链
 
 ### 1. **Zotero Plugin Toolkit** ⭐
+
 我们使用这个强大的工具包简化开发：
 
 ```typescript
-import { BasicTool, UITool, PreferenceTool, ProgressWindow } from "zotero-plugin-toolkit";
+import {
+  BasicTool,
+  UITool,
+  PreferenceTool,
+  ProgressWindow,
+} from "zotero-plugin-toolkit";
 
 // 示例：创建进度窗口
 const progressWindow = new ProgressWindow(config.addonName);
 progressWindow.createLine({
   text: "Processing items...",
   type: "default",
-  progress: 0
+  progress: 0,
 });
 ```
 
 [完整 API 文档](https://github.com/windingwind/zotero-plugin-toolkit/blob/master/docs/zotero-plugin-toolkit.md)
 
 ### 2. **Zotero Plugin Scaffold** ⭐
+
 构建系统已配置在 `zotero-plugin.config.ts`：
 
 ```typescript
@@ -34,16 +41,19 @@ export default defineConfig({
   id: pkg.config.addonID,
   namespace: pkg.config.addonRef,
   build: {
-    esbuildOptions: [{
-      entryPoints: ["src/index.ts"],
-      bundle: true,
-      target: "firefox115",
-    }]
-  }
+    esbuildOptions: [
+      {
+        entryPoints: ["src/index.ts"],
+        bundle: true,
+        target: "firefox115",
+      },
+    ],
+  },
 });
 ```
 
 ### 3. **Zotero Types** ⭐
+
 提供完整的 TypeScript 支持：
 
 ```typescript
@@ -87,14 +97,14 @@ import { config } from "../package.json";
 
 async function onStartup() {
   await BasicTool.waitForZotero();
-  
+
   // 初始化插件
   addon.data.ztoolkit = new ZoteroToolkit();
   addon.data.ztoolkit.basicOptions.log.prefix = `[${config.addonName}]`;
-  
+
   // 注册通知监听器
   registerNotifier();
-  
+
   // 等待主窗口
   await waitForMainWindow();
 }
@@ -106,11 +116,13 @@ async function waitForMainWindow() {
     } else {
       const observer = {
         observe: (subject: any) => {
-          if (subject.location.href === "chrome://zotero/content/zotero.xhtml") {
+          if (
+            subject.location.href === "chrome://zotero/content/zotero.xhtml"
+          ) {
             Services.wm.removeListener(observer);
             resolve();
           }
-        }
+        },
       };
       Services.wm.addListener(observer);
     }
@@ -132,7 +144,7 @@ function createToolbarButton(doc: Document) {
     style: "list-style-image: url(chrome://researchnavigator/content/icons/icon.svg)",
     onclick: "ResearchNavigator.togglePanel()"
   };
-  
+
   return UITool.createElement(doc, "toolbarbutton", props);
 }
 
@@ -142,18 +154,18 @@ function createReactPanel(doc: Document) {
     id: `${config.addonRef}-react-panel`,
     classList: ["research-navigator-panel"]
   });
-  
+
   const React = require("react");
   const ReactDOM = require("react-dom");
-  
+
   ReactDOM.render(
-    <HistoryPanel 
+    <HistoryPanel
       history={addon.data.history}
       onItemClick={handleItemClick}
     />,
     container
   );
-  
+
   return container;
 }
 ```
@@ -164,22 +176,22 @@ function createReactPanel(doc: Document) {
 // 使用 Zotero 偏好设置系统
 class DataManager {
   private prefix = config.prefsPrefix;
-  
+
   async saveData(key: string, data: any) {
     const serialized = JSON.stringify(data);
     Zotero.Prefs.set(`${this.prefix}.${key}`, serialized);
   }
-  
+
   async loadData(key: string): Promise<any> {
     const serialized = Zotero.Prefs.get(`${this.prefix}.${key}`);
     return serialized ? JSON.parse(serialized) : null;
   }
-  
+
   // 使用 Zotero 数据库存储大量数据
   async saveLargeData(key: string, data: any) {
     await Zotero.DB.queryAsync(
       "INSERT OR REPLACE INTO settings (setting, key, value) VALUES (?, ?, ?)",
-      [config.addonID, key, JSON.stringify(data)]
+      [config.addonID, key, JSON.stringify(data)],
     );
   }
 }
@@ -190,29 +202,32 @@ class DataManager {
 ```typescript
 // 注册 Notifier
 function registerNotifier() {
-  const notifierID = Zotero.Notifier.registerObserver({
-    notify: async (
-      event: string,
-      type: string,
-      ids: number[] | string[],
-      extraData: any
-    ) => {
-      if (type === "item") {
-        switch (event) {
-          case "add":
-            await handleItemsAdded(ids as number[]);
-            break;
-          case "modify":
-            await handleItemsModified(ids as number[]);
-            break;
-          case "delete":
-            await handleItemsDeleted(ids as number[]);
-            break;
+  const notifierID = Zotero.Notifier.registerObserver(
+    {
+      notify: async (
+        event: string,
+        type: string,
+        ids: number[] | string[],
+        extraData: any,
+      ) => {
+        if (type === "item") {
+          switch (event) {
+            case "add":
+              await handleItemsAdded(ids as number[]);
+              break;
+            case "modify":
+              await handleItemsModified(ids as number[]);
+              break;
+            case "delete":
+              await handleItemsDeleted(ids as number[]);
+              break;
+          }
         }
-      }
-    }
-  }, ["item", "collection", "search"]);
-  
+      },
+    },
+    ["item", "collection", "search"],
+  );
+
   // 在关闭时注销
   addon.data.notifierID = notifierID;
 }
@@ -247,7 +262,7 @@ function getString(key: string, args?: Record<string, string>) {
 // 在 UI 中使用
 const button = {
   label: getString("toolbar-button-label"),
-  tooltiptext: getString("toolbar-button-tooltip")
+  tooltiptext: getString("toolbar-button-tooltip"),
 };
 ```
 
@@ -267,7 +282,9 @@ if (__env__ === "development") {
 
 ```javascript
 // 打开浏览器工具箱
-Zotero.openInViewer("chrome://devtools/content/devtools-browser-toolbox/index.xhtml");
+Zotero.openInViewer(
+  "chrome://devtools/content/devtools-browser-toolbox/index.xhtml",
+);
 
 // 检查对象
 Zotero.debug(JSON.stringify(myObject, null, 2));
@@ -336,20 +353,20 @@ import React, { useState, useEffect } from "react";
 
 export const HistoryList: React.FC<{ items: HistoryItem[] }> = ({ items }) => {
   const [filter, setFilter] = useState("");
-  
-  const filteredItems = items.filter(item => 
-    item.title.toLowerCase().includes(filter.toLowerCase())
+
+  const filteredItems = items.filter((item) =>
+    item.title.toLowerCase().includes(filter.toLowerCase()),
   );
-  
+
   return (
     <div className="history-list">
-      <input 
+      <input
         type="search"
         placeholder="Filter history..."
         onChange={(e) => setFilter(e.target.value)}
       />
       <ul>
-        {filteredItems.map(item => (
+        {filteredItems.map((item) => (
           <li key={item.id} onClick={() => openItem(item.id)}>
             {item.title}
           </li>
@@ -366,7 +383,7 @@ export const HistoryList: React.FC<{ items: HistoryItem[] }> = ({ items }) => {
 // worker.js
 self.addEventListener("message", async (event) => {
   const { action, data } = event.data;
-  
+
   switch (action) {
     case "buildIndex":
       const index = await buildSearchIndex(data);

@@ -11,18 +11,18 @@ export interface ClosedTabsTabOptions {
 export class ClosedTabsTab {
   constructor(
     private window: Window,
-    private options: ClosedTabsTabOptions
+    private options: ClosedTabsTabOptions,
   ) {}
-  
+
   async initialize(): Promise<void> {}
-  
+
   render(): HTMLElement {
     const doc = this.window.document;
     const container = doc.createElement("div");
     container.innerHTML = "<p>Closed tabs view coming soon...</p>";
     return container;
   }
-  
+
   onHide(): void {}
   destroy(): void {}
 }

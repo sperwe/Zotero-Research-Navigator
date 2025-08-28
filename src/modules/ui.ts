@@ -12,59 +12,64 @@ let currentSearchEngine: SearchEngine;
 export async function initializeUI(
   win: Window,
   historyTracker: HistoryTracker,
-  searchEngine: SearchEngine
+  searchEngine: SearchEngine,
 ): Promise<void> {
   ztoolkit.log("[Research Navigator] Starting UI initialization");
-  
+
   currentHistoryTracker = historyTracker;
   currentSearchEngine = searchEngine;
-  
+
   try {
     // 首先尝试创建一个简单的测试按钮
     createSimpleTestButton(win);
-    
+
     // 添加工具栏按钮
     await createToolbarButton(win);
     ztoolkit.log("[Research Navigator] Toolbar button creation attempted");
-    
+
     // 创建历史面板
     createHistoryPanel(win, historyTracker, searchEngine);
     ztoolkit.log("[Research Navigator] History panel created");
-    
+
     // 添加菜单项
     createMenuItems(win);
     ztoolkit.log("[Research Navigator] Menu items created");
-    
+
     // 注册快捷键
     registerShortcuts(win);
     ztoolkit.log("[Research Navigator] Shortcuts registered");
-    
+
     ztoolkit.log("[Research Navigator] UI initialization completed");
-    
+
     // 添加一个测试通知来确认插件已加载
     win.setTimeout(() => {
-      ztoolkit.getGlobal("Zotero").alert(
-        null,
-        "Research Navigator",
-        "Plugin loaded successfully! Use Ctrl+Shift+H to open the history panel."
-      );
+      ztoolkit
+        .getGlobal("Zotero")
+        .alert(
+          null,
+          "Research Navigator",
+          "Plugin loaded successfully! Use Ctrl+Shift+H to open the history panel.",
+        );
     }, 2000);
   } catch (error) {
-    ztoolkit.log(`[Research Navigator] UI initialization error: ${error}`, 'error');
+    ztoolkit.log(
+      `[Research Navigator] UI initialization error: ${error}`,
+      "error",
+    );
   }
 }
 
 function createSimpleTestButton(win: Window): void {
   try {
     const doc = win.document;
-    
+
     // 查找 Zotero 主界面中的一个稳定元素
     const zoteroPane = doc.getElementById("zotero-pane");
     if (!zoteroPane) {
-      ztoolkit.log("[Research Navigator] zotero-pane not found", 'warn');
+      ztoolkit.log("[Research Navigator] zotero-pane not found", "warn");
       return;
     }
-    
+
     // 创建一个浮动按钮用于测试
     const testButton = doc.createElement("button");
     testButton.id = "research-navigator-test-button";
@@ -83,109 +88,114 @@ function createSimpleTestButton(win: Window): void {
       font-size: 14px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.3);
     `;
-    
+
     testButton.addEventListener("click", () => {
       ztoolkit.log("[Research Navigator] Test button clicked!");
       toggleHistoryPanel(win);
     });
-    
+
     testButton.addEventListener("mouseover", () => {
       testButton.style.background = "#3498db";
     });
-    
+
     testButton.addEventListener("mouseout", () => {
       testButton.style.background = "#2980b9";
     });
-    
+
     zoteroPane.appendChild(testButton);
     ztoolkit.log("[Research Navigator] Test button added successfully");
   } catch (error) {
-    ztoolkit.log(`[Research Navigator] Error creating test button: ${error}`, 'error');
+    ztoolkit.log(
+      `[Research Navigator] Error creating test button: ${error}`,
+      "error",
+    );
   }
 }
 
 async function createToolbarButton(win: Window): Promise<void> {
   const doc = win.document;
-  
+
   try {
     // 基于 Zotero 源码，工具栏按钮应该是这样的结构
     const props = {
       id: "zotero-tb-research-navigator",
       class: "zotero-tb-button",
-      tooltiptext: "Research Navigator - View History (Ctrl+Shift+H)", 
-      tabindex: "-1"
+      tooltiptext: "Research Navigator - View History (Ctrl+Shift+H)",
+      tabindex: "-1",
     };
-    
+
     // 创建工具栏按钮
     const toolbarbutton = doc.createXULElement("toolbarbutton");
     for (const [key, value] of Object.entries(props)) {
       toolbarbutton.setAttribute(key, value);
     }
-    
+
     // 设置图标样式 - 使用内联样式确保显示
     toolbarbutton.style.cssText = `
       list-style-image: url('chrome://researchnavigator/content/icons/icon.svg');
       -moz-image-region: rect(0, 16px, 16px, 0);
     `;
-    
+
     // 添加事件监听器
     toolbarbutton.addEventListener("command", () => {
       ztoolkit.log("[Research Navigator] Toolbar button clicked");
       toggleHistoryPanel(win);
     });
-    
+
     // Zotero 7 的主要工具栏位置 - 基于实际源码
     const insertLocations = [
       // 1. 最理想的位置：在笔记按钮后面
-      { 
-        containerId: "zotero-items-toolbar", 
+      {
+        containerId: "zotero-items-toolbar",
         afterId: "zotero-tb-note-add",
         beforeId: null,
-        desc: "after note button"
+        desc: "after note button",
       },
       // 2. 备选：在附件按钮后面
-      { 
-        containerId: "zotero-items-toolbar", 
+      {
+        containerId: "zotero-items-toolbar",
         afterId: "zotero-tb-attachment-add",
         beforeId: null,
-        desc: "after attachment button"
+        desc: "after attachment button",
       },
       // 3. 备选：在查找按钮后面（如果存在）
-      { 
-        containerId: "zotero-items-toolbar", 
+      {
+        containerId: "zotero-items-toolbar",
         afterId: "zotero-tb-lookup",
         beforeId: null,
-        desc: "after lookup button"
+        desc: "after lookup button",
       },
       // 4. 备选：在搜索框前面
-      { 
-        containerId: "zotero-items-toolbar", 
+      {
+        containerId: "zotero-items-toolbar",
         afterId: null,
         beforeId: "zotero-tb-search-spinner",
-        desc: "before search"
-      }
+        desc: "before search",
+      },
     ];
-    
+
     let added = false;
-    
+
     // 首先检查按钮是否已存在
     if (doc.getElementById(props.id)) {
       ztoolkit.log(`[Research Navigator] Button already exists`);
       return;
     }
-    
+
     for (const location of insertLocations) {
       const container = doc.getElementById(location.containerId);
       if (!container) {
-        ztoolkit.log(`[Research Navigator] Container ${location.containerId} not found`);
+        ztoolkit.log(
+          `[Research Navigator] Container ${location.containerId} not found`,
+        );
         continue;
       }
-      
+
       if (location.afterId) {
         const referenceNode = doc.getElementById(location.afterId);
         if (referenceNode && referenceNode.parentNode === container) {
           // 插入到参考节点之后
-          referenceNode.insertAdjacentElement('afterend', toolbarbutton);
+          referenceNode.insertAdjacentElement("afterend", toolbarbutton);
           ztoolkit.log(`[Research Navigator] Button inserted ${location.desc}`);
           added = true;
           break;
@@ -194,14 +204,14 @@ async function createToolbarButton(win: Window): Promise<void> {
         const referenceNode = doc.getElementById(location.beforeId);
         if (referenceNode && referenceNode.parentNode === container) {
           // 插入到参考节点之前
-          referenceNode.insertAdjacentElement('beforebegin', toolbarbutton);
+          referenceNode.insertAdjacentElement("beforebegin", toolbarbutton);
           ztoolkit.log(`[Research Navigator] Button inserted ${location.desc}`);
           added = true;
           break;
         }
       }
     }
-    
+
     // 如果都失败了，尝试直接添加到工具栏
     if (!added) {
       const toolbar = doc.getElementById("zotero-items-toolbar");
@@ -210,7 +220,7 @@ async function createToolbarButton(win: Window): Promise<void> {
         const spacer = toolbar.querySelector("spacer[flex='1']");
         if (spacer) {
           // 在 spacer 之前插入
-          spacer.insertAdjacentElement('beforebegin', toolbarbutton);
+          spacer.insertAdjacentElement("beforebegin", toolbarbutton);
           ztoolkit.log("[Research Navigator] Button inserted before spacer");
           added = true;
         } else {
@@ -221,22 +231,28 @@ async function createToolbarButton(win: Window): Promise<void> {
         }
       }
     }
-    
+
     if (!added) {
-      ztoolkit.log("[Research Navigator] ERROR: Could not add toolbar button to any location", 'error');
+      ztoolkit.log(
+        "[Research Navigator] ERROR: Could not add toolbar button to any location",
+        "error",
+      );
     }
   } catch (error) {
-    ztoolkit.log(`[Research Navigator] Error creating toolbar button: ${error}`, 'error');
+    ztoolkit.log(
+      `[Research Navigator] Error creating toolbar button: ${error}`,
+      "error",
+    );
   }
 }
 
 function createHistoryPanel(
   win: Window,
   historyTracker: HistoryTracker,
-  searchEngine: SearchEngine
+  searchEngine: SearchEngine,
 ): void {
   const doc = win.document;
-  
+
   // 创建面板容器
   const panel = ztoolkit.UI.createElement(doc, "div", {
     tag: "div",
@@ -326,7 +342,12 @@ function createHistoryPanel(
                 type: "input",
                 listener: (e: Event) => {
                   const query = (e.target as HTMLInputElement).value;
-                  updateHistoryDisplay(win, historyTracker, searchEngine, query);
+                  updateHistoryDisplay(
+                    win,
+                    historyTracker,
+                    searchEngine,
+                    query,
+                  );
                 },
               },
             ],
@@ -345,9 +366,9 @@ function createHistoryPanel(
       },
     ],
   });
-  
+
   doc.body.appendChild(panel);
-  
+
   // 存储到窗口对象
   (win as any).researchNavigatorPanel = panel;
 }
@@ -355,25 +376,30 @@ function createHistoryPanel(
 function toggleHistoryPanel(win: Window): void {
   const doc = win.document;
   let panel = doc.getElementById("research-navigator-panel");
-  
+
   // 如果面板不存在，先创建它
   if (!panel) {
     ztoolkit.log("[Research Navigator] Panel not found, creating it now");
     createHistoryPanel(win, currentHistoryTracker, currentSearchEngine);
     panel = doc.getElementById("research-navigator-panel");
   }
-  
+
   if (panel) {
     const isVisible = panel.style.display !== "none";
     panel.style.display = isVisible ? "none" : "flex";
-    
+
     if (!isVisible) {
       // 面板打开时更新显示
       updateHistoryDisplay(win, currentHistoryTracker, currentSearchEngine);
     }
-    ztoolkit.log(`[Research Navigator] Panel ${isVisible ? 'hidden' : 'shown'}`);
+    ztoolkit.log(
+      `[Research Navigator] Panel ${isVisible ? "hidden" : "shown"}`,
+    );
   } else {
-    ztoolkit.log("[Research Navigator] Failed to create or find panel", 'error');
+    ztoolkit.log(
+      "[Research Navigator] Failed to create or find panel",
+      "error",
+    );
   }
 }
 
@@ -381,27 +407,28 @@ function updateHistoryDisplay(
   win: Window,
   historyTracker: HistoryTracker,
   searchEngine: SearchEngine,
-  query?: string
+  query?: string,
 ): void {
   const doc = win.document;
   const treeContainer = doc.getElementById("research-navigator-tree");
   if (!treeContainer) return;
-  
+
   // 清空现有内容
   treeContainer.innerHTML = "";
-  
+
   const history = historyTracker.getHistory();
-  
+
   if (query && query.trim()) {
     // 构建搜索索引并搜索
     searchEngine.buildIndex(history);
     const results = searchEngine.search(query);
-    
+
     if (results.length === 0) {
-      treeContainer.innerHTML = '<div style="color: #666; text-align: center;">No results found</div>';
+      treeContainer.innerHTML =
+        '<div style="color: #666; text-align: center;">No results found</div>';
       return;
     }
-    
+
     // 显示搜索结果
     for (const result of results) {
       const node = createHistoryNodeElement(doc, result, () => {
@@ -412,10 +439,11 @@ function updateHistoryDisplay(
   } else {
     // 显示完整历史树
     if (history.length === 0) {
-      treeContainer.innerHTML = '<div style="color: #666; text-align: center;">No history yet</div>';
+      treeContainer.innerHTML =
+        '<div style="color: #666; text-align: center;">No history yet</div>';
       return;
     }
-    
+
     for (const node of history) {
       const element = createHistoryTreeElement(doc, node);
       treeContainer.appendChild(element);
@@ -423,7 +451,10 @@ function updateHistoryDisplay(
   }
 }
 
-function createHistoryTreeElement(doc: Document, node: HistoryNode): HTMLElement {
+function createHistoryTreeElement(
+  doc: Document,
+  node: HistoryNode,
+): HTMLElement {
   const nodeEl = ztoolkit.UI.createElement(doc, "div", {
     styles: {
       marginBottom: "5px",
@@ -442,13 +473,15 @@ function createHistoryTreeElement(doc: Document, node: HistoryNode): HTMLElement
           {
             type: "mouseenter",
             listener: (e: Event) => {
-              (e.currentTarget as HTMLElement).style.backgroundColor = "#f0f0f0";
+              (e.currentTarget as HTMLElement).style.backgroundColor =
+                "#f0f0f0";
             },
           },
           {
             type: "mouseleave",
             listener: (e: Event) => {
-              (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
+              (e.currentTarget as HTMLElement).style.backgroundColor =
+                "transparent";
             },
           },
           {
@@ -486,7 +519,7 @@ function createHistoryTreeElement(doc: Document, node: HistoryNode): HTMLElement
       },
     ],
   });
-  
+
   // 递归创建子节点
   if (node.children && node.children.length > 0) {
     const childrenContainer = ztoolkit.UI.createElement(doc, "div", {
@@ -494,21 +527,21 @@ function createHistoryTreeElement(doc: Document, node: HistoryNode): HTMLElement
         marginLeft: "20px",
       },
     });
-    
+
     for (const child of node.children) {
       childrenContainer.appendChild(createHistoryTreeElement(doc, child));
     }
-    
+
     nodeEl.appendChild(childrenContainer);
   }
-  
+
   return nodeEl;
 }
 
 function createHistoryNodeElement(
   doc: Document,
   node: HistoryNode,
-  onClick: () => void
+  onClick: () => void,
 ): HTMLElement {
   return ztoolkit.UI.createElement(doc, "div", {
     styles: {
@@ -530,9 +563,10 @@ function createHistoryNodeElement(
         },
       },
       {
-        type: "mouseleave", 
+        type: "mouseleave",
         listener: (e: Event) => {
-          (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
+          (e.currentTarget as HTMLElement).style.backgroundColor =
+            "transparent";
         },
       },
     ],
@@ -600,7 +634,7 @@ function formatDate(timestamp: number): string {
   const now = new Date();
   const diff = now.getTime() - date.getTime();
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  
+
   if (days === 0) {
     return "Today";
   } else if (days === 1) {
@@ -616,27 +650,27 @@ async function openItem(itemID: string): Promise<void> {
   try {
     const id = parseInt(itemID);
     const item = await Zotero.Items.getAsync(id);
-    
+
     if (item) {
       // 选择条目
       const itemTreeView = Zotero.getActiveZoteroPane().itemsView;
-      
+
       await itemTreeView.selectItem(id);
-      
+
       // 如果是 PDF，尝试打开
       if (item.isPDFAttachment()) {
         Zotero.OpenPDF.openToPage(item, 1);
       }
     }
   } catch (error) {
-    ztoolkit.log(`[Research Navigator] Error opening item: ${error}`, 'error');
+    ztoolkit.log(`[Research Navigator] Error opening item: ${error}`, "error");
   }
 }
 
 function createMenuItems(win: Window): void {
   try {
     const doc = win.document;
-    
+
     // 直接添加到工具菜单（基于 Zotero 源码）
     const toolsMenuPopup = doc.getElementById("menu_ToolsPopup");
     if (toolsMenuPopup) {
@@ -648,10 +682,10 @@ function createMenuItems(win: Window): void {
         ztoolkit.log("[Research Navigator] Tools menu item clicked");
         toggleHistoryPanel(win);
       });
-      
+
       // 添加分隔符
       const separator = doc.createXULElement("menuseparator");
-      
+
       // 插入到插件菜单项之前（menu_addons）
       const addonsMenuItem = doc.getElementById("menu_addons");
       if (addonsMenuItem) {
@@ -662,12 +696,14 @@ function createMenuItems(win: Window): void {
         // 如果找不到插件菜单项，添加到末尾
         toolsMenuPopup.appendChild(separator);
         toolsMenuPopup.appendChild(menuitem);
-        ztoolkit.log("[Research Navigator] Menu item added to end of Tools menu");
+        ztoolkit.log(
+          "[Research Navigator] Menu item added to end of Tools menu",
+        );
       }
     } else {
-      ztoolkit.log("[Research Navigator] Tools menu not found", 'warn');
+      ztoolkit.log("[Research Navigator] Tools menu not found", "warn");
     }
-    
+
     // 同时尝试使用 ztoolkit 的方法（作为备用）
     ztoolkit.Menu.register("menuTools", {
       tag: "menuitem",
@@ -678,9 +714,11 @@ function createMenuItems(win: Window): void {
         toggleHistoryPanel(win);
       },
     });
-    
   } catch (error) {
-    ztoolkit.log(`[Research Navigator] Error creating menu items: ${error}`, 'error');
+    ztoolkit.log(
+      `[Research Navigator] Error creating menu items: ${error}`,
+      "error",
+    );
   }
 }
 
@@ -688,8 +726,10 @@ function registerShortcuts(win: Window): void {
   try {
     // 注册快捷键 Ctrl/Cmd + Shift + H
     ztoolkit.Keyboard.register((ev, data) => {
-      ztoolkit.log(`[Research Navigator] Key event: ${ev.key}, ctrl: ${ev.ctrlKey}, shift: ${ev.shiftKey}, meta: ${ev.metaKey}`);
-      
+      ztoolkit.log(
+        `[Research Navigator] Key event: ${ev.key}, ctrl: ${ev.ctrlKey}, shift: ${ev.shiftKey}, meta: ${ev.metaKey}`,
+      );
+
       if (ev.key === "H" && ev.shiftKey && (ev.ctrlKey || ev.metaKey)) {
         ztoolkit.log("[Research Navigator] Shortcut triggered!");
         toggleHistoryPanel(win);
@@ -699,9 +739,14 @@ function registerShortcuts(win: Window): void {
       }
       return false;
     });
-    
-    ztoolkit.log("[Research Navigator] Keyboard shortcut registered (Ctrl/Cmd+Shift+H)");
+
+    ztoolkit.log(
+      "[Research Navigator] Keyboard shortcut registered (Ctrl/Cmd+Shift+H)",
+    );
   } catch (error) {
-    ztoolkit.log(`[Research Navigator] Error registering shortcuts: ${error}`, 'error');
+    ztoolkit.log(
+      `[Research Navigator] Error registering shortcuts: ${error}`,
+      "error",
+    );
   }
 }

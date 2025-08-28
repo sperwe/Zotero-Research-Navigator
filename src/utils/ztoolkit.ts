@@ -30,28 +30,28 @@ function initZToolkit(_ztoolkit: ZoteroToolkit) {
 // 创建最小的 ztoolkit mock
 function createMinimalZToolkit(): any {
   const log = (message: string, type?: string) => {
-    if (typeof Zotero !== 'undefined' && Zotero.debug) {
+    if (typeof Zotero !== "undefined" && Zotero.debug) {
       Zotero.debug(`[${config.addonName}] ${message}`);
     }
   };
-  
+
   return {
     log,
     basicOptions: {
       log: {
         prefix: `[${config.addonName}]`,
-        disableConsole: true
+        disableConsole: true,
       },
       api: {
-        pluginID: config.addonID
-      }
+        pluginID: config.addonID,
+      },
     },
     UI: {
       basicOptions: {
         ui: {
           enableElementJSONLog: false,
-          enableElementDOMLog: false
-        }
+          enableElementDOMLog: false,
+        },
       },
       createElement: (doc: Document, tagName: string, props?: any) => {
         const elem = doc.createElement(tagName);
@@ -63,10 +63,14 @@ function createMinimalZToolkit(): any {
         if (props?.children) {
           // Simple children support
           props.children.forEach((child: any) => {
-            if (typeof child === 'string') {
+            if (typeof child === "string") {
               elem.appendChild(doc.createTextNode(child));
             } else if (child.tag) {
-              const childElem = createMinimalZToolkit().UI.createElement(doc, child.tag, child);
+              const childElem = createMinimalZToolkit().UI.createElement(
+                doc,
+                child.tag,
+                child,
+              );
               elem.appendChild(childElem);
             }
           });
@@ -79,26 +83,30 @@ function createMinimalZToolkit(): any {
         return elem;
       },
       appendElement: (props: any, parent: Element) => {
-        const elem = createMinimalZToolkit().UI.createElement(parent.ownerDocument, props.tag, props);
+        const elem = createMinimalZToolkit().UI.createElement(
+          parent.ownerDocument,
+          props.tag,
+          props,
+        );
         parent.appendChild(elem);
         return elem;
-      }
+      },
     },
     Menu: {
       register: (menuId: string, options: any) => {
         log(`Menu.register called for ${menuId}`);
-      }
+      },
     },
     Keyboard: {
       register: (callback: Function) => {
-        log('Keyboard.register called');
-      }
+        log("Keyboard.register called");
+      },
     },
     ProgressWindow: {
-      setIconURI: () => {}
+      setIconURI: () => {},
     },
     getGlobal: (name: string) => {
       return (globalThis as any)[name];
-    }
+    },
   };
 }

@@ -38,7 +38,7 @@ export class DiagnosticTool {
       phase,
       success,
       details,
-      error
+      error,
     };
 
     this.diagnosticLog.push(info);
@@ -47,9 +47,11 @@ export class DiagnosticTool {
     const prefix = `[${config.addonName} Diagnostic]`;
     const timeStr = `+${info.timestamp}ms`;
     const statusStr = success ? "✓" : "✗";
-    
+
     if (typeof Zotero !== "undefined" && Zotero.debug) {
-      Zotero.debug(`${prefix} ${timeStr} ${statusStr} ${phase}: ${JSON.stringify(details)}`);
+      Zotero.debug(
+        `${prefix} ${timeStr} ${statusStr} ${phase}: ${JSON.stringify(details)}`,
+      );
       if (error) {
         Zotero.debug(`${prefix} Error: ${error.message}\n${error.stack}`);
       }
@@ -68,31 +70,31 @@ export class DiagnosticTool {
     const checks = [
       {
         name: "Zotero object",
-        test: () => typeof Zotero !== "undefined" && Zotero !== null
+        test: () => typeof Zotero !== "undefined" && Zotero !== null,
       },
       {
         name: "Zotero version",
         test: () => {
           if (typeof Zotero !== "undefined" && Zotero.version) {
             const version = Zotero.version;
-            const major = parseInt(version.split('.')[0]);
+            const major = parseInt(version.split(".")[0]);
             return major >= 7;
           }
           return false;
-        }
+        },
       },
       {
         name: "Services",
-        test: () => typeof Services !== "undefined"
+        test: () => typeof Services !== "undefined",
       },
       {
         name: "ChromeUtils",
-        test: () => typeof ChromeUtils !== "undefined"
+        test: () => typeof ChromeUtils !== "undefined",
       },
       {
         name: "Components",
-        test: () => typeof Components !== "undefined"
-      }
+        test: () => typeof Components !== "undefined",
+      },
     ];
 
     let allPassed = true;
@@ -102,14 +104,19 @@ export class DiagnosticTool {
         const passed = check.test();
         this.log(`Environment check: ${check.name}`, passed, {
           check: check.name,
-          passed
+          passed,
         });
         if (!passed) allPassed = false;
       } catch (error) {
-        this.log(`Environment check: ${check.name}`, false, {
-          check: check.name,
-          error: error.message
-        }, error as Error);
+        this.log(
+          `Environment check: ${check.name}`,
+          false,
+          {
+            check: check.name,
+            error: error.message,
+          },
+          error as Error,
+        );
         allPassed = false;
       }
     }
@@ -124,24 +131,25 @@ export class DiagnosticTool {
     const checks = [
       {
         name: "Window object exists",
-        test: () => win !== null && win !== undefined
+        test: () => win !== null && win !== undefined,
       },
       {
         name: "Window document",
-        test: () => win.document !== null && win.document !== undefined
+        test: () => win.document !== null && win.document !== undefined,
       },
       {
         name: "Window location",
-        test: () => win.location && win.location.href
+        test: () => win.location && win.location.href,
       },
       {
         name: "Is main Zotero window",
-        test: () => win.location.href === "chrome://zotero/content/zotero.xhtml"
+        test: () =>
+          win.location.href === "chrome://zotero/content/zotero.xhtml",
       },
       {
         name: "Document ready state",
-        test: () => win.document.readyState === "complete"
-      }
+        test: () => win.document.readyState === "complete",
+      },
     ];
 
     let allPassed = true;
@@ -152,14 +160,22 @@ export class DiagnosticTool {
         this.log(`Window check: ${check.name}`, passed, {
           check: check.name,
           passed,
-          details: check.name === "Window location" && win.location ? win.location.href : undefined
+          details:
+            check.name === "Window location" && win.location
+              ? win.location.href
+              : undefined,
         });
         if (!passed) allPassed = false;
       } catch (error) {
-        this.log(`Window check: ${check.name}`, false, {
-          check: check.name,
-          error: error.message
-        }, error as Error);
+        this.log(
+          `Window check: ${check.name}`,
+          false,
+          {
+            check: check.name,
+            error: error.message,
+          },
+          error as Error,
+        );
         allPassed = false;
       }
     }
@@ -176,7 +192,7 @@ export class DiagnosticTool {
       { id: "zotero-items-toolbar", name: "Items toolbar" },
       { id: "zotero-toolbar", name: "Main toolbar" },
       { id: "zotero-pane", name: "Zotero pane" },
-      { id: "zotero-items-tree", name: "Items tree" }
+      { id: "zotero-items-tree", name: "Items tree" },
     ];
 
     for (const elem of elements) {
@@ -184,7 +200,7 @@ export class DiagnosticTool {
       this.log(`UI element check: ${elem.name}`, exists, {
         id: elem.id,
         name: elem.name,
-        exists
+        exists,
       });
     }
   }
@@ -205,11 +221,16 @@ export class DiagnosticTool {
 
     const duration = performance.now() - startTime;
 
-    this.log(`Performance: ${operation}`, !error, {
-      operation,
-      duration: `${duration.toFixed(2)}ms`,
-      error: error?.message
-    }, error as Error);
+    this.log(
+      `Performance: ${operation}`,
+      !error,
+      {
+        operation,
+        duration: `${duration.toFixed(2)}ms`,
+        error: error?.message,
+      },
+      error as Error,
+    );
 
     if (error) throw error;
     return result;
@@ -223,19 +244,20 @@ export class DiagnosticTool {
       plugin: {
         name: config.addonName,
         version: version || "unknown",
-        id: config.addonID
+        id: config.addonID,
       },
       environment: {
-        zoteroVersion: typeof Zotero !== "undefined" ? Zotero.version : "unknown",
-        platform: typeof Zotero !== "undefined" ? Zotero.platform : "unknown"
+        zoteroVersion:
+          typeof Zotero !== "undefined" ? Zotero.version : "unknown",
+        platform: typeof Zotero !== "undefined" ? Zotero.platform : "unknown",
       },
       diagnosticLog: this.diagnosticLog,
       summary: {
         totalChecks: this.diagnosticLog.length,
-        passed: this.diagnosticLog.filter(d => d.success).length,
-        failed: this.diagnosticLog.filter(d => !d.success).length,
-        totalTime: Date.now() - this.startTime
-      }
+        passed: this.diagnosticLog.filter((d) => d.success).length,
+        failed: this.diagnosticLog.filter((d) => !d.success).length,
+        totalTime: Date.now() - this.startTime,
+      },
     };
 
     return JSON.stringify(report, null, 2);

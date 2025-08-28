@@ -20,15 +20,18 @@ npm install
 我已经为您设置了完整的测试环境，包括：
 
 ### 1. **自动化脚本**
+
 - `setup-zotero-dev.sh` - 自动下载和配置 Zotero 7 Beta
 - `quick-start.sh` - 一键启动开发环境
 - `dev-tools/zotero-dev-helper.cjs` - 开发助手工具
 
 ### 2. **测试工具**
+
 - `test/plugin-test-runner.cjs` - 插件验证测试
 - `test/zotero-test-environment.cjs` - 模拟 Zotero 环境测试
 
 ### 3. **构建系统**
+
 - 已配置 TypeScript 和构建工具
 - 支持热重载和自动构建
 - 生成的插件位于 `build/zotero-research-navigator.xpi`
@@ -47,11 +50,13 @@ npm install
 ### 方法二：手动开发
 
 1. 构建插件：
+
    ```bash
    npm run build
    ```
 
 2. 启动 Zotero：
+
    ```bash
    ~/zotero-dev/start-zotero-dev.sh
    ```
@@ -134,6 +139,7 @@ npm install
 ## 🆘 需要帮助？
 
 如果遇到问题：
+
 1. 查看 `TESTING_ENVIRONMENT.md` 获取详细信息
 2. 检查错误控制台的具体错误信息
 3. 确保所有依赖都已正确安装

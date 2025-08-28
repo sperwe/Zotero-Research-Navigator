@@ -3,6 +3,7 @@
 ## 1. 插件加载流程
 
 ### ExtensionSupport.registerBootstrap() 的实现
+
 在 Zotero 7 中，插件管理已经从旧的 ExtensionSupport API 迁移到了新的实现方式。根据源代码分析：
 
 - **不再使用 ExtensionSupport.registerBootstrap()**：Zotero 7 使用了自己的插件管理器 (`chrome/content/zotero/xpcom/plugins.js`)
@@ -12,22 +13,23 @@
 ### Bootstrap.js 的 startup() 函数调用机制
 
 1. **加载时机**：
+
    ```javascript
    // plugins.js 第59-76行
    this.init = async function () {
-       var addons = await AddonManager.getAllAddons();
-       for (let addon of addons) {
-           if (addon.type != 'extension') continue;
-           let blockedReason = shouldBlockPlugin(addon);
-           if (blockedReason || !addon.isActive) {
-               continue;
-           }
-           addonVersions.set(addon.id, addon.version);
-           _loadScope(addon);
-           setDefaultPrefs(addon);
-           await registerLocales(addon);
-           await _callMethod(addon, 'startup', REASONS.APP_STARTUP);
+     var addons = await AddonManager.getAllAddons();
+     for (let addon of addons) {
+       if (addon.type != "extension") continue;
+       let blockedReason = shouldBlockPlugin(addon);
+       if (blockedReason || !addon.isActive) {
+         continue;
        }
+       addonVersions.set(addon.id, addon.version);
+       _loadScope(addon);
+       setDefaultPrefs(addon);
+       await registerLocales(addon);
+       await _callMethod(addon, "startup", REASONS.APP_STARTUP);
+     }
    };
    ```
 
@@ -53,14 +55,11 @@
 
 ```javascript
 // plugins.js 第196-203行
-let uri = addon.getResourceURI().spec + 'bootstrap.js';
-Services.scriptloader.loadSubScriptWithOptions(
-    uri,
-    {
-        target: scope,
-        ignoreCache: true
-    }
-);
+let uri = addon.getResourceURI().spec + "bootstrap.js";
+Services.scriptloader.loadSubScriptWithOptions(uri, {
+  target: scope,
+  ignoreCache: true,
+});
 ```
 
 ### 执行环境（Sandbox）的创建
@@ -68,44 +67,53 @@ Services.scriptloader.loadSubScriptWithOptions(
 ```javascript
 // plugins.js 第129-151行
 var scope = new Cu.Sandbox(
-    Services.scriptSecurityManager.getSystemPrincipal(),
-    {
-        sandboxName: addon.id,
-        wantGlobalProperties: [
-            "atob", "btoa", "Blob", "crypto", "CSS",
-            "ChromeUtils", "DOMParser", "fetch", "File",
-            "FileReader", "TextDecoder", "TextEncoder",
-            "URL", "URLSearchParams", "XMLHttpRequest"
-        ]
-    }
+  Services.scriptSecurityManager.getSystemPrincipal(),
+  {
+    sandboxName: addon.id,
+    wantGlobalProperties: [
+      "atob",
+      "btoa",
+      "Blob",
+      "crypto",
+      "CSS",
+      "ChromeUtils",
+      "DOMParser",
+      "fetch",
+      "File",
+      "FileReader",
+      "TextDecoder",
+      "TextEncoder",
+      "URL",
+      "URLSearchParams",
+      "XMLHttpRequest",
+    ],
+  },
 );
 ```
 
 ### ctx 对象和全局 Zotero 对象的关系
 
 1. **Zotero 对象的注入**：
+
    ```javascript
    // plugins.js 第155-175行
-   Object.assign(
-       scope,
-       {
-           Zotero,  // 这里将全局 Zotero 对象注入到插件的 sandbox
-           ChromeWorker,
-           IOUtils,
-           Localization,
-           PathUtils,
-           Services,
-           Worker,
-           XMLSerializer,
-           // 额外的全局函数
-           setTimeout,
-           clearTimeout,
-           setInterval,
-           clearInterval,
-           requestIdleCallback,
-           cancelIdleCallback,
-       }
-   );
+   Object.assign(scope, {
+     Zotero, // 这里将全局 Zotero 对象注入到插件的 sandbox
+     ChromeWorker,
+     IOUtils,
+     Localization,
+     PathUtils,
+     Services,
+     Worker,
+     XMLSerializer,
+     // 额外的全局函数
+     setTimeout,
+     clearTimeout,
+     setInterval,
+     clearInterval,
+     requestIdleCallback,
+     cancelIdleCallback,
+   });
    ```
 
 2. **Sandbox 隔离**：每个插件在独立的 Sandbox 中运行，有自己的全局作用域，但共享同一个 Zotero 对象引用
@@ -126,10 +134,11 @@ var scope = new Cu.Sandbox(
 ### 不同窗口/上下文之间的对象共享
 
 1. **主窗口访问**：
+
    ```javascript
    // zotero.js
    this.getMainWindow = function () {
-       return Services.wm.getMostRecentWindow("navigator:browser");
+     return Services.wm.getMostRecentWindow("navigator:browser");
    };
    ```
 
@@ -170,15 +179,16 @@ var scope = new Cu.Sandbox(
 
 1. **使用插件 API**：通过 Zotero 提供的插件 API 来注册功能，而不是直接修改 Zotero 对象
 2. **确保正确的访问方式**：
+
    ```javascript
    // 在插件中
    if (!Zotero.ResearchNavigator) {
-       Zotero.ResearchNavigator = addonInstance;
+     Zotero.ResearchNavigator = addonInstance;
    }
-   
+
    // 在其他地方访问时
-   if (typeof Zotero !== 'undefined' && Zotero.ResearchNavigator) {
-       // 使用 Zotero.ResearchNavigator
+   if (typeof Zotero !== "undefined" && Zotero.ResearchNavigator) {
+     // 使用 Zotero.ResearchNavigator
    }
    ```
 
@@ -186,9 +196,9 @@ var scope = new Cu.Sandbox(
    ```javascript
    // 注册观察者
    Zotero.Plugins.addObserver({
-       startup: function(params, reason) {
-           // 插件启动后的处理
-       }
+     startup: function (params, reason) {
+       // 插件启动后的处理
+     },
    });
    ```
 

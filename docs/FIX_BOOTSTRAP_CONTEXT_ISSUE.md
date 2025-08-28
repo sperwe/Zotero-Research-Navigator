@@ -3,7 +3,9 @@
 ## Problem Description
 
 ### User Report
+
 The user reported the following error:
+
 ```
 [Research Navigator] ctx.addon = undefined
 [Research Navigator] ctx._globalThis.addon = undefined
@@ -19,8 +21,12 @@ Through systematic testing, we identified the root cause:
 1. **Bootstrap.js behavior**: When loading the plugin script, bootstrap.js creates a context object (`ctx`) and sets `ctx.globalThis = ctx` (circular reference).
 
 2. **Bootstrap.js expectation**: The bootstrap.js checks for addon in this order:
+
    ```javascript
-   const addon = ctx.addon || (ctx._globalThis && ctx._globalThis.addon) || ctx.globalThis.addon;
+   const addon =
+     ctx.addon ||
+     (ctx._globalThis && ctx._globalThis.addon) ||
+     ctx.globalThis.addon;
    ```
 
 3. **Original code issue**: The original code used `BasicTool.getGlobal("globalThis")` which might return the actual global `globalThis` object, not the `ctx` object from bootstrap.js context.
@@ -40,19 +46,21 @@ We implemented a comprehensive solution that:
 
 ```typescript
 // Get current execution context
-const currentContext = (function() { return this; })();
+const currentContext = (function () {
+  return this;
+})();
 
 // Strategy 1: Set addon on the current execution context (ctx in bootstrap.js)
 if (currentContext && typeof currentContext === "object") {
   (currentContext as any).addon = addonInstance;
   (currentContext as any).ztoolkit = addonInstance.ztoolkit;
-  
+
   // CRITICAL FIX: Handle bootstrap.js expectation of ctx._globalThis.addon
   if (currentContext.globalThis === currentContext) {
     // We're in bootstrap.js context
     currentContext._globalThis = {
       addon: addonInstance,
-      ztoolkit: addonInstance.ztoolkit
+      ztoolkit: addonInstance.ztoolkit,
     };
   }
 }
@@ -68,6 +76,7 @@ We created comprehensive tests to verify the fix:
 ### Results
 
 ✅ **Fix Verified**: All tests pass, confirming:
+
 - `ctx._globalThis` is now properly created
 - `ctx._globalThis.addon` contains the addon instance
 - Bootstrap.js can successfully find the addon
@@ -92,7 +101,7 @@ We created comprehensive tests to verify the fix:
 # Run fix verification test
 node test/test-fix-verification.cjs
 
-# Run complete lifecycle test  
+# Run complete lifecycle test
 node test/test-complete-lifecycle.cjs
 
 # Build production version

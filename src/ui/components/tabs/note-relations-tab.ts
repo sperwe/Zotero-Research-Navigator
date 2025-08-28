@@ -13,18 +13,18 @@ export interface NoteRelationsTabOptions {
 export class NoteRelationsTab {
   constructor(
     private window: Window,
-    private options: NoteRelationsTabOptions
+    private options: NoteRelationsTabOptions,
   ) {}
-  
+
   async initialize(): Promise<void> {}
-  
+
   render(): HTMLElement {
     const doc = this.window.document;
     const container = doc.createElement("div");
     container.innerHTML = "<p>Note relations view coming soon...</p>";
     return container;
   }
-  
+
   onHide(): void {}
   destroy(): void {}
 }

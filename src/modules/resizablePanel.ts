@@ -19,18 +19,18 @@ export class ResizablePanel {
   private resizer: HTMLDivElement | null = null;
   private tabBar: HTMLDivElement | null = null;
   private contentArea: HTMLDivElement | null = null;
-  
+
   private tabs: PanelTab[] = [];
   private activeTabId: string = "history";
-  
+
   private minHeight = 200;
   private maxHeight = 600;
   private defaultHeight = 300;
-  
+
   private isResizing = false;
   private startY = 0;
   private startHeight = 0;
-  
+
   constructor(private addon: any) {
     // 初始化视图
     this.tabs = [
@@ -131,7 +131,10 @@ export class ResizablePanel {
           marginRight: "4px",
           cursor: "pointer",
           borderRadius: "4px 4px 0 0",
-          backgroundColor: tab.id === this.activeTabId ? "var(--material-sidepane)" : "transparent",
+          backgroundColor:
+            tab.id === this.activeTabId
+              ? "var(--material-sidepane)"
+              : "transparent",
           fontWeight: tab.id === this.activeTabId ? "bold" : "normal",
         },
         properties: {
@@ -311,7 +314,7 @@ export class ResizablePanel {
         await tab.view.init();
       }
     }
-    
+
     // 渲染初始视图
     await this.renderActiveView();
   }
@@ -321,19 +324,25 @@ export class ResizablePanel {
    */
   private async loadSavedState() {
     // 加载高度
-    const savedHeight = Zotero.Prefs.get(`${config.addonRef}.panel.height`) as number;
+    const savedHeight = Zotero.Prefs.get(
+      `${config.addonRef}.panel.height`,
+    ) as number;
     if (savedHeight && this.container) {
       this.container.style.height = `${savedHeight}px`;
     }
 
     // 加载活动标签
-    const savedTab = Zotero.Prefs.get(`${config.addonRef}.panel.activeTab`) as string;
+    const savedTab = Zotero.Prefs.get(
+      `${config.addonRef}.panel.activeTab`,
+    ) as string;
     if (savedTab && this.tabs.find((tab) => tab.id === savedTab)) {
       this.activeTabId = savedTab;
     }
 
     // 加载显示状态
-    const isVisible = Zotero.Prefs.get(`${config.addonRef}.panel.visible`) as boolean;
+    const isVisible = Zotero.Prefs.get(
+      `${config.addonRef}.panel.visible`,
+    ) as boolean;
     if (isVisible) {
       this.show();
     }
@@ -402,7 +411,7 @@ export class ResizablePanel {
 
     // 移除DOM元素
     this.container?.remove();
-    
+
     // 移除样式
     const doc = this.addon.data.ztoolkit.getGlobal("document");
     doc.getElementById("research-navigator-panel-styles")?.remove();

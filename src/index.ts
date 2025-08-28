@@ -23,24 +23,28 @@ if (typeof Zotero !== "undefined" && Zotero.debug) {
 }
 
 // Get current execution context
-const currentContext = (function() { return this; })();
+const currentContext = (function () {
+  return this;
+})();
 
 // Strategy 1: Set addon on the current execution context (ctx in bootstrap.js)
 if (currentContext && typeof currentContext === "object") {
   (currentContext as any).addon = addonInstance;
   (currentContext as any).ztoolkit = addonInstance.ztoolkit;
-  
+
   // CRITICAL FIX: Handle bootstrap.js expectation of ctx._globalThis.addon
   // If we're in bootstrap context (ctx.globalThis === ctx), set up _globalThis
   if (currentContext.globalThis === currentContext) {
     // We're in bootstrap.js context
     currentContext._globalThis = {
       addon: addonInstance,
-      ztoolkit: addonInstance.ztoolkit
+      ztoolkit: addonInstance.ztoolkit,
     };
-    
+
     if (typeof Zotero !== "undefined" && Zotero.debug) {
-      Zotero.debug("[Research Navigator] Detected bootstrap.js context, set ctx._globalThis.addon");
+      Zotero.debug(
+        "[Research Navigator] Detected bootstrap.js context, set ctx._globalThis.addon",
+      );
     }
   }
 }
@@ -61,17 +65,24 @@ if (typeof window !== "undefined") {
 if (typeof Zotero !== "undefined") {
   Zotero[config.addonInstance] = addonInstance;
   Zotero.debug("[Research Navigator] Addon instance created and registered");
-  Zotero.debug("[Research Navigator] Version: " + (config as any).version || "unknown");
+  Zotero.debug(
+    "[Research Navigator] Version: " + (config as any).version || "unknown",
+  );
   Zotero.debug("[Research Navigator] Addon ID: " + config.addonID);
-  
+
   // Additional debug info
   Zotero.debug("[Research Navigator] Addon available at:");
-  if (currentContext && currentContext.addon) Zotero.debug("  - currentContext.addon");
-  if (currentContext && currentContext._globalThis?.addon) Zotero.debug("  - currentContext._globalThis.addon");
+  if (currentContext && currentContext.addon)
+    Zotero.debug("  - currentContext.addon");
+  if (currentContext && currentContext._globalThis?.addon)
+    Zotero.debug("  - currentContext._globalThis.addon");
   if ((globalThis as any).addon) Zotero.debug("  - globalThis.addon");
-  if (Zotero[config.addonInstance]) Zotero.debug("  - Zotero." + config.addonInstance);
+  if (Zotero[config.addonInstance])
+    Zotero.debug("  - Zotero." + config.addonInstance);
 } else {
-  console.log("[Research Navigator] Warning: Zotero not available during initialization");
+  console.log(
+    "[Research Navigator] Warning: Zotero not available during initialization",
+  );
 }
 
 // Export for potential use by other modules

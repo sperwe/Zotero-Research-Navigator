@@ -2,52 +2,52 @@ name: Build XPI
 
 on:
   push:
-    branches: [ master, main, 'feature/**', 'fix/**', 'refactor/**' ]
+    branches: [master, main, "feature/**", "fix/**", "refactor/**"]
   pull_request:
-    branches: [ master, main ]
-  workflow_dispatch:  # 允许手动触发
+    branches: [master, main]
+  workflow_dispatch: # 允许手动触发
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-    
-    - name: Install dependencies
-      run: npm install --legacy-peer-deps
-    
-    - name: Build plugin
-      run: |
-        echo "Starting build..."
-        npm run build-prod || (echo "Build failed!" && exit 1)
-        echo "Build completed successfully!"
-        echo "Checking generated files..."
-        ls -la build/
-    
-    - name: Copy XPI file
-      run: |
-        # zotero-plugin build 已经生成了正确的 XPI 文件
-        cp build/zotero-research-navigator.xpi ./zotero-research-navigator-latest.xpi
-        echo "XPI file copied successfully!"
-        ls -la *.xpi
-    
-    - name: Upload XPI
-      uses: actions/upload-artifact@v4
-      with:
-        name: zotero-research-navigator-xpi
-        path: ./zotero-research-navigator-latest.xpi
-        retention-days: 7
-    
-    - name: Output download instructions
-      run: |
-        echo "✅ Build completed successfully!"
-        echo "📦 XPI file is available as an artifact in this workflow run."
-        echo "📥 Click on 'Summary' tab above, then download 'zotero-research-navigator-xpi'"
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build plugin
+        run: |
+          echo "Starting build..."
+          npm run build-prod || (echo "Build failed!" && exit 1)
+          echo "Build completed successfully!"
+          echo "Checking generated files..."
+          ls -la build/
+
+      - name: Copy XPI file
+        run: |
+          # zotero-plugin build 已经生成了正确的 XPI 文件
+          cp build/zotero-research-navigator.xpi ./zotero-research-navigator-latest.xpi
+          echo "XPI file copied successfully!"
+          ls -la *.xpi
+
+      - name: Upload XPI
+        uses: actions/upload-artifact@v4
+        with:
+          name: zotero-research-navigator-xpi
+          path: ./zotero-research-navigator-latest.xpi
+          retention-days: 7
+
+      - name: Output download instructions
+        run: |
+          echo "✅ Build completed successfully!"
+          echo "📦 XPI file is available as an artifact in this workflow run."
+          echo "📥 Click on 'Summary' tab above, then download 'zotero-research-navigator-xpi'"

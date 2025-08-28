@@ -26,7 +26,7 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
     `${rootURI}/content/scripts/researchnavigator.js`,
     ctx,
   );
-  
+
   // Initialize plugin
   await Zotero.ResearchNavigator.hooks.onStartup();
 }

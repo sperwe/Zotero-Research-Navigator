@@ -5,6 +5,7 @@
 ## 🚀 5分钟快速发布流程
 
 ### ✅ **第1步：验证推送** (1分钟)
+
 ```bash
 # 在您的本地仓库运行
 git remote -v
@@ -15,6 +16,7 @@ git status
 ```
 
 ### ✅ **第2步：创建Release** (2分钟)
+
 1. 访问：https://github.com/sperwe/Zotero-Research-Navigator/releases
 2. 点击 **"Create a new release"**
 3. 填写：
@@ -24,18 +26,23 @@ git status
 5. 点击 **"Publish release"**
 
 ### ✅ **第3步：设置仓库** (1分钟)
+
 在仓库主页点击 ⚙️ **Settings**：
+
 - **Description**: `🔍 A powerful Zotero plugin for tracking research history with tree-style navigation`
 - **Topics**: `zotero-plugin`, `research-tool`, `history-tracking`
 - **Website**: `https://github.com/sperwe/Zotero-Research-Navigator/releases`
 
 ### ✅ **第4步：测试下载** (1分钟)
+
 1. 访问您的 Releases 页面
 2. 点击下载 XPI 文件
 3. 确认文件大小约 12.5KB
 
 ### ✅ **第5步：分享** (立即)
+
 发送给朋友测试：
+
 ```
 🎉 我刚发布了一个Zotero插件！
 🔗 https://github.com/sperwe/Zotero-Research-Navigator/releases
@@ -54,16 +61,19 @@ git status
 ## 📈 **后续推广建议**
 
 ### **立即行动** (今天)
+
 - [ ] 在 Zotero 官方论坛发帖介绍
 - [ ] 在社交媒体分享
 - [ ] 邀请朋友同事测试
 
 ### **本周内**
+
 - [ ] 收集用户反馈
 - [ ] 准备使用教程截图
 - [ ] 考虑制作演示视频
 
 ### **长期规划**
+
 - [ ] 根据反馈规划 v1.1.0 功能
 - [ ] 建立用户社区
 - [ ] 考虑提交到 Zotero 官方插件目录

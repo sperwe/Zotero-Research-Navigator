@@ -3,13 +3,13 @@
  */
 
 export enum RelationType {
-  TAB = 'tab',
-  LINK = 'link',
-  SEARCH = 'search',
-  RELATED = 'related',
-  PARENT = 'parent',
-  CHILD = 'child',
-  MANUAL = 'manual'
+  TAB = "tab",
+  LINK = "link",
+  SEARCH = "search",
+  RELATED = "related",
+  PARENT = "parent",
+  CHILD = "child",
+  MANUAL = "manual",
 }
 
 export interface HistoryNode {
@@ -28,7 +28,7 @@ export interface HistoryNode {
   notes: string;
   tags: string[];
   importance: number;
-  
+
   // 文献信息缓存
   title: string;
   creators: string;
@@ -38,12 +38,12 @@ export interface HistoryNode {
   doi: string;
   abstract: string;
   libraryId: number | null;
-  
+
   // 标签页状态
   isClosed?: boolean;
   closedAt?: Date;
   closedContext?: any;
-  
+
   // 笔记关联
   hasNotes?: boolean;
 }

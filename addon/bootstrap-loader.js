@@ -5,7 +5,7 @@
 
 // 等待 Zotero 初始化
 async function waitForZotero() {
-  if (typeof Zotero !== 'undefined') {
+  if (typeof Zotero !== "undefined") {
     return;
   }
 
@@ -21,20 +21,25 @@ async function waitForZotero() {
     }
   }
   if (!found) {
-    await new Promise(resolve => {
+    await new Promise((resolve) => {
       var listener = {
         onOpenWindow: function (aWindow) {
-          let domWindow = aWindow.QueryInterface(Ci.nsIInterfaceRequestor)
+          let domWindow = aWindow
+            .QueryInterface(Ci.nsIInterfaceRequestor)
             .getInterface(Ci.nsIDOMWindow);
-          domWindow.addEventListener("load", function () {
-            domWindow.removeEventListener("load", arguments.callee, false);
-            if (domWindow.Zotero) {
-              Services.wm.removeListener(listener);
-              Zotero = domWindow.Zotero;
-              resolve();
-            }
-          }, false);
-        }
+          domWindow.addEventListener(
+            "load",
+            function () {
+              domWindow.removeEventListener("load", arguments.callee, false);
+              if (domWindow.Zotero) {
+                Services.wm.removeListener(listener);
+                Zotero = domWindow.Zotero;
+                resolve();
+              }
+            },
+            false,
+          );
+        },
       };
       Services.wm.addListener(listener);
     });
@@ -47,23 +52,26 @@ var loadedFunctions = {};
 // Bootstrap 函数
 async function startup({ id, version, rootURI }, reason) {
   await waitForZotero();
-  
+
   try {
     // 创建一个沙箱作用域
     var scope = {
       Zotero: Zotero,
       Services: Services,
-      window: {}
+      window: {},
     };
-    
-      // 加载编译后的 TypeScript 代码
-  Services.scriptloader.loadSubScript(rootURI + "bootstrap-compiled.js", scope);
-    
+
+    // 加载编译后的 TypeScript 代码
+    Services.scriptloader.loadSubScript(
+      rootURI + "bootstrap-compiled.js",
+      scope,
+    );
+
     // 保存加载的函数
     if (scope.window) {
       loadedFunctions = scope.window;
     }
-    
+
     // 调用真正的 startup
     if (loadedFunctions.startup) {
       await loadedFunctions.startup({ id, version, rootURI }, reason);
@@ -75,7 +83,7 @@ async function startup({ id, version, rootURI }, reason) {
     Services.prompt.alert(
       null,
       "Research Navigator",
-      "Failed to load: " + error.message
+      "Failed to load: " + error.message,
     );
   }
 }

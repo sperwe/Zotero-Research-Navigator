@@ -21,7 +21,7 @@ export class NoteRelationView {
   private container: HTMLDivElement | null = null;
   private listContainer: HTMLDivElement | null = null;
   private currentNode: HistoryNode | null = null;
-  
+
   constructor(private addon: any) {}
 
   /**
@@ -37,7 +37,7 @@ export class NoteRelationView {
    */
   public async render(): Promise<HTMLElement> {
     const doc = this.addon.data.ztoolkit.getGlobal("document");
-    
+
     this.container = this.addon.data.ztoolkit.UI.createElement(doc, "div", {
       classList: ["note-relation-view"],
       styles: {
@@ -84,7 +84,7 @@ export class NoteRelationView {
    */
   private createToolbar(): HTMLElement {
     const doc = this.addon.data.ztoolkit.getGlobal("document");
-    
+
     const toolbar = this.addon.data.ztoolkit.UI.createElement(doc, "div", {
       classList: ["note-toolbar"],
       styles: {
@@ -110,48 +110,56 @@ export class NoteRelationView {
     toolbar.appendChild(title);
 
     // 创建新笔记按钮
-    const createNoteBtn = this.addon.data.ztoolkit.UI.createElement(doc, "button", {
-      classList: ["create-note-btn"],
-      styles: {
-        marginLeft: "auto",
-        padding: "4px 12px",
-        border: "1px solid var(--material-border-quarternary)",
-        borderRadius: "4px",
-        backgroundColor: "var(--material-button)",
-        cursor: "pointer",
-      },
-      properties: {
-        textContent: getString("create-note"),
-      },
-      listeners: [
-        {
-          type: "click",
-          listener: () => this.createNewNote(),
+    const createNoteBtn = this.addon.data.ztoolkit.UI.createElement(
+      doc,
+      "button",
+      {
+        classList: ["create-note-btn"],
+        styles: {
+          marginLeft: "auto",
+          padding: "4px 12px",
+          border: "1px solid var(--material-border-quarternary)",
+          borderRadius: "4px",
+          backgroundColor: "var(--material-button)",
+          cursor: "pointer",
         },
-      ],
-    });
+        properties: {
+          textContent: getString("create-note"),
+        },
+        listeners: [
+          {
+            type: "click",
+            listener: () => this.createNewNote(),
+          },
+        ],
+      },
+    );
     toolbar.appendChild(createNoteBtn);
 
     // 关联现有笔记按钮
-    const linkNoteBtn = this.addon.data.ztoolkit.UI.createElement(doc, "button", {
-      classList: ["link-note-btn"],
-      styles: {
-        padding: "4px 12px",
-        border: "1px solid var(--material-border-quarternary)",
-        borderRadius: "4px",
-        backgroundColor: "var(--material-button)",
-        cursor: "pointer",
-      },
-      properties: {
-        textContent: getString("link-existing-note"),
-      },
-      listeners: [
-        {
-          type: "click",
-          listener: () => this.linkExistingNote(),
+    const linkNoteBtn = this.addon.data.ztoolkit.UI.createElement(
+      doc,
+      "button",
+      {
+        classList: ["link-note-btn"],
+        styles: {
+          padding: "4px 12px",
+          border: "1px solid var(--material-border-quarternary)",
+          borderRadius: "4px",
+          backgroundColor: "var(--material-button)",
+          cursor: "pointer",
         },
-      ],
-    });
+        properties: {
+          textContent: getString("link-existing-note"),
+        },
+        listeners: [
+          {
+            type: "click",
+            listener: () => this.linkExistingNote(),
+          },
+        ],
+      },
+    );
     toolbar.appendChild(linkNoteBtn);
 
     return toolbar;
@@ -162,7 +170,7 @@ export class NoteRelationView {
    */
   private createPathPanel(): HTMLElement {
     const doc = this.addon.data.ztoolkit.getGlobal("document");
-    
+
     const panel = this.addon.data.ztoolkit.UI.createElement(doc, "div", {
       classList: ["path-panel"],
       styles: {
@@ -188,10 +196,14 @@ export class NoteRelationView {
     panel.appendChild(header);
 
     // 路径显示
-    const pathContainer = this.addon.data.ztoolkit.UI.createElement(doc, "div", {
-      id: "path-container",
-      classList: ["path-container"],
-    });
+    const pathContainer = this.addon.data.ztoolkit.UI.createElement(
+      doc,
+      "div",
+      {
+        id: "path-container",
+        classList: ["path-container"],
+      },
+    );
     panel.appendChild(pathContainer);
 
     return panel;
@@ -202,7 +214,7 @@ export class NoteRelationView {
    */
   private createNotePanel(): HTMLElement {
     const doc = this.addon.data.ztoolkit.getGlobal("document");
-    
+
     const panel = this.addon.data.ztoolkit.UI.createElement(doc, "div", {
       classList: ["note-panel"],
       styles: {
@@ -245,7 +257,7 @@ export class NoteRelationView {
   private async loadCurrentNodeNotes() {
     // 获取当前选中的历史节点
     this.currentNode = this.addon.data.researchNavigator.currentNode;
-    
+
     if (!this.currentNode) {
       this.showEmptyState();
       return;
@@ -274,22 +286,29 @@ export class NoteRelationView {
 
     path.forEach((node, index) => {
       // 节点
-      const nodeElement = this.addon.data.ztoolkit.UI.createElement(doc, "div", {
-        classList: ["path-node"],
-        styles: {
-          padding: "8px",
-          marginBottom: "4px",
-          backgroundColor: index === path.length - 1 ? "var(--material-button)" : "transparent",
-          borderRadius: "4px",
-          cursor: "pointer",
-        },
-        listeners: [
-          {
-            type: "click",
-            listener: () => this.addon.hooks.onOpenItem(node.itemId),
+      const nodeElement = this.addon.data.ztoolkit.UI.createElement(
+        doc,
+        "div",
+        {
+          classList: ["path-node"],
+          styles: {
+            padding: "8px",
+            marginBottom: "4px",
+            backgroundColor:
+              index === path.length - 1
+                ? "var(--material-button)"
+                : "transparent",
+            borderRadius: "4px",
+            cursor: "pointer",
           },
-        ],
-      });
+          listeners: [
+            {
+              type: "click",
+              listener: () => this.addon.hooks.onOpenItem(node.itemId),
+            },
+          ],
+        },
+      );
 
       // 缩进
       if (index > 0) {
@@ -315,15 +334,19 @@ export class NoteRelationView {
 
       // 连接线
       if (index < path.length - 1) {
-        const connector = this.addon.data.ztoolkit.UI.createElement(doc, "div", {
-          styles: {
-            marginLeft: `${(index + 1) * 20 - 10}px`,
-            width: "2px",
-            height: "20px",
-            backgroundColor: "var(--material-border-quarternary)",
-            marginBottom: "4px",
+        const connector = this.addon.data.ztoolkit.UI.createElement(
+          doc,
+          "div",
+          {
+            styles: {
+              marginLeft: `${(index + 1) * 20 - 10}px`,
+              width: "2px",
+              height: "20px",
+              backgroundColor: "var(--material-border-quarternary)",
+              marginBottom: "4px",
+            },
           },
-        });
+        );
         pathContainer.appendChild(connector);
       }
     });
@@ -339,7 +362,9 @@ export class NoteRelationView {
     while (currentNode) {
       path.unshift(currentNode);
       if (currentNode.parentId) {
-        currentNode = this.addon.data.researchNavigator.nodeMap.get(currentNode.parentId);
+        currentNode = this.addon.data.researchNavigator.nodeMap.get(
+          currentNode.parentId,
+        );
       } else {
         break;
       }
@@ -377,7 +402,7 @@ export class NoteRelationView {
 
     const doc = this.addon.data.ztoolkit.getGlobal("document");
 
-    relations.forEach(relation => {
+    relations.forEach((relation) => {
       const noteItem = this.createNoteItem(relation);
       this.listContainer.appendChild(noteItem);
     });
@@ -389,7 +414,7 @@ export class NoteRelationView {
   private createNoteItem(relation: NoteRelation): HTMLElement {
     const doc = this.addon.data.ztoolkit.getGlobal("document");
     const note = Zotero.Items.get(relation.noteId);
-    
+
     if (!note) return doc.createElement("div");
 
     const noteItem = this.addon.data.ztoolkit.UI.createElement(doc, "div", {
@@ -465,28 +490,32 @@ export class NoteRelationView {
     });
 
     // 查看历史上下文按钮
-    const contextBtn = this.addon.data.ztoolkit.UI.createElement(doc, "button", {
-      styles: {
-        padding: "2px 8px",
-        fontSize: "12px",
-        border: "1px solid var(--material-border-quarternary)",
-        borderRadius: "4px",
-        backgroundColor: "var(--material-button)",
-        cursor: "pointer",
-      },
-      properties: {
-        textContent: getString("view-context"),
-      },
-      listeners: [
-        {
-          type: "click",
-          listener: (e: Event) => {
-            e.stopPropagation();
-            this.showNoteContext(relation);
-          },
+    const contextBtn = this.addon.data.ztoolkit.UI.createElement(
+      doc,
+      "button",
+      {
+        styles: {
+          padding: "2px 8px",
+          fontSize: "12px",
+          border: "1px solid var(--material-border-quarternary)",
+          borderRadius: "4px",
+          backgroundColor: "var(--material-button)",
+          cursor: "pointer",
         },
-      ],
-    });
+        properties: {
+          textContent: getString("view-context"),
+        },
+        listeners: [
+          {
+            type: "click",
+            listener: (e: Event) => {
+              e.stopPropagation();
+              this.showNoteContext(relation);
+            },
+          },
+        ],
+      },
+    );
     actions.appendChild(contextBtn);
 
     // 取消关联按钮
@@ -555,7 +584,7 @@ export class NoteRelationView {
    */
   private showNoteContext(relation: NoteRelation) {
     const doc = this.addon.data.ztoolkit.getGlobal("document");
-    
+
     // 创建弹出窗口显示详细的历史上下文
     const dialog = this.addon.data.ztoolkit.UI.createElement(doc, "dialog", {
       styles: {
@@ -615,8 +644,9 @@ export class NoteRelationView {
     try {
       // 创建新笔记
       const note = new Zotero.Item("note");
-      note.libraryID = this.currentNode.libraryId || Zotero.Libraries.userLibraryID;
-      
+      note.libraryID =
+        this.currentNode.libraryId || Zotero.Libraries.userLibraryID;
+
       // 如果当前节点是文献，将笔记作为子笔记
       const item = Zotero.Items.get(this.currentNode.itemId);
       if (item && !item.isNote()) {
@@ -625,8 +655,8 @@ export class NoteRelationView {
 
       // 设置初始内容，包含历史上下文
       const path = this.buildNodePath(this.currentNode);
-      const pathText = path.map(n => n.title).join(" → ");
-      
+      const pathText = path.map((n) => n.title).join(" → ");
+
       note.setNote(`
         <h2>Research Context</h2>
         <p><strong>Path:</strong> ${pathText}</p>
@@ -646,7 +676,7 @@ export class NoteRelationView {
         context: {
           sessionId: this.addon.data.researchNavigator.currentSessionId,
           fromNode: this.currentNode.parentId,
-          path: path.map(n => n.id),
+          path: path.map((n) => n.id),
         },
       });
 
@@ -679,7 +709,7 @@ export class NoteRelationView {
       "chrome://zotero/content/selectItemsDialog.xul",
       "",
       "chrome,dialog=no,centerscreen,resizable=yes",
-      io
+      io,
     );
 
     if (io.dataOut && io.dataOut.length > 0) {
@@ -707,7 +737,7 @@ export class NoteRelationView {
     const confirmed = Services.prompt.confirm(
       null,
       getString("confirm-unlink-title"),
-      getString("confirm-unlink-message")
+      getString("confirm-unlink-message"),
     );
 
     if (!confirmed) return;
@@ -715,7 +745,7 @@ export class NoteRelationView {
     try {
       await this.addon.data.researchNavigator.db.removeNoteRelation(
         relation.noteId,
-        relation.nodeId
+        relation.nodeId,
       );
 
       // 刷新列表
@@ -792,27 +822,31 @@ export class NoteRelationView {
    * 注册笔记监听器
    */
   private registerNoteListeners() {
-    const notifierID = Zotero.Notifier.registerObserver({
-      notify: async (event: string, type: string, ids: number[]) => {
-        if (type === "item") {
-          // 检查是否有笔记被创建或修改
-          const items = Zotero.Items.get(ids);
-          const hasNotes = items.some(item => item.isNote());
-          
-          if (hasNotes && this.currentNode) {
-            // 检查是否需要自动关联
-            for (const item of items) {
-              if (item.isNote() && event === "add") {
-                await this.checkAutoRelation(item);
+    const notifierID = Zotero.Notifier.registerObserver(
+      {
+        notify: async (event: string, type: string, ids: number[]) => {
+          if (type === "item") {
+            // 检查是否有笔记被创建或修改
+            const items = Zotero.Items.get(ids);
+            const hasNotes = items.some((item) => item.isNote());
+
+            if (hasNotes && this.currentNode) {
+              // 检查是否需要自动关联
+              for (const item of items) {
+                if (item.isNote() && event === "add") {
+                  await this.checkAutoRelation(item);
+                }
               }
+
+              // 刷新视图
+              await this.loadCurrentNodeNotes();
             }
-            
-            // 刷新视图
-            await this.loadCurrentNodeNotes();
           }
-        }
+        },
       },
-    }, ["item"], "NoteRelationView");
+      ["item"],
+      "NoteRelationView",
+    );
 
     this.addon.data._noteRelationNotifierID = notifierID;
   }
@@ -825,10 +859,11 @@ export class NoteRelationView {
 
     // 如果笔记的父项与当前节点的项目相同，自动创建关联
     if (note.parentID === this.currentNode.itemId) {
-      const existingRelation = await this.addon.data.researchNavigator.db.getNoteRelation(
-        note.id,
-        this.currentNode.id
-      );
+      const existingRelation =
+        await this.addon.data.researchNavigator.db.getNoteRelation(
+          note.id,
+          this.currentNode.id,
+        );
 
       if (!existingRelation) {
         await this.addon.data.researchNavigator.db.createNoteRelation({
@@ -850,7 +885,9 @@ export class NoteRelationView {
   public destroy() {
     // 注销监听器
     if (this.addon.data._noteRelationNotifierID) {
-      Zotero.Notifier.unregisterObserver(this.addon.data._noteRelationNotifierID);
+      Zotero.Notifier.unregisterObserver(
+        this.addon.data._noteRelationNotifierID,
+      );
     }
 
     // 清理 DOM

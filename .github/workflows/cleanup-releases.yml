@@ -3,18 +3,18 @@ name: Cleanup Old Releases
 on:
   schedule:
     # 每周日凌晨2点运行
-    - cron: '0 2 * * 0'
+    - cron: "0 2 * * 0"
   workflow_dispatch:
     inputs:
       days_to_keep:
-        description: 'Number of days to keep dev releases'
+        description: "Number of days to keep dev releases"
         required: false
-        default: '7'
+        default: "7"
         type: number
       dry_run:
-        description: 'Dry run (only show what would be deleted)'
+        description: "Dry run (only show what would be deleted)"
         required: false
-        default: 'false'
+        default: "false"
         type: boolean
 
 permissions:
@@ -23,132 +23,132 @@ permissions:
 jobs:
   cleanup:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Setup variables
-      id: vars
-      run: |
-        DAYS_TO_KEEP=${{ github.event.inputs.days_to_keep || 7 }}
-        DRY_RUN=${{ github.event.inputs.dry_run || 'false' }}
-        echo "DAYS_TO_KEEP=$DAYS_TO_KEEP" >> $GITHUB_OUTPUT
-        echo "DRY_RUN=$DRY_RUN" >> $GITHUB_OUTPUT
-        echo "CUTOFF_DATE=$(date -d "$DAYS_TO_KEEP days ago" -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
-    
-    - name: List releases to clean
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const daysToKeep = ${{ steps.vars.outputs.DAYS_TO_KEEP }};
-          const dryRun = ${{ steps.vars.outputs.DRY_RUN }};
-          const cutoffDate = new Date('${{ steps.vars.outputs.CUTOFF_DATE }}');
-          
-          console.log(`Cleaning releases older than ${daysToKeep} days (before ${cutoffDate.toISOString()})`);
-          console.log(`Dry run: ${dryRun}`);
-          
-          // 获取所有releases
-          const releases = await github.rest.repos.listReleases({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            per_page: 100
-          });
-          
-          let deletedCount = 0;
-          let keptCount = 0;
-          const summary = [];
-          
-          for (const release of releases.data) {
-            const releaseDate = new Date(release.created_at);
-            const isDevRelease = release.tag_name.startsWith('dev-');
-            const isOld = releaseDate < cutoffDate;
-            
-            if (isDevRelease && isOld) {
-              summary.push(`🗑️ DELETE: ${release.name} (${release.tag_name}) - Created: ${release.created_at}`);
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup variables
+        id: vars
+        run: |
+          DAYS_TO_KEEP=${{ github.event.inputs.days_to_keep || 7 }}
+          DRY_RUN=${{ github.event.inputs.dry_run || 'false' }}
+          echo "DAYS_TO_KEEP=$DAYS_TO_KEEP" >> $GITHUB_OUTPUT
+          echo "DRY_RUN=$DRY_RUN" >> $GITHUB_OUTPUT
+          echo "CUTOFF_DATE=$(date -d "$DAYS_TO_KEEP days ago" -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
+
+      - name: List releases to clean
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const daysToKeep = ${{ steps.vars.outputs.DAYS_TO_KEEP }};
+            const dryRun = ${{ steps.vars.outputs.DRY_RUN }};
+            const cutoffDate = new Date('${{ steps.vars.outputs.CUTOFF_DATE }}');
+
+            console.log(`Cleaning releases older than ${daysToKeep} days (before ${cutoffDate.toISOString()})`);
+            console.log(`Dry run: ${dryRun}`);
+
+            // 获取所有releases
+            const releases = await github.rest.repos.listReleases({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
+
+            let deletedCount = 0;
+            let keptCount = 0;
+            const summary = [];
+
+            for (const release of releases.data) {
+              const releaseDate = new Date(release.created_at);
+              const isDevRelease = release.tag_name.startsWith('dev-');
+              const isOld = releaseDate < cutoffDate;
               
-              if (!dryRun) {
-                try {
-                  // 删除release
-                  await github.rest.repos.deleteRelease({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    release_id: release.id
-                  });
-                  
-                  // 删除tag
+              if (isDevRelease && isOld) {
+                summary.push(`🗑️ DELETE: ${release.name} (${release.tag_name}) - Created: ${release.created_at}`);
+                
+                if (!dryRun) {
                   try {
-                    await github.rest.git.deleteRef({
+                    // 删除release
+                    await github.rest.repos.deleteRelease({
                       owner: context.repo.owner,
                       repo: context.repo.repo,
-                      ref: `tags/${release.tag_name}`
+                      release_id: release.id
                     });
-                  } catch (e) {
-                    console.log(`Failed to delete tag ${release.tag_name}: ${e.message}`);
+                    
+                    // 删除tag
+                    try {
+                      await github.rest.git.deleteRef({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        ref: `tags/${release.tag_name}`
+                      });
+                    } catch (e) {
+                      console.log(`Failed to delete tag ${release.tag_name}: ${e.message}`);
+                    }
+                    
+                    deletedCount++;
+                  } catch (error) {
+                    console.error(`Failed to delete release ${release.name}: ${error.message}`);
                   }
-                  
+                } else {
                   deletedCount++;
-                } catch (error) {
-                  console.error(`Failed to delete release ${release.name}: ${error.message}`);
                 }
               } else {
-                deletedCount++;
-              }
-            } else {
-              if (isDevRelease) {
-                summary.push(`✅ KEEP: ${release.name} (${release.tag_name}) - Created: ${release.created_at}`);
-              }
-              keptCount++;
-            }
-          }
-          
-          // 生成摘要
-          const actionSummary = `## 🧹 Release Cleanup Summary\n\n` +
-            `- **Total Releases**: ${releases.data.length}\n` +
-            `- **Deleted**: ${deletedCount}\n` +
-            `- **Kept**: ${keptCount}\n` +
-            `- **Cutoff Date**: ${cutoffDate.toISOString()}\n` +
-            `- **Dry Run**: ${dryRun}\n\n` +
-            `### Details\n\n${summary.join('\n')}`;
-          
-          // 写入到GitHub Action Summary
-          await core.summary.addRaw(actionSummary).write();
-          
-          console.log(`\nCleanup complete: Deleted ${deletedCount} releases, kept ${keptCount}`);
-    
-    - name: Cleanup orphaned tags
-      if: ${{ steps.vars.outputs.DRY_RUN == 'false' }}
-      uses: actions/github-script@v7
-      with:
-        script: |
-          // 获取所有tags
-          const tags = await github.rest.repos.listTags({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            per_page: 100
-          });
-          
-          // 获取所有releases的tag
-          const releases = await github.rest.repos.listReleases({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            per_page: 100
-          });
-          
-          const releaseTags = new Set(releases.data.map(r => r.tag_name));
-          
-          // 删除孤立的dev tags
-          for (const tag of tags.data) {
-            if (tag.name.startsWith('dev-') && !releaseTags.has(tag.name)) {
-              console.log(`Deleting orphaned tag: ${tag.name}`);
-              try {
-                await github.rest.git.deleteRef({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  ref: `tags/${tag.name}`
-                });
-              } catch (e) {
-                console.log(`Failed to delete tag ${tag.name}: ${e.message}`);
+                if (isDevRelease) {
+                  summary.push(`✅ KEEP: ${release.name} (${release.tag_name}) - Created: ${release.created_at}`);
+                }
+                keptCount++;
               }
             }
-          }
+
+            // 生成摘要
+            const actionSummary = `## 🧹 Release Cleanup Summary\n\n` +
+              `- **Total Releases**: ${releases.data.length}\n` +
+              `- **Deleted**: ${deletedCount}\n` +
+              `- **Kept**: ${keptCount}\n` +
+              `- **Cutoff Date**: ${cutoffDate.toISOString()}\n` +
+              `- **Dry Run**: ${dryRun}\n\n` +
+              `### Details\n\n${summary.join('\n')}`;
+
+            // 写入到GitHub Action Summary
+            await core.summary.addRaw(actionSummary).write();
+
+            console.log(`\nCleanup complete: Deleted ${deletedCount} releases, kept ${keptCount}`);
+
+      - name: Cleanup orphaned tags
+        if: ${{ steps.vars.outputs.DRY_RUN == 'false' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // 获取所有tags
+            const tags = await github.rest.repos.listTags({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
+
+            // 获取所有releases的tag
+            const releases = await github.rest.repos.listReleases({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
+
+            const releaseTags = new Set(releases.data.map(r => r.tag_name));
+
+            // 删除孤立的dev tags
+            for (const tag of tags.data) {
+              if (tag.name.startsWith('dev-') && !releaseTags.has(tag.name)) {
+                console.log(`Deleting orphaned tag: ${tag.name}`);
+                try {
+                  await github.rest.git.deleteRef({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    ref: `tags/${tag.name}`
+                  });
+                } catch (e) {
+                  console.log(`Failed to delete tag ${tag.name}: ${e.message}`);
+                }
+              }
+            }

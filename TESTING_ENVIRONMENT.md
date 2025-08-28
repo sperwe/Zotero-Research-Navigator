@@ -19,6 +19,7 @@ npm install
 ```
 
 这个脚本会：
+
 - 下载 Zotero 7 Beta 版本
 - 创建开发配置文件
 - 设置调试选项
@@ -33,6 +34,7 @@ node test/plugin-test-runner.js
 ```
 
 这会检查：
+
 - 插件结构完整性
 - 本地化文件
 - 脚本语法
@@ -47,6 +49,7 @@ node dev-tools/zotero-dev-helper.js
 ```
 
 开发助手提供：
+
 - 自动构建和热重载
 - Zotero 启动管理
 - 日志查看
@@ -55,11 +58,13 @@ node dev-tools/zotero-dev-helper.js
 #### 方法二：手动启动
 
 1. 构建插件：
+
    ```bash
    npm run build
    ```
 
 2. 启动 Zotero：
+
    ```bash
    ~/zotero-dev/start-zotero-dev.sh
    ```
@@ -82,17 +87,20 @@ node dev-tools/zotero-dev-helper.js
 ### 2. 调试
 
 Zotero 开发配置已启用：
+
 - JavaScript 控制台 (`-jsconsole`)
 - 调试日志
 - 远程调试
 
 查看调试日志：
+
 - 在 Zotero 中：工具 → 开发者 → 错误控制台
 - 在开发助手中：按 'l' 查看日志
 
 ### 3. 测试插件功能
 
 主要测试点：
+
 - 历史记录功能是否正常
 - 导航功能是否响应
 - 右键菜单是否显示
@@ -124,6 +132,7 @@ Zotero 开发配置已启用：
 ### 1. 构建失败
 
 检查：
+
 - Node.js 版本是否满足要求
 - 依赖是否正确安装
 - TypeScript 配置是否正确
@@ -131,6 +140,7 @@ Zotero 开发配置已启用：
 ### 2. Zotero 无法启动
 
 确保：
+
 - 已运行 `setup-zotero-dev.sh`
 - Zotero Beta 下载完成
 - 有执行权限
@@ -138,6 +148,7 @@ Zotero 开发配置已启用：
 ### 3. 插件未加载
 
 检查：
+
 - 构建是否成功
 - manifest.json 中的 ID 是否正确
 - Zotero 版本是否兼容
@@ -145,6 +156,7 @@ Zotero 开发配置已启用：
 ### 4. 调试信息未显示
 
 确保：
+
 - 使用开发配置文件启动 Zotero
 - 打开错误控制台
 - 检查 `extensions.zotero.debug.log` 设置
@@ -187,6 +199,7 @@ node dev-tools/zotero-dev-helper.js  # 开发助手
 ## 支持
 
 如有问题，请查看：
+
 - [Zotero 7 开发者指南](https://www.zotero.org/support/dev/zotero_7_for_developers)
 - [Zotero 源代码](https://github.com/zotero/zotero)
 - 项目 Issues 页面

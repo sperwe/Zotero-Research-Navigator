@@ -5,7 +5,7 @@
   "description": "__MSG_addon_description__",
   "homepage_url": "https://github.com/YOUR_USERNAME/zotero-research-navigator",
   "author": "YOUR_NAME",
-  
+
   "applications": {
     "zotero": {
       "id": "research-navigator@zotero.org",
@@ -40,7 +40,5 @@
     "open_in_tab": false
   },
 
-  "permissions": [
-    "storage"
-  ]
+  "permissions": ["storage"]
 }

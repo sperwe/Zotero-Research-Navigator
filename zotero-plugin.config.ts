@@ -13,11 +13,11 @@ export default defineConfig({
 
   build: {
     makeManifest: {
-      enable: false  // 禁用自动修改 manifest.json
+      enable: false, // 禁用自动修改 manifest.json
     },
     assets: [
       "addon/**/*.*",
-      "!addon/bootstrap-archive/**/*"  // 排除 bootstrap-archive 目录
+      "!addon/bootstrap-archive/**/*", // 排除 bootstrap-archive 目录
     ],
     define: {
       // 不使用任何占位符，避免替换问题

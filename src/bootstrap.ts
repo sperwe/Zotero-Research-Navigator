@@ -28,34 +28,37 @@ function install(data: any, reason: any): void {
  */
 async function startup(
   { id, version, rootURI }: { id: string; version: string; rootURI: string },
-  reason: number
+  reason: number,
 ): Promise<void> {
   try {
     // 等待 Zotero 初始化
     while (typeof Zotero === "undefined" || !Zotero.initialized) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
-    
+
     // 记录启动信息
-    Zotero.log(`[Research Navigator] Starting up... Version: ${version}, Reason: ${reason}`, "info");
-    
+    Zotero.log(
+      `[Research Navigator] Starting up... Version: ${version}, Reason: ${reason}`,
+      "info",
+    );
+
     // 获取插件实例并初始化
     const navigator = getResearchNavigator();
     await navigator.initialize();
-    
+
     // 注册到全局对象，便于调试和外部访问
     (Zotero as any).ResearchNavigator = navigator;
-    
+
     // 注册关闭处理器
     Zotero.addShutdownListener(shutdown);
-    
+
     Zotero.log("[Research Navigator] Startup completed successfully", "info");
   } catch (error) {
     Zotero.logError(error);
     Services.prompt.alert(
       null,
       "Research Navigator",
-      `Failed to start Research Navigator: ${error}`
+      `Failed to start Research Navigator: ${error}`,
     );
   }
 }
@@ -65,17 +68,20 @@ async function startup(
  */
 async function shutdown(data: any, reason: any): Promise<void> {
   try {
-    Zotero.log(`[Research Navigator] Shutting down... Reason: ${reason}`, "info");
-    
+    Zotero.log(
+      `[Research Navigator] Shutting down... Reason: ${reason}`,
+      "info",
+    );
+
     // 获取插件实例并关闭
     const navigator = getResearchNavigator();
     await navigator.shutdown();
-    
+
     // 清理全局引用
     if ((Zotero as any).ResearchNavigator) {
       delete (Zotero as any).ResearchNavigator;
     }
-    
+
     Zotero.log("[Research Navigator] Shutdown completed", "info");
   } catch (error) {
     Zotero.logError(error);

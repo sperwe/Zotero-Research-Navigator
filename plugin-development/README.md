@@ -40,12 +40,14 @@ This directory contains comprehensive documentation and examples for Zotero 7 pl
 ## Key Findings
 
 ### Plugin Loading in Zotero 7
+
 - Plugins run in isolated Cu.Sandbox environments
 - No direct access to window/document objects in the sandbox
 - UI must be created using the window parameter passed to onMainWindowLoad()
 - All bootstrap functions must be in the global scope
 
 ### Common Issues and Solutions
+
 1. **UI not showing**: Use the window parameter from onMainWindowLoad, not global window
 2. **Object persistence**: Plugin modifications to Zotero object may not persist across contexts
 3. **Debugging**: Use Zotero.debug(), dump(), and Services.console for logging
@@ -63,4 +65,4 @@ These documents were created through source code analysis of Zotero 7. If you fi
 
 ---
 
-*Note: These documents are based on Zotero 7.0+ and may need updates for future versions.*
+_Note: These documents are based on Zotero 7.0+ and may need updates for future versions._

@@ -6,7 +6,7 @@ dump("\n[Research Navigator Debug] Bootstrap loading...\n");
 // 等待 Zotero 初始化
 async function waitForZotero() {
   dump("[Research Navigator Debug] Waiting for Zotero...\n");
-  
+
   if (typeof Zotero != "undefined") {
     dump("[Research Navigator Debug] Zotero already available\n");
     await Zotero.initializationPromise;
@@ -25,7 +25,7 @@ async function waitForZotero() {
       break;
     }
   }
-  
+
   if (!found) {
     dump("[Research Navigator Debug] Waiting for Zotero window...\n");
     await new Promise((resolve) => {
@@ -45,7 +45,7 @@ async function waitForZotero() {
                 resolve();
               }
             },
-            false
+            false,
           );
         },
       };
@@ -60,13 +60,13 @@ var ResearchNavigator = {
   id: null,
   version: null,
   rootURI: null,
-  
+
   addedElementIds: [],
-  
+
   debug(msg) {
     Zotero.debug(`[Research Navigator] ${msg}`);
     dump(`[Research Navigator] ${msg}\n`);
-  }
+  },
 };
 
 function install(data, reason) {
@@ -77,10 +77,10 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
   dump("[Research Navigator Debug] Startup called\n");
   dump(`[Research Navigator Debug] ID: ${id}, Version: ${version}\n`);
   dump(`[Research Navigator Debug] Reason: ${reason}\n`);
-  
+
   try {
     await waitForZotero();
-    
+
     if (!rootURI) {
       rootURI = resourceURI.spec;
     }
@@ -88,12 +88,12 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
     ResearchNavigator.id = id;
     ResearchNavigator.version = version;
     ResearchNavigator.rootURI = rootURI;
-    
-    ResearchNavigator.debug('Starting Research Navigator');
-    
+
+    ResearchNavigator.debug("Starting Research Navigator");
+
     // 注册到 Zotero
     Zotero.ResearchNavigator = ResearchNavigator;
-    
+
     // 确保在所有已打开的窗口中添加 UI
     var windows = Services.wm.getEnumerator("navigator:browser");
     while (windows.hasMoreElements()) {
@@ -102,11 +102,11 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
         addUI(win);
       }
     }
-    
+
     // 监听新窗口
     Services.wm.addListener(windowListener);
-    
-    ResearchNavigator.debug('Research Navigator started successfully');
+
+    ResearchNavigator.debug("Research Navigator started successfully");
   } catch (e) {
     dump(`[Research Navigator Debug] Startup error: ${e}\n`);
     dump(`[Research Navigator Debug] Stack: ${e.stack}\n`);
@@ -117,14 +117,14 @@ const APP_SHUTDOWN = 2;
 
 function shutdown({ id, version, resourceURI, rootURI }, reason) {
   dump(`[Research Navigator Debug] Shutdown called, reason: ${reason}\n`);
-  
+
   if (reason === APP_SHUTDOWN) {
     return;
   }
-  
+
   // 移除监听器
   Services.wm.removeListener(windowListener);
-  
+
   // 移除所有窗口的 UI
   var windows = Services.wm.getEnumerator("navigator:browser");
   while (windows.hasMoreElements()) {
@@ -133,7 +133,7 @@ function shutdown({ id, version, resourceURI, rootURI }, reason) {
       removeUI(win);
     }
   }
-  
+
   // 从 Zotero 对象移除
   if (Zotero.ResearchNavigator) {
     delete Zotero.ResearchNavigator;
@@ -158,19 +158,19 @@ var windowListener = {
           addUI(domWindow);
         }
       },
-      false
+      false,
     );
   },
   onCloseWindow: function (aWindow) {},
-  onWindowTitleChange: function (aWindow, aTitle) {}
+  onWindowTitleChange: function (aWindow, aTitle) {},
 };
 
 // 添加 UI
 function addUI(window) {
-  ResearchNavigator.debug('Adding UI to window');
-  
+  ResearchNavigator.debug("Adding UI to window");
+
   const doc = window.document;
-  
+
   // 1. 添加浮动测试按钮（右下角）
   if (!doc.getElementById("research-navigator-float-button")) {
     const floatBtn = doc.createElement("button");
@@ -192,22 +192,32 @@ function addUI(window) {
       box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
       font-size: 24px !important;
     `;
-    
-    floatBtn.onclick = function(e) {
+
+    floatBtn.onclick = function (e) {
       e.preventDefault();
       e.stopPropagation();
-      ResearchNavigator.debug('Float button clicked');
-      alert('Research Navigator is working!\n\nVersion: ' + ResearchNavigator.version);
+      ResearchNavigator.debug("Float button clicked");
+      alert(
+        "Research Navigator is working!\n\nVersion: " +
+          ResearchNavigator.version,
+      );
     };
-    
+
     // 尝试多个父元素
-    const parents = [doc.body, doc.documentElement, doc.getElementById("browser"), doc.querySelector("#appcontent")];
+    const parents = [
+      doc.body,
+      doc.documentElement,
+      doc.getElementById("browser"),
+      doc.querySelector("#appcontent"),
+    ];
     for (let parent of parents) {
       if (parent) {
         try {
           parent.appendChild(floatBtn);
-          ResearchNavigator.addedElementIds.push("research-navigator-float-button");
-          ResearchNavigator.debug('Float button added successfully');
+          ResearchNavigator.addedElementIds.push(
+            "research-navigator-float-button",
+          );
+          ResearchNavigator.debug("Float button added successfully");
           break;
         } catch (e) {
           ResearchNavigator.debug(`Failed to add to ${parent}: ${e}`);
@@ -215,29 +225,29 @@ function addUI(window) {
       }
     }
   }
-  
+
   // 2. 添加工具菜单项
   const toolsMenu = doc.getElementById("menu_ToolsPopup");
   if (toolsMenu && !doc.getElementById("research-navigator-tools-menu")) {
     const menuitem = doc.createXULElement("menuitem");
     menuitem.id = "research-navigator-tools-menu";
     menuitem.setAttribute("label", "Research Navigator Debug");
-    menuitem.addEventListener("command", function() {
-      ResearchNavigator.debug('Tools menu clicked');
-      alert('Research Navigator Tools Menu Working!');
+    menuitem.addEventListener("command", function () {
+      ResearchNavigator.debug("Tools menu clicked");
+      alert("Research Navigator Tools Menu Working!");
     });
     toolsMenu.appendChild(menuitem);
     ResearchNavigator.addedElementIds.push("research-navigator-tools-menu");
-    ResearchNavigator.debug('Tools menu added successfully');
+    ResearchNavigator.debug("Tools menu added successfully");
   }
-  
-  ResearchNavigator.debug('UI addition completed');
+
+  ResearchNavigator.debug("UI addition completed");
 }
 
 // 移除 UI
 function removeUI(window) {
   const doc = window.document;
-  
+
   for (let id of ResearchNavigator.addedElementIds) {
     const elem = doc.getElementById(id);
     if (elem && elem.parentNode) {

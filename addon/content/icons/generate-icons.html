@@ -1,120 +1,120 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
+  <head>
     <title>Generate Icons</title>
-</head>
-<body>
+  </head>
+  <body>
     <h1>Icon Generator for Research Navigator</h1>
     <p>右键保存下面的图标：</p>
-    
+
     <h2>16x16</h2>
     <canvas id="icon16" width="16" height="16"></canvas>
-    
+
     <h2>32x32</h2>
     <canvas id="icon32" width="32" height="32"></canvas>
-    
+
     <h2>48x48</h2>
     <canvas id="icon48" width="48" height="48"></canvas>
-    
+
     <h2>96x96</h2>
     <canvas id="icon96" width="96" height="96"></canvas>
 
     <script>
-        function drawIcon(canvas) {
-            const ctx = canvas.getContext('2d');
-            const size = canvas.width;
-            const center = size / 2;
-            const radius = size * 0.4;
-            
-            // 清除画布
-            ctx.clearRect(0, 0, size, size);
-            
-            // 背景圆（蓝色）
-            ctx.fillStyle = '#2980b9';
-            ctx.beginPath();
-            ctx.arc(center, center, radius + size * 0.05, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // 白色内圈
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(center, center, radius, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // 时钟刻度
-            ctx.strokeStyle = '#2c3e50';
-            ctx.lineWidth = Math.max(1, size * 0.04);
-            for (let i = 0; i < 12; i++) {
-                const angle = (i * 30 - 90) * Math.PI / 180;
-                const innerRadius = i % 3 === 0 ? radius * 0.7 : radius * 0.8;
-                const x1 = center + Math.cos(angle) * radius * 0.9;
-                const y1 = center + Math.sin(angle) * radius * 0.9;
-                const x2 = center + Math.cos(angle) * innerRadius;
-                const y2 = center + Math.sin(angle) * innerRadius;
-                
-                ctx.beginPath();
-                ctx.moveTo(x1, y1);
-                ctx.lineTo(x2, y2);
-                ctx.stroke();
-            }
-            
-            // 时针
-            ctx.strokeStyle = '#2c3e50';
-            ctx.lineWidth = Math.max(2, size * 0.06);
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.moveTo(center, center);
-            const hourAngle = (10 * 30 - 90) * Math.PI / 180;
-            ctx.lineTo(
-                center + Math.cos(hourAngle) * radius * 0.5,
-                center + Math.sin(hourAngle) * radius * 0.5
-            );
-            ctx.stroke();
-            
-            // 分针
-            ctx.lineWidth = Math.max(1.5, size * 0.04);
-            ctx.beginPath();
-            ctx.moveTo(center, center);
-            const minAngle = (2 * 30 - 90) * Math.PI / 180;
-            ctx.lineTo(
-                center + Math.cos(minAngle) * radius * 0.7,
-                center + Math.sin(minAngle) * radius * 0.7
-            );
-            ctx.stroke();
-            
-            // 中心点
-            ctx.fillStyle = '#e74c3c';
-            ctx.beginPath();
-            ctx.arc(center, center, Math.max(2, size * 0.08), 0, Math.PI * 2);
-            ctx.fill();
-            
-            // 历史箭头
-            ctx.strokeStyle = '#e74c3c';
-            ctx.lineWidth = Math.max(2, size * 0.05);
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.arc(center, center, radius * 0.85, Math.PI * 0.5, Math.PI, false);
-            ctx.stroke();
-            
-            // 箭头头部
-            const arrowX = center - radius * 0.85;
-            const arrowY = center;
-            const arrowSize = Math.max(3, size * 0.1);
-            
-            ctx.fillStyle = '#e74c3c';
-            ctx.beginPath();
-            ctx.moveTo(arrowX, arrowY);
-            ctx.lineTo(arrowX + arrowSize, arrowY - arrowSize * 0.7);
-            ctx.lineTo(arrowX + arrowSize, arrowY + arrowSize * 0.7);
-            ctx.closePath();
-            ctx.fill();
+      function drawIcon(canvas) {
+        const ctx = canvas.getContext("2d");
+        const size = canvas.width;
+        const center = size / 2;
+        const radius = size * 0.4;
+
+        // 清除画布
+        ctx.clearRect(0, 0, size, size);
+
+        // 背景圆（蓝色）
+        ctx.fillStyle = "#2980b9";
+        ctx.beginPath();
+        ctx.arc(center, center, radius + size * 0.05, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 白色内圈
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(center, center, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 时钟刻度
+        ctx.strokeStyle = "#2c3e50";
+        ctx.lineWidth = Math.max(1, size * 0.04);
+        for (let i = 0; i < 12; i++) {
+          const angle = ((i * 30 - 90) * Math.PI) / 180;
+          const innerRadius = i % 3 === 0 ? radius * 0.7 : radius * 0.8;
+          const x1 = center + Math.cos(angle) * radius * 0.9;
+          const y1 = center + Math.sin(angle) * radius * 0.9;
+          const x2 = center + Math.cos(angle) * innerRadius;
+          const y2 = center + Math.sin(angle) * innerRadius;
+
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
         }
-        
-        // 生成所有尺寸的图标
-        drawIcon(document.getElementById('icon16'));
-        drawIcon(document.getElementById('icon32'));
-        drawIcon(document.getElementById('icon48'));
-        drawIcon(document.getElementById('icon96'));
+
+        // 时针
+        ctx.strokeStyle = "#2c3e50";
+        ctx.lineWidth = Math.max(2, size * 0.06);
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(center, center);
+        const hourAngle = ((10 * 30 - 90) * Math.PI) / 180;
+        ctx.lineTo(
+          center + Math.cos(hourAngle) * radius * 0.5,
+          center + Math.sin(hourAngle) * radius * 0.5,
+        );
+        ctx.stroke();
+
+        // 分针
+        ctx.lineWidth = Math.max(1.5, size * 0.04);
+        ctx.beginPath();
+        ctx.moveTo(center, center);
+        const minAngle = ((2 * 30 - 90) * Math.PI) / 180;
+        ctx.lineTo(
+          center + Math.cos(minAngle) * radius * 0.7,
+          center + Math.sin(minAngle) * radius * 0.7,
+        );
+        ctx.stroke();
+
+        // 中心点
+        ctx.fillStyle = "#e74c3c";
+        ctx.beginPath();
+        ctx.arc(center, center, Math.max(2, size * 0.08), 0, Math.PI * 2);
+        ctx.fill();
+
+        // 历史箭头
+        ctx.strokeStyle = "#e74c3c";
+        ctx.lineWidth = Math.max(2, size * 0.05);
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.arc(center, center, radius * 0.85, Math.PI * 0.5, Math.PI, false);
+        ctx.stroke();
+
+        // 箭头头部
+        const arrowX = center - radius * 0.85;
+        const arrowY = center;
+        const arrowSize = Math.max(3, size * 0.1);
+
+        ctx.fillStyle = "#e74c3c";
+        ctx.beginPath();
+        ctx.moveTo(arrowX, arrowY);
+        ctx.lineTo(arrowX + arrowSize, arrowY - arrowSize * 0.7);
+        ctx.lineTo(arrowX + arrowSize, arrowY + arrowSize * 0.7);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // 生成所有尺寸的图标
+      drawIcon(document.getElementById("icon16"));
+      drawIcon(document.getElementById("icon32"));
+      drawIcon(document.getElementById("icon48"));
+      drawIcon(document.getElementById("icon96"));
     </script>
-</body>
+  </body>
 </html>

@@ -11,7 +11,7 @@ export enum ErrorLevel {
   INFO = "info",
   WARN = "warn",
   ERROR = "error",
-  FATAL = "fatal"
+  FATAL = "fatal",
 }
 
 export interface ErrorContext {
@@ -48,10 +48,10 @@ export class ErrorHandler {
     level: ErrorLevel,
     message: string,
     error?: Error | unknown,
-    context?: ErrorContext
+    context?: ErrorContext,
   ): void {
     const timestamp = Date.now();
-    
+
     // 添加到错误日志
     this.errorLog.push({
       level,
@@ -59,9 +59,9 @@ export class ErrorHandler {
       error: error instanceof Error ? error : undefined,
       context: {
         ...context,
-        timestamp
+        timestamp,
       },
-      timestamp
+      timestamp,
     });
 
     // 格式化消息
@@ -69,7 +69,10 @@ export class ErrorHandler {
 
     // 输出到 Zotero 日志
     if (addon && addon.ztoolkit) {
-      addon.ztoolkit.log(formattedMessage, level === ErrorLevel.ERROR ? 'error' : undefined);
+      addon.ztoolkit.log(
+        formattedMessage,
+        level === ErrorLevel.ERROR ? "error" : undefined,
+      );
     } else {
       console.log(formattedMessage);
     }
@@ -78,7 +81,7 @@ export class ErrorHandler {
     if (error instanceof Error && error.stack) {
       const stackMessage = `Stack trace:\n${error.stack}`;
       if (addon && addon.ztoolkit) {
-        addon.ztoolkit.log(stackMessage, 'error');
+        addon.ztoolkit.log(stackMessage, "error");
       } else {
         console.error(stackMessage);
       }
@@ -110,11 +113,19 @@ export class ErrorHandler {
     this.log(ErrorLevel.WARN, message, undefined, context);
   }
 
-  error(message: string, error?: Error | unknown, context?: ErrorContext): void {
+  error(
+    message: string,
+    error?: Error | unknown,
+    context?: ErrorContext,
+  ): void {
     this.log(ErrorLevel.ERROR, message, error, context);
   }
 
-  fatal(message: string, error?: Error | unknown, context?: ErrorContext): void {
+  fatal(
+    message: string,
+    error?: Error | unknown,
+    context?: ErrorContext,
+  ): void {
     this.log(ErrorLevel.FATAL, message, error, context);
   }
 
@@ -124,15 +135,15 @@ export class ErrorHandler {
   private formatMessage(
     level: ErrorLevel,
     message: string,
-    context?: ErrorContext
+    context?: ErrorContext,
   ): string {
     const timestamp = new Date().toISOString();
     const contextStr = context
       ? ` [${Object.entries(context)
-          .filter(([key]) => key !== 'timestamp')
+          .filter(([key]) => key !== "timestamp")
           .map(([key, value]) => `${key}: ${value}`)
-          .join(', ')}]`
-      : '';
+          .join(", ")}]`
+      : "";
 
     return `[${timestamp}] [${level.toUpperCase()}] ${message}${contextStr}`;
   }
@@ -140,11 +151,14 @@ export class ErrorHandler {
   /**
    * 显示错误通知
    */
-  private showErrorNotification(message: string, error?: Error | unknown): void {
+  private showErrorNotification(
+    message: string,
+    error?: Error | unknown,
+  ): void {
     try {
       // 使用 ProgressWindow 显示错误
       const progressWindow = new ProgressWindowHelper(config.addonName);
-      
+
       let errorMessage = message;
       if (error instanceof Error) {
         errorMessage += `\n${error.message}`;
@@ -154,7 +168,7 @@ export class ErrorHandler {
         .createLine({
           text: errorMessage,
           type: "error",
-          progress: 100
+          progress: 100,
         })
         .show();
 
@@ -185,7 +199,7 @@ export class ErrorHandler {
    */
   getErrorLog(level?: ErrorLevel): typeof this.errorLog {
     if (level) {
-      return this.errorLog.filter(entry => entry.level === level);
+      return this.errorLog.filter((entry) => entry.level === level);
     }
     return [...this.errorLog];
   }
@@ -207,32 +221,29 @@ export class ErrorHandler {
   /**
    * 包装函数以自动捕获错误
    */
-  wrap<T extends (...args: any[]) => any>(
-    fn: T,
-    context?: ErrorContext
-  ): T {
+  wrap<T extends (...args: any[]) => any>(fn: T, context?: ErrorContext): T {
     return ((...args: Parameters<T>) => {
       try {
         const result = fn(...args);
-        
+
         // 处理 Promise
         if (result instanceof Promise) {
           return result.catch((error) => {
             this.error(
-              `Async error in ${fn.name || 'anonymous function'}`,
+              `Async error in ${fn.name || "anonymous function"}`,
               error,
-              context
+              context,
             );
             throw error;
           });
         }
-        
+
         return result;
       } catch (error) {
         this.error(
-          `Error in ${fn.name || 'anonymous function'}`,
+          `Error in ${fn.name || "anonymous function"}`,
           error,
-          context
+          context,
         );
         throw error;
       }
@@ -244,16 +255,16 @@ export class ErrorHandler {
    */
   wrapAsync<T extends (...args: any[]) => Promise<any>>(
     fn: T,
-    context?: ErrorContext
+    context?: ErrorContext,
   ): T {
     return (async (...args: Parameters<T>) => {
       try {
         return await fn(...args);
       } catch (error) {
         this.error(
-          `Async error in ${fn.name || 'anonymous function'}`,
+          `Async error in ${fn.name || "anonymous function"}`,
           error,
-          context
+          context,
         );
         throw error;
       }
@@ -267,23 +278,17 @@ export const errorHandler = ErrorHandler.getInstance();
 // 全局错误处理器
 if (typeof window !== "undefined") {
   window.addEventListener("unhandledrejection", (event) => {
-    errorHandler.error(
-      "Unhandled promise rejection",
-      event.reason,
-      { type: "unhandledrejection" }
-    );
+    errorHandler.error("Unhandled promise rejection", event.reason, {
+      type: "unhandledrejection",
+    });
   });
 
   window.addEventListener("error", (event) => {
-    errorHandler.error(
-      "Uncaught error",
-      event.error,
-      {
-        type: "error",
-        filename: event.filename,
-        lineno: event.lineno,
-        colno: event.colno
-      }
-    );
+    errorHandler.error("Uncaught error", event.error, {
+      type: "error",
+      filename: event.filename,
+      lineno: event.lineno,
+      colno: event.colno,
+    });
   });
 }

@@ -3,7 +3,7 @@
  * Provides fuzzy search functionality for history items
  */
 
-import { HistoryNode, HistoryTracker } from './historyTracker';
+import { HistoryNode, HistoryTracker } from "./historyTracker";
 
 export interface SearchResult {
   node: HistoryNode;
@@ -29,7 +29,9 @@ export class SearchEngine {
   buildIndex(nodes: HistoryNode[]): void {
     this.searchIndex.clear();
     this.indexNodes(nodes);
-    ztoolkit.log(`[Research Navigator] Search index built with ${this.searchIndex.size} items`);
+    ztoolkit.log(
+      `[Research Navigator] Search index built with ${this.searchIndex.size} items`,
+    );
   }
 
   private indexNodes(nodes: HistoryNode[]): void {
@@ -51,7 +53,9 @@ export class SearchEngine {
 
     const results: SearchResult[] = [];
     const queryLower = query.toLowerCase();
-    const queryTerms = queryLower.split(/\s+/).filter(term => term.length > 0);
+    const queryTerms = queryLower
+      .split(/\s+/)
+      .filter((term) => term.length > 0);
 
     for (const node of this.searchIndex.values()) {
       const result = this.scoreNode(node, queryTerms);
@@ -63,7 +67,7 @@ export class SearchEngine {
     // 按分数排序
     results.sort((a, b) => b.score - a.score);
 
-    return results.slice(0, limit).map(r => r.node);
+    return results.slice(0, limit).map((r) => r.node);
   }
 
   /**
@@ -73,18 +77,23 @@ export class SearchEngine {
     const result: SearchResult = {
       node,
       score: 0,
-      matches: []
+      matches: [],
     };
 
     // 搜索标题
-    const titleScore = this.scoreField(node.title, queryTerms, 'title', 2.0);
+    const titleScore = this.scoreField(node.title, queryTerms, "title", 2.0);
     if (titleScore.score > 0) {
       result.score += titleScore.score;
       result.matches.push(titleScore.match);
     }
 
     // 搜索项目类型
-    const typeScore = this.scoreField(node.itemType, queryTerms, 'itemType', 0.5);
+    const typeScore = this.scoreField(
+      node.itemType,
+      queryTerms,
+      "itemType",
+      0.5,
+    );
     if (typeScore.score > 0) {
       result.score += typeScore.score;
       result.matches.push(typeScore.match);
@@ -93,13 +102,14 @@ export class SearchEngine {
     // 访问频率加成
     const accessCount = node.accessRecords?.length || 0;
     if (accessCount > 0) {
-      result.score *= (1 + Math.log10(accessCount) * 0.1);
+      result.score *= 1 + Math.log10(accessCount) * 0.1;
     }
 
     // 最近访问加成
-    const daysSinceAccess = (Date.now() - node.lastAccessed) / (1000 * 60 * 60 * 24);
+    const daysSinceAccess =
+      (Date.now() - node.lastAccessed) / (1000 * 60 * 60 * 24);
     if (daysSinceAccess < 7) {
-      result.score *= (1 + (7 - daysSinceAccess) / 7 * 0.2);
+      result.score *= 1 + ((7 - daysSinceAccess) / 7) * 0.2;
     }
 
     return result;
@@ -108,7 +118,12 @@ export class SearchEngine {
   /**
    * 计算字段的匹配分数
    */
-  private scoreField(text: string, queryTerms: string[], fieldName: string, weight: number): {
+  private scoreField(
+    text: string,
+    queryTerms: string[],
+    fieldName: string,
+    weight: number,
+  ): {
     score: number;
     match: { field: string; indices: [number, number][] };
   } {
@@ -137,7 +152,7 @@ export class SearchEngine {
 
     return {
       score: totalScore,
-      match: { field: fieldName, indices }
+      match: { field: fieldName, indices },
     };
   }
 
@@ -169,7 +184,7 @@ export class SearchEngine {
     // 按索引位置排序
     indices.sort((a, b) => a[0] - b[0]);
 
-    let result = '';
+    let result = "";
     let lastIndex = 0;
 
     for (const [start, end] of indices) {

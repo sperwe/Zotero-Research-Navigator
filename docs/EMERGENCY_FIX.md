@@ -1,6 +1,7 @@
 # 紧急修复指南 - Research Navigator 无法显示
 
 ## 问题症状
+
 - `Zotero.ResearchNavigator` 返回 undefined
 - 看不到工具栏按钮
 - Tools 菜单中没有 Research Navigator
@@ -14,40 +15,40 @@
 
 ```javascript
 // 手动查找并初始化插件
-(async function() {
+(async function () {
   // 检查是否有隐藏的 addon 实例
   const possibleLocations = [
     window.addon,
     globalThis.addon,
     this.addon,
-    document.addon
+    document.addon,
   ];
-  
+
   let addon = null;
   for (const loc of possibleLocations) {
     if (loc && loc.hooks) {
       addon = loc;
-      console.log('Found addon at:', possibleLocations.indexOf(loc));
+      console.log("Found addon at:", possibleLocations.indexOf(loc));
       break;
     }
   }
-  
+
   if (addon) {
     // 手动注册到 Zotero
     Zotero.ResearchNavigator = addon;
-    console.log('Manually registered addon to Zotero.ResearchNavigator');
-    
+    console.log("Manually registered addon to Zotero.ResearchNavigator");
+
     // 尝试初始化 UI
     if (addon.hooks && addon.hooks.onMainWindowLoad) {
       try {
         await addon.hooks.onMainWindowLoad(window);
-        console.log('UI initialization attempted');
+        console.log("UI initialization attempted");
       } catch (e) {
-        console.error('UI initialization failed:', e);
+        console.error("UI initialization failed:", e);
       }
     }
   } else {
-    console.error('No addon instance found anywhere');
+    console.error("No addon instance found anywhere");
   }
 })();
 ```
@@ -58,56 +59,59 @@
 
 ```javascript
 // 创建临时按钮
-(function() {
+(function () {
   const doc = window.document;
-  
+
   // 移除旧按钮
-  const oldBtn = doc.getElementById('rn-temp-button');
+  const oldBtn = doc.getElementById("rn-temp-button");
   if (oldBtn) oldBtn.remove();
-  
+
   // 查找工具栏
   const toolbars = [
-    'zotero-items-toolbar',
-    'zotero-tb-advanced-search',
-    'zotero-collections-toolbar'
+    "zotero-items-toolbar",
+    "zotero-tb-advanced-search",
+    "zotero-collections-toolbar",
   ];
-  
+
   let toolbar = null;
   for (const id of toolbars) {
     toolbar = doc.getElementById(id);
     if (toolbar) break;
   }
-  
+
   if (toolbar) {
     // 创建按钮
-    const button = doc.createXULElement('toolbarbutton');
-    button.id = 'rn-temp-button';
-    button.label = 'Research Nav';
-    button.tooltipText = 'Open Research Navigator (Temporary)';
-    button.style.listStyleImage = 'url(chrome://zotero/skin/16/universal/folder.svg)';
-    button.style.border = '1px solid red';
-    
-    button.addEventListener('command', () => {
+    const button = doc.createXULElement("toolbarbutton");
+    button.id = "rn-temp-button";
+    button.label = "Research Nav";
+    button.tooltipText = "Open Research Navigator (Temporary)";
+    button.style.listStyleImage =
+      "url(chrome://zotero/skin/16/universal/folder.svg)";
+    button.style.border = "1px solid red";
+
+    button.addEventListener("command", () => {
       // 尝试打开历史面板
       if (Zotero.ResearchNavigator && Zotero.ResearchNavigator.modules) {
         const uiManager = Zotero.ResearchNavigator.modules.uiManager;
         if (uiManager && uiManager.toggleHistoryPanel) {
           uiManager.toggleHistoryPanel(window);
         } else {
-          alert('UI Manager not available');
+          alert("UI Manager not available");
         }
       } else {
-        alert('Research Navigator not loaded.\n\nTry:\n1. Restart Zotero\n2. Disable and re-enable the plugin\n3. Reinstall the plugin');
+        alert(
+          "Research Navigator not loaded.\n\nTry:\n1. Restart Zotero\n2. Disable and re-enable the plugin\n3. Reinstall the plugin",
+        );
       }
     });
-    
+
     toolbar.appendChild(button);
-    console.log('Temporary button created in ' + toolbar.id);
+    console.log("Temporary button created in " + toolbar.id);
   } else {
     // 创建浮动按钮
-    const floater = doc.createElement('div');
-    floater.id = 'rn-temp-floater';
-    floater.innerHTML = 'RN';
+    const floater = doc.createElement("div");
+    floater.id = "rn-temp-floater";
+    floater.innerHTML = "RN";
     floater.style.cssText = `
       position: fixed;
       bottom: 20px;
@@ -124,13 +128,15 @@
       z-index: 9999;
       font-weight: bold;
     `;
-    
+
     floater.onclick = () => {
-      alert('Research Navigator emergency button clicked.\n\nPlugin not properly loaded.');
+      alert(
+        "Research Navigator emergency button clicked.\n\nPlugin not properly loaded.",
+      );
     };
-    
+
     doc.body.appendChild(floater);
-    console.log('Emergency floating button created');
+    console.log("Emergency floating button created");
   }
 })();
 ```
@@ -161,33 +167,36 @@
 
 ```javascript
 // 收集诊断信息
-console.log('=== Research Navigator Diagnostic ===');
-console.log('Zotero version:', Zotero.version);
-console.log('Platform:', Zotero.platform);
+console.log("=== Research Navigator Diagnostic ===");
+console.log("Zotero version:", Zotero.version);
+console.log("Platform:", Zotero.platform);
 
 // 检查插件加载
-console.log('\nPlugin status:');
-console.log('typeof Zotero.ResearchNavigator:', typeof Zotero.ResearchNavigator);
+console.log("\nPlugin status:");
+console.log(
+  "typeof Zotero.ResearchNavigator:",
+  typeof Zotero.ResearchNavigator,
+);
 
 // 检查 bootstrap 环境
-console.log('\nBootstrap environment:');
-console.log('typeof addon:', typeof addon);
-console.log('typeof globalThis.addon:', typeof globalThis.addon);
-console.log('typeof window.addon:', typeof window.addon);
+console.log("\nBootstrap environment:");
+console.log("typeof addon:", typeof addon);
+console.log("typeof globalThis.addon:", typeof globalThis.addon);
+console.log("typeof window.addon:", typeof window.addon);
 
 // 检查工具栏
-console.log('\nToolbars:');
-['zotero-items-toolbar', 'zotero-tb-advanced-search'].forEach(id => {
+console.log("\nToolbars:");
+["zotero-items-toolbar", "zotero-tb-advanced-search"].forEach((id) => {
   const tb = document.getElementById(id);
-  console.log(`${id}:`, tb ? 'exists' : 'not found');
+  console.log(`${id}:`, tb ? "exists" : "not found");
 });
 
 // 检查已加载的插件
-console.log('\nLoaded plugins:');
+console.log("\nLoaded plugins:");
 if (Zotero.getInstalledExtensions) {
-  Zotero.getInstalledExtensions().then(exts => {
-    exts.forEach(ext => {
-      if (ext.id.includes('research') || ext.id.includes('navigator')) {
+  Zotero.getInstalledExtensions().then((exts) => {
+    exts.forEach((ext) => {
+      if (ext.id.includes("research") || ext.id.includes("navigator")) {
         console.log(`- ${ext.name} (${ext.id}) v${ext.version}`);
       }
     });
@@ -198,6 +207,7 @@ if (Zotero.getInstalledExtensions) {
 ## 根本原因
 
 插件加载过程中的某个环节失败了：
+
 1. Bootstrap.js 成功加载了脚本
 2. 但 addon 实例没有正确暴露到 Zotero.ResearchNavigator
 3. 导致所有 UI 组件无法初始化
