@@ -67,12 +67,20 @@ export class UIManager {
     while (retries < 30) {
       // 最多等待3秒
       const win = Zotero.getMainWindow();
-      if (win && win.document.readyState === "complete") {
+      if (win && win.document && win.document.readyState === "complete" && win.document.body) {
         return;
       }
       await new Promise((resolve) => setTimeout(resolve, 100));
       retries++;
     }
+    
+    // 如果还没准备好，尝试使用当前窗口
+    const win = Zotero.getMainWindow();
+    if (win && win.document) {
+      Zotero.log("[UIManager] Main window not fully ready, proceeding anyway", "warn");
+      return;
+    }
+    
     throw new Error("Main window not ready");
   }
 
@@ -223,7 +231,13 @@ export class UIManager {
       }
     `;
 
-    doc.head.appendChild(style);
+    if (doc.head) {
+      doc.head.appendChild(style);
+    } else {
+      // 如果 head 还不存在，稍后重试
+      const root = doc.documentElement || doc;
+      root.appendChild(style);
+    }
   }
 
   /**

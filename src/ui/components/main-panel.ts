@@ -74,7 +74,13 @@ export class MainPanel {
     this.createResizers(doc);
 
     // 添加到文档
-    doc.body.appendChild(this.container);
+    if (doc.body) {
+      doc.body.appendChild(this.container);
+    } else {
+      // 如果 body 还不存在，添加到根元素
+      const root = doc.documentElement || doc;
+      root.appendChild(this.container);
+    }
 
     // 初始化标签页
     await this.initializeTabs();
