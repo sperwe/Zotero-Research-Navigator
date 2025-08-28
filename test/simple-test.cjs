@@ -7,6 +7,7 @@ console.log('=== Running Simple Plugin Tests ===\n');
 
 const fs = require('fs');
 const path = require('path');
+const MockZoteroEnvironment = require('./mock-zotero-env.cjs');
 
 let hasErrors = false;
 
@@ -84,12 +85,39 @@ if (fs.existsSync(compiledPath)) {
   hasErrors = true;
 }
 
-// 结果
-console.log('\n=== Test Summary ===');
-if (hasErrors) {
-  console.error('❌ Some tests failed');
-  process.exit(1);
-} else {
-  console.log('✅ All tests passed');
-  process.exit(0);
-}
+// 测试 5: 功能测试
+console.log('\n[TEST] Running lifecycle tests...');
+(async () => {
+  try {
+    const env = new MockZoteroEnvironment();
+    const pluginContext = await env.loadPlugin(xpiPath);
+    const results = await env.testLifecycle(pluginContext);
+    
+    console.log(`✓ Install: ${results.install}`);
+    console.log(`✓ Startup: ${results.startup}`);
+    console.log(`✓ Shutdown: ${results.shutdown}`);
+    console.log(`✓ Uninstall: ${results.uninstall}`);
+    
+    if (results.errors.length > 0) {
+      console.error('✗ Errors during lifecycle:', results.errors);
+      hasErrors = true;
+    }
+    
+    if (!results.install || !results.startup || !results.shutdown || !results.uninstall) {
+      hasErrors = true;
+    }
+  } catch (error) {
+    console.error('✗ Lifecycle test failed:', error.message);
+    hasErrors = true;
+  }
+  
+  // 结果
+  console.log('\n=== Test Summary ===');
+  if (hasErrors) {
+    console.error('❌ Some tests failed');
+    process.exit(1);
+  } else {
+    console.log('✅ All tests passed');
+    process.exit(0);
+  }
+})();
