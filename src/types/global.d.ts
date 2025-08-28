@@ -21,12 +21,15 @@ declare namespace Zotero {
     isNote(): boolean;
     isAttachment(): boolean;
     isRegularItem(): boolean;
+    isTopLevelItem(): boolean;
     getNoteTitle(): string;
     getNote(): string;
     setNote(content: string): void;
     getField(field: string): string;
     getAttachments(): number[];
+    getNotes(): number[];
     parentID?: number;
+    parentItemID?: number;
     saveTx(): Promise<void>;
     addTag(tag: string): void;
     attachmentReaderType?: string;

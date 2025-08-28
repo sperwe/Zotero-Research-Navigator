@@ -480,6 +480,21 @@ export class ResearchNavigator {
           Zotero.log(`Item has ${attachments.length} attachments`, "info");
         }
         
+        // 测试历史节点的笔记关联
+        if (this.historyService && this.noteAssociationSystem) {
+          const nodes = await this.historyService.getNodesByItemId(item.id);
+          if (nodes.length > 0) {
+            const node = nodes[0];
+            Zotero.log(`\n--- Testing Node Note Association ---`, "info");
+            Zotero.log(`Node ID: ${node.id}`, "info");
+            const nodeNotes = await this.noteAssociationSystem.getNodeNotes(node.id);
+            Zotero.log(`Node has ${nodeNotes.length} associated notes:`, "info");
+            for (const assoc of nodeNotes) {
+              Zotero.log(`  - Note: ${assoc.note.getField('title') || 'Untitled'} (ID: ${assoc.note.id}, Type: ${assoc.relationType})`, "info");
+            }
+          }
+        }
+        
         Zotero.log("=====================================", "info");
       },
       
