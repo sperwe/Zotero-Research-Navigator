@@ -2,7 +2,7 @@ name: Build XPI
 
 on:
   push:
-    branches: [ master, main, 'feature/**', 'fix/**', 'refactor/**' ]
+    branches: [ master, main, 'feature/**', 'fix/**', 'refactor/**', 'stable/**' ]
   pull_request:
     branches: [ master, main ]
   workflow_dispatch:  # 允许手动触发

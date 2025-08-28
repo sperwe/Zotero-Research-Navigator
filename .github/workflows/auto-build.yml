@@ -8,6 +8,7 @@ on:
       - 'feature/**'
       - 'fix/**'
       - 'refactor/**'
+      - 'stable/**'
     paths:
       - 'addon/**'
       - 'src/**'
