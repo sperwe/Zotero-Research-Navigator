@@ -64,6 +64,8 @@ export class ClosedTabsManager {
     const Zotero_Tabs = this.getZoteroTabs();
     if (!Zotero_Tabs || !Zotero_Tabs._history) return;
 
+    Zotero.log(`[ClosedTabsManager] Syncing with Zotero history: ${Zotero_Tabs._history.length} groups`, "info");
+
     // Zotero_Tabs._history 是一个数组的数组
     // 每个元素代表一次关闭操作，可能包含多个标签页
     for (const closedGroup of Zotero_Tabs._history) {
@@ -77,19 +79,12 @@ export class ClosedTabsManager {
           );
 
           if (!exists) {
-            // 创建历史节点
-            const nodes = this.historyService.getItemNodes(tabData.data.itemID);
-            let targetNode = nodes.find((n) => n.status === "closed");
-
-            if (!targetNode && nodes.length > 0) {
-              // 如果没有已关闭的节点，标记最近的节点为关闭
-              targetNode = nodes[0];
-              await this.markNodeAsClosed(targetNode, tabData);
-            }
-
-            if (targetNode) {
+            // 创建或获取幽灵节点
+            const ghostNode = await this.createGhostNode(tabData);
+            
+            if (ghostNode) {
               this.closedTabs.unshift({
-                node: targetNode,
+                node: ghostNode,
                 tabData,
                 closedAt: new Date(tabData.closedAt || Date.now()),
                 windowId: tabData.windowId || 0,
@@ -105,6 +100,8 @@ export class ClosedTabsManager {
     if (this.closedTabs.length > this.maxClosedTabs) {
       this.closedTabs = this.closedTabs.slice(0, this.maxClosedTabs);
     }
+    
+    Zotero.log(`[ClosedTabsManager] Synced ${this.closedTabs.length} closed tabs`, "info");
   }
 
   /**
@@ -144,6 +141,68 @@ export class ClosedTabsManager {
         // 触发事件
         this.notifyClosedTabsChanged();
       }
+    }
+  }
+
+  /**
+   * 创建幽灵节点（用于 Zotero 历史中的已关闭标签页）
+   */
+  private async createGhostNode(tabData: any): Promise<HistoryNode | null> {
+    try {
+      const itemId = tabData.data?.itemID;
+      if (!itemId) return null;
+
+      // 获取现有节点
+      const nodes = this.historyService.getItemNodes(itemId);
+      let targetNode = nodes.find((n) => n.status === "closed");
+
+      if (!targetNode) {
+        // 尝试获取项目信息
+        const item = await Zotero.Items.getAsync(itemId);
+        if (!item) {
+          // 创建一个幽灵节点（项目可能已删除）
+          const ghostNode: HistoryNode = {
+            id: `ghost_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            itemId: itemId,
+            libraryId: tabData.data?.libraryID || Zotero.Libraries.userLibraryID,
+            parentId: null,
+            sessionId: "ghost_session",
+            timestamp: new Date(tabData.closedAt || Date.now()),
+            lastVisit: new Date(tabData.closedAt || Date.now()),
+            visitCount: 1,
+            title: tabData.title || `Deleted Item #${itemId}`,
+            itemType: "attachment",
+            status: "closed",
+            closedAt: new Date(tabData.closedAt || Date.now()),
+            closedContext: {
+              tabData: {
+                type: tabData.type,
+                data: tabData.data,
+                title: tabData.title,
+              },
+              windowId: tabData.windowId || 0,
+              index: tabData.index || 0,
+              isGhost: true
+            },
+            hasNotes: false,
+            depth: 0,
+            path: [],
+            data: { isGhost: true }
+          };
+          
+          // 不保存到数据库，只在内存中
+          return ghostNode;
+        } else {
+          // 创建一个新的历史节点
+          targetNode = await this.historyService.createOrUpdateNode(item.id, { force: true });
+          await this.markNodeAsClosed(targetNode, tabData);
+        }
+      }
+
+      return targetNode;
+    } catch (error) {
+      Zotero.logError(`[ClosedTabsManager] Failed to create ghost node: ${error}`);
+      return null;
     }
   }
 

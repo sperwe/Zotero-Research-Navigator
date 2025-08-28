@@ -110,6 +110,11 @@ export class HistoryTreeTab {
     
     container.appendChild(this.treeContainer);
     
+    // 监听已关闭标签页变化
+    this.window.addEventListener("research-navigator-closed-tabs-changed", () => {
+      this.refresh();
+    });
+    
     // 初始加载
     this.refresh();
   }
@@ -129,8 +134,9 @@ export class HistoryTreeTab {
     const sessions = this.historyService.getAllSessions();
     Zotero.log(`[HistoryTreeTab] Found ${sessions.length} sessions`, "info");
     
-    // 获取已关闭的标签页组
-    const closedGroups = this.tabsIntegration.getClosedTabs();
+    // 获取已关闭的标签页（包含幽灵节点）
+    const closedTabs = this.closedTabsManager.getClosedTabs();
+    Zotero.log(`[HistoryTreeTab] Found ${closedTabs.length} closed tabs`, "info");
     
     // 创建根节点
     const rootList = doc.createElement("ul");
@@ -141,10 +147,10 @@ export class HistoryTreeTab {
       margin: 0;
     `;
     
-    // 添加已关闭标签页部分
-    if (closedGroups.length > 0) {
-      const closedSection = this.createClosedTabsSection(doc, closedGroups);
-      rootList.appendChild(closedSection);
+    // 添加已关闭标签页部分（作为幽灵节点）
+    if (closedTabs.length > 0) {
+      const ghostSection = this.createGhostSection(doc, closedTabs);
+      rootList.appendChild(ghostSection);
     }
     
     // 添加会话历史
@@ -156,6 +162,104 @@ export class HistoryTreeTab {
     this.treeContainer.appendChild(rootList);
   }
   
+  /**
+   * 创建幽灵节点部分（已关闭的标签页）
+   */
+  private createGhostSection(doc: Document, closedTabs: any[]): HTMLElement {
+    const li = doc.createElement("li");
+    li.className = "ghost-section";
+    
+    // 部分标题
+    const header = doc.createElement("div");
+    header.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px;
+      font-weight: bold;
+      background: var(--material-mix-quinary);
+      border-radius: 5px;
+      margin-bottom: 10px;
+      cursor: pointer;
+    `;
+    
+    const icon = doc.createElement("span");
+    icon.textContent = "👻";
+    header.appendChild(icon);
+    
+    const title = doc.createElement("span");
+    title.textContent = `Closed Tabs (${closedTabs.length})`;
+    title.style.flex = "1";
+    header.appendChild(title);
+    
+    // 清除所有按钮
+    const clearBtn = doc.createElement("button");
+    clearBtn.textContent = "Clear All";
+    clearBtn.style.cssText = `
+      font-size: 0.8em;
+      padding: 2px 8px;
+      cursor: pointer;
+    `;
+    clearBtn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (this.window.confirm("Clear all closed tabs history?")) {
+        await this.closedTabsManager.clearAll();
+        this.refresh();
+      }
+    });
+    header.appendChild(clearBtn);
+    
+    li.appendChild(header);
+    
+    // 创建列表
+    const list = doc.createElement("ul");
+    list.style.cssText = `
+      list-style: none;
+      padding-left: 20px;
+      margin: 0;
+    `;
+    
+    // 添加每个关闭的标签页作为幽灵节点
+    for (const closedTab of closedTabs.slice(0, 20)) { // 最多显示20个
+      const ghostNode = this.createHistoryNode(doc, closedTab.node);
+      
+      // 添加恢复按钮
+      const restoreBtn = doc.createElement("button");
+      restoreBtn.textContent = "↻";
+      restoreBtn.title = "Restore this tab";
+      restoreBtn.style.cssText = `
+        margin-left: 5px;
+        padding: 0 5px;
+        font-size: 1.2em;
+        cursor: pointer;
+        opacity: 0.7;
+      `;
+      restoreBtn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const success = await this.closedTabsManager.restoreTab(closedTab.node.id);
+        if (success) {
+          this.refresh();
+        }
+      });
+      
+      ghostNode.querySelector("div")?.appendChild(restoreBtn);
+      list.appendChild(ghostNode);
+    }
+    
+    li.appendChild(list);
+    
+    // 折叠功能
+    let expanded = true;
+    header.addEventListener("click", (e) => {
+      if (e.target === clearBtn) return;
+      expanded = !expanded;
+      list.style.display = expanded ? "block" : "none";
+      icon.textContent = expanded ? "👻" : "📁";
+    });
+    
+    return li;
+  }
+
   /**
    * 创建已关闭标签页部分
    */
@@ -417,7 +521,8 @@ export class HistoryTreeTab {
    */
   private createHistoryNode(doc: Document, node: HistoryNode): HTMLElement {
     const li = doc.createElement("li");
-    li.className = `history-node ${node.status}`;
+    const isGhost = node.data?.isGhost || node.closedContext?.isGhost;
+    li.className = `history-node ${node.status} ${isGhost ? 'ghost-node' : ''}`;
     li.style.cssText = `
       margin: 3px 0;
     `;
@@ -431,19 +536,27 @@ export class HistoryTreeTab {
       padding: 3px 5px;
       cursor: pointer;
       border-radius: 3px;
-      opacity: ${node.status === "closed" ? "0.6" : "1"};
+      opacity: ${node.status === "closed" ? (isGhost ? "0.5" : "0.6") : "1"};
+      ${isGhost ? 'border: 1px dashed var(--material-border-quarternary); background: var(--material-sidepane);' : ''}
     `;
     
     // 图标
     const icon = doc.createElement("span");
-    icon.textContent = node.status === "active" ? "📖" : 
-                       node.status === "closed" ? "📕" : "📘";
+    if (isGhost) {
+      icon.textContent = "👻"; // 幽灵图标
+    } else {
+      icon.textContent = node.status === "active" ? "📖" : 
+                         node.status === "closed" ? "📕" : "📘";
+    }
     content.appendChild(icon);
     
     // 标题
     const title = doc.createElement("span");
     title.style.flex = "1";
     title.textContent = node.title || `Item ${node.itemId}`;
+    if (isGhost) {
+      title.style.fontStyle = "italic";
+    }
     content.appendChild(title);
     
     // 时间
@@ -588,6 +701,12 @@ export class HistoryTreeTab {
   private async openItem(itemId: number): Promise<void> {
     try {
       const item = await Zotero.Items.getAsync(itemId);
+      if (!item) {
+        // 项目不存在，可能是幽灵节点
+        this.window.alert("This item no longer exists in your library.");
+        return;
+      }
+      
       if (item) {
         if (item.isRegularItem() && item.isTopLevelItem()) {
           // 打开 PDF
