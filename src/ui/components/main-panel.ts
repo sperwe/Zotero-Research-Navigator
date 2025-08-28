@@ -81,11 +81,30 @@ export class MainPanel {
     // 等待添加到文档
     const attachToDOM = async () => {
       return new Promise<void>((resolve) => {
+        let attempts = 0;
+        const maxAttempts = 100; // 最多尝试 5 秒
+        
         const tryAttach = async () => {
-          if (doc.body) {
-            doc.body.appendChild(this.container);
+          attempts++;
+          
+          // 尝试多种方式获取可用的 document 和 body
+          let targetDoc = doc;
+          let targetBody = targetDoc.body;
+          
+          // 如果当前文档没有 body，尝试获取主窗口的文档
+          if (!targetBody && this.window !== Zotero.getMainWindow()) {
+            const mainWindow = Zotero.getMainWindow();
+            if (mainWindow && mainWindow.document && mainWindow.document.body) {
+              targetDoc = mainWindow.document;
+              targetBody = mainWindow.document.body;
+              Zotero.log("[MainPanel] Using main window document", "info");
+            }
+          }
+          
+          if (targetBody) {
+            targetBody.appendChild(this.container);
             // 在添加到 DOM 后注入样式
-            this.injectStyles(doc);
+            this.injectStyles(targetDoc);
             
             // 初始化标签页
             await this.initializeTabs();
@@ -95,9 +114,18 @@ export class MainPanel {
             
             Zotero.log("[MainPanel] Successfully attached to DOM", "info");
             resolve();
-          } else {
-            Zotero.log("[MainPanel] Waiting for document.body...", "info");
+          } else if (attempts < maxAttempts) {
+            Zotero.log(`[MainPanel] Waiting for document.body... ${attempts}`, "info");
             this.window.setTimeout(tryAttach, 50);
+          } else {
+            // 超时后，强制完成创建流程
+            Zotero.log("[MainPanel] Timeout waiting for body, completing creation anyway", "warning");
+            
+            // 初始化标签页（即使没有附加到 DOM）
+            await this.initializeTabs();
+            
+            // 标记面板已创建，稍后可以尝试附加
+            resolve();
           }
         };
         tryAttach();
@@ -623,8 +651,20 @@ export class MainPanel {
     try {
       // 确保容器在 DOM 中
       if (!this.container.parentNode) {
-        Zotero.logError("[MainPanel] Container not in DOM, cannot show");
-        return;
+        Zotero.log("[MainPanel] Container not in DOM, attempting to attach", "info");
+        
+        // 尝试附加到 DOM
+        const mainWindow = Zotero.getMainWindow();
+        if (mainWindow && mainWindow.document && mainWindow.document.body) {
+          mainWindow.document.body.appendChild(this.container);
+          Zotero.log("[MainPanel] Container attached to main window body", "info");
+        } else if (this.window && this.window.document && this.window.document.body) {
+          this.window.document.body.appendChild(this.container);
+          Zotero.log("[MainPanel] Container attached to window body", "info");
+        } else {
+          Zotero.logError("[MainPanel] No document body available to attach container");
+          return;
+        }
       }
       
       // 强制显示
