@@ -1752,17 +1752,20 @@ var ResearchNavigator = {
       contentEl.appendChild(countEl);
     }
     
-    // 点击打开文献
-    contentEl.addEventListener('click', async () => {
+    // 左键点击打开文献（避免右键触发）
+    contentEl.addEventListener('mousedown', async (e) => {
+      if (e.button !== 0) return; // 仅左键
+      e.stopPropagation();
       this.currentNode = node;
       await this.openItemFromNode(node);
       this.addToNavigationHistory(node);
       this.updateTreeDisplay();
     });
     
-    // 右键菜单
+    // 右键菜单（阻止冒泡，避免触发单击逻辑）
     contentEl.addEventListener('contextmenu', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       this.showNodeContextMenu(doc, node, e);
     });
 
@@ -2382,7 +2385,13 @@ function addUI(window) {
   const doc = window.document;
   
   // 添加键盘事件监听
-  doc.addEventListener('keydown', ResearchNavigator.handleShortcut.bind(ResearchNavigator));
+  // 在文本输入时不触发全局快捷键
+  doc.addEventListener('keydown', (e) => {
+    const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+    const isTextInput = tag === 'textbox' || tag === 'input' || tag === 'textarea' || (e.target && e.target.isContentEditable);
+    if (isTextInput) return;
+    ResearchNavigator.handleShortcut(e);
+  });
   
   // 1. 添加导航工具栏
   addNavigationToolbar(window);
@@ -2828,6 +2837,12 @@ function createTreePanel(window) {
   searchBox.setAttribute('placeholder', 'Search history...');
   searchBox.setAttribute('flex', '1');
   searchBox.style.cssText = 'margin-right: 8px;';
+  // 阻止触发外层快捷键/拖拽等
+  searchBox.addEventListener('keydown', (e) => { e.stopPropagation(); });
+  searchBox.addEventListener('keypress', (e) => { e.stopPropagation(); });
+  searchBox.addEventListener('keyup', (e) => { e.stopPropagation(); });
+  searchBox.addEventListener('mousedown', (e) => { e.stopPropagation(); });
+  searchBox.addEventListener('click', (e) => { e.stopPropagation(); });
   searchBox.addEventListener('input', (e) => {
     ResearchNavigator.searchQuery = e.target.value;
     ResearchNavigator.updateTreeDisplay();
