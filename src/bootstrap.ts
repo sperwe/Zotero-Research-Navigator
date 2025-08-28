@@ -1,5 +1,6 @@
 /**
  * Bootstrap 入口文件
+ * Version 2.3.1 - Dev Build with Auto-Update
  * 提供 Zotero 插件所需的生命周期函数
  */
 
