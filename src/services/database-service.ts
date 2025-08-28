@@ -70,13 +70,15 @@ export class DatabaseService {
           depth INTEGER DEFAULT 0,
           path TEXT,
           data TEXT,
-          FOREIGN KEY (parentId) REFERENCES ${this.HISTORY_TABLE}(id),
-          INDEX idx_itemId (itemId),
-          INDEX idx_sessionId (sessionId),
-          INDEX idx_status (status),
-          INDEX idx_timestamp (timestamp)
+          FOREIGN KEY (parentId) REFERENCES ${this.HISTORY_TABLE}(id)
         )
       `);
+
+      // 创建索引
+      await Zotero.DB.queryAsync(`CREATE INDEX IF NOT EXISTS idx_itemId ON ${this.HISTORY_TABLE}(itemId)`);
+      await Zotero.DB.queryAsync(`CREATE INDEX IF NOT EXISTS idx_sessionId ON ${this.HISTORY_TABLE}(sessionId)`);
+      await Zotero.DB.queryAsync(`CREATE INDEX IF NOT EXISTS idx_status ON ${this.HISTORY_TABLE}(status)`);
+      await Zotero.DB.queryAsync(`CREATE INDEX IF NOT EXISTS idx_timestamp ON ${this.HISTORY_TABLE}(timestamp)`);
 
       // 创建笔记关联表
       await Zotero.DB.queryAsync(`
@@ -88,11 +90,13 @@ export class DatabaseService {
           createdAt INTEGER NOT NULL,
           context TEXT,
           UNIQUE(noteId, nodeId),
-          FOREIGN KEY (nodeId) REFERENCES ${this.HISTORY_TABLE}(id),
-          INDEX idx_noteId (noteId),
-          INDEX idx_nodeId (nodeId)
+          FOREIGN KEY (nodeId) REFERENCES ${this.HISTORY_TABLE}(id)
         )
       `);
+
+      // 创建笔记关联表的索引
+      await Zotero.DB.queryAsync(`CREATE INDEX IF NOT EXISTS idx_noteId ON ${this.RELATIONS_TABLE}(noteId)`);
+      await Zotero.DB.queryAsync(`CREATE INDEX IF NOT EXISTS idx_nodeId ON ${this.RELATIONS_TABLE}(nodeId)`);
 
       this.initialized = true;
       Zotero.log("[DatabaseService] Database initialized", "info");
