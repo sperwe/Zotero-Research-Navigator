@@ -364,6 +364,12 @@ export class HistoryService {
    * 删除节点
    */
   async deleteNode(nodeId: string): Promise<void> {
+    // 首先递归删除所有子节点
+    const childNodes = this.getChildNodes(nodeId);
+    for (const child of childNodes) {
+      await this.deleteNode(child.id);
+    }
+    
     // 从缓存中删除
     const node = this.nodeCache.get(nodeId);
     if (node) {
