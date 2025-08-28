@@ -238,10 +238,11 @@ export class MainPanel {
    */
   private async initializeTabs(): Promise<void> {
     // 历史树标签页
-    const historyTab = new HistoryTreeTab(this.window, {
-      historyService: this.options.historyService,
-      closedTabsManager: this.options.closedTabsManager,
-    });
+    const historyTab = new HistoryTreeTab(
+      this.window,
+      this.options.historyService,
+      this.options.closedTabsManager
+    );
     this.tabs.set("history", historyTab);
 
     // 已关闭标签页

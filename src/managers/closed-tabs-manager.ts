@@ -5,6 +5,7 @@
 
 import { HistoryService } from "../services/history-service";
 import { HistoryNode } from "../services/database-service";
+import { ZoteroTabsIntegration } from "./zotero-tabs-integration";
 
 export interface ClosedTab {
   node: HistoryNode;
@@ -17,8 +18,11 @@ export interface ClosedTab {
 export class ClosedTabsManager {
   private closedTabs: ClosedTab[] = [];
   private maxClosedTabs = 100; // 最多保留100个已关闭标签页
+  private tabsIntegration: ZoteroTabsIntegration;
 
-  constructor(private historyService: HistoryService) {}
+  constructor(private historyService: HistoryService) {
+    this.tabsIntegration = new ZoteroTabsIntegration();
+  }
 
   get databaseService() {
     return (this.historyService as any).databaseService;
