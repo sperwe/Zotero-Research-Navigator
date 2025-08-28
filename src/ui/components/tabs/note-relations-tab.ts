@@ -529,10 +529,17 @@ export class NoteRelationsTab {
     `;
     openBtn.addEventListener("click", () => {
       // 打开笔记窗口
-      const noteItem = Zotero.Items.get(note.noteId);
-      if (noteItem) {
-        const libraryID = noteItem.libraryID;
-        const noteWindow = Zotero.getMainWindow().Zotero_Browser.noteEditor.open(note.noteId, libraryID);
+      try {
+        const noteItem = Zotero.Items.get(note.noteId);
+        if (noteItem) {
+          // 使用 Zotero 的 API 打开笔记编辑器
+          const zoteroPane = Zotero.getActiveZoteroPane();
+          if (zoteroPane) {
+            zoteroPane.openNoteWindow(note.noteId);
+          }
+        }
+      } catch (error) {
+        Zotero.logError(`Failed to open note: ${error}`);
       }
     });
     actions.appendChild(openBtn);

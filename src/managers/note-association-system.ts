@@ -449,12 +449,11 @@ ${initialContent || "<p>Your notes here...</p>"}
    * 通知关联创建
    */
   private notifyAssociationCreated(relation: NoteRelation): void {
-    const event = new CustomEvent("research-navigator-association-created", {
-      detail: relation,
-    });
-
     const win = Zotero.getMainWindow();
-    if (win) {
+    if (win && win.document) {
+      const event = win.document.createEvent("Event");
+      event.initEvent("research-navigator-association-created", true, true);
+      (win as any).researchNavigatorAssociationDetail = relation;
       win.dispatchEvent(event);
     }
   }
@@ -463,12 +462,11 @@ ${initialContent || "<p>Your notes here...</p>"}
    * 通知关联删除
    */
   private notifyAssociationRemoved(noteId: number, nodeId: string): void {
-    const event = new CustomEvent("research-navigator-association-removed", {
-      detail: { noteId, nodeId },
-    });
-
     const win = Zotero.getMainWindow();
-    if (win) {
+    if (win && win.document) {
+      const event = win.document.createEvent("Event");
+      event.initEvent("research-navigator-association-removed", true, true);
+      (win as any).researchNavigatorRemovedDetail = { noteId, nodeId };
       win.dispatchEvent(event);
     }
   }
@@ -523,7 +521,7 @@ ${initialContent || "<p>Your notes here...</p>"}
     try {
       // 获取同一文献的其他笔记
       const itemNotes = await Zotero.DB.queryAsync(`
-        SELECT DISTINCT i.itemID as noteId, i.title, i.dateModified
+        SELECT DISTINCT i.itemID as noteId, i.dateModified
         FROM items i
         JOIN itemTypes it ON i.itemTypeID = it.itemTypeID
         WHERE i.parentItemID = ? AND it.typeName = 'note'
@@ -534,12 +532,26 @@ ${initialContent || "<p>Your notes here...</p>"}
         LIMIT 5
       `, [node.itemId, nodeId]);
       
-      return itemNotes.map(row => ({
-        noteId: row.noteId,
-        title: row.title || 'Untitled Note',
-        dateModified: new Date(row.dateModified),
-        relationType: 'suggested'
-      }));
+      const notes: any[] = [];
+      for (const row of itemNotes) {
+        try {
+          const note = await Zotero.Items.getAsync(row.noteId);
+          if (note) {
+            notes.push({
+              noteId: row.noteId,
+              nodeId: nodeId,
+              relationType: 'suggested',
+              title: note.getField('title') || 'Untitled Note',
+              content: note.getNote(),
+              dateModified: new Date(row.dateModified)
+            });
+          }
+        } catch (error) {
+          Zotero.logError(`Failed to get note ${row.noteId}: ${error}`);
+        }
+      }
+      
+      return notes;
     } catch (error) {
       Zotero.logError(`Failed to get suggested notes: ${error}`);
       return [];
