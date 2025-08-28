@@ -104,6 +104,8 @@ export class NoteRelationsTab {
       flex: 1;
       overflow-y: auto;
       padding: 10px;
+      position: relative;
+      z-index: 1;
     `;
     
     // 加载最近的节点
@@ -158,27 +160,34 @@ export class NoteRelationsTab {
   private createNodeElement(doc: Document, node: HistoryNode): HTMLElement {
     const element = doc.createElement("div");
     element.style.cssText = `
-      padding: 8px;
-      margin: 3px 0;
-      border-radius: 3px;
+      padding: 10px 12px;
+      margin: 5px 0;
+      border-radius: 5px;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: all 0.2s;
       display: flex;
       align-items: center;
       gap: 8px;
+      user-select: none;
+      border: 1px solid transparent;
+      position: relative;
     `;
     
     // 图标
     const icon = doc.createElement("span");
+    icon.style.pointerEvents = "none";
     icon.textContent = node.status === "active" ? "📖" : "📕";
     element.appendChild(icon);
     
     // 标题
     const title = doc.createElement("div");
-    title.style.flex = "1";
-    title.style.overflow = "hidden";
-    title.style.textOverflow = "ellipsis";
-    title.style.whiteSpace = "nowrap";
+    title.style.cssText = `
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      pointer-events: none;
+    `;
     title.textContent = node.title || `Item ${node.itemId}`;
     element.appendChild(title);
     
@@ -192,6 +201,7 @@ export class NoteRelationsTab {
           padding: 2px 6px;
           border-radius: 10px;
           font-size: 0.8em;
+          pointer-events: none;  /* 确保badge不会阻挡点击 */
         `;
         badge.textContent = notes.length.toString();
         element.appendChild(badge);
@@ -199,26 +209,37 @@ export class NoteRelationsTab {
     });
     
     // 点击事件
-    element.addEventListener("click", () => {
+    element.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      
+      Zotero.log(`[NoteRelationsTab] Node clicked: ${node.id} - ${node.title}`, "info");
+      
       this.selectNode(node);
       
       // 更新选中状态
       element.parentElement?.querySelectorAll("div").forEach(el => {
-        if (el.style.background) el.style.background = "";
+        if (el.style.background) {
+          el.style.background = "";
+          el.style.border = "1px solid transparent";
+        }
       });
       element.style.background = "var(--material-mix-quinary)";
+      element.style.border = "1px solid var(--material-border-secondary)";
     });
     
     // 悬停效果
     element.addEventListener("mouseenter", () => {
-      if (!element.style.background) {
+      if (!this.selectedNode || this.selectedNode.id !== node.id) {
         element.style.background = "var(--material-button)";
+        element.style.border = "1px solid var(--material-border-quarternary)";
       }
     });
     
     element.addEventListener("mouseleave", () => {
       if (!this.selectedNode || this.selectedNode.id !== node.id) {
         element.style.background = "";
+        element.style.border = "1px solid transparent";
       }
     });
     
@@ -229,6 +250,7 @@ export class NoteRelationsTab {
    * 选择节点
    */
   private async selectNode(node: HistoryNode): Promise<void> {
+    Zotero.log(`[NoteRelationsTab] Selecting node: ${node.id} - ${node.title}`, "info");
     this.selectedNode = node;
     await this.loadNodeAssociations();
   }
