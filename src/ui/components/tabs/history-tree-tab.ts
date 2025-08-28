@@ -107,11 +107,14 @@ export class HistoryTreeTab {
   async refresh(): Promise<void> {
     if (!this.treeContainer) return;
     
+    Zotero.log("[HistoryTreeTab] Refreshing history tree", "info");
+    
     const doc = this.window.document;
     this.treeContainer.innerHTML = "";
     
     // 获取会话历史
     const sessions = this.historyService.getAllSessions();
+    Zotero.log(`[HistoryTreeTab] Found ${sessions.length} sessions`, "info");
     
     // 获取已关闭的标签页组
     const closedGroups = this.tabsIntegration.getClosedTabs();

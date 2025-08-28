@@ -153,9 +153,12 @@ export class HistoryService {
 
     // 保存到数据库
     await this.databaseService.saveHistoryNode(newNode);
+    
+    Zotero.log(`[HistoryService] Created new node: ${newNode.id} for item "${newNode.title}"`, "info");
 
     // 更新缓存
     this.nodeCache.set(newNode.id, newNode);
+    Zotero.log(`[HistoryService] Current nodeCache size: ${this.nodeCache.size}`, "info");
     if (!this.itemNodeMap.has(itemId)) {
       this.itemNodeMap.set(itemId, []);
     }
@@ -211,17 +214,37 @@ export class HistoryService {
    * 获取所有会话
    */
   getAllSessions(): any[] {
-    // TODO: 从数据库获取所有会话
-    // 临时返回当前会话
-    if (this.currentSessionId) {
-      return [{
-        id: this.currentSessionId,
-        name: `Session ${new Date().toLocaleDateString()}`,
-        startTime: new Date(),
-        nodes: []
-      }];
+    // 根据 sessionId 分组节点
+    const sessionMap = new Map<string, any>();
+    
+    for (const node of this.nodeCache.values()) {
+      if (!sessionMap.has(node.sessionId)) {
+        sessionMap.set(node.sessionId, {
+          id: node.sessionId,
+          name: `Session ${node.timestamp.toLocaleDateString()} ${node.timestamp.toLocaleTimeString()}`,
+          startTime: node.timestamp,
+          nodes: []
+        });
+      }
+      sessionMap.get(node.sessionId).nodes.push(node);
     }
-    return [];
+    
+    // 按时间排序会话
+    const sessions = Array.from(sessionMap.values())
+      .sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
+    
+    Zotero.log(`[HistoryService] Returning ${sessions.length} sessions with total ${this.nodeCache.size} nodes`, "info");
+    
+    return sessions;
+  }
+  
+  /**
+   * 获取会话的所有节点
+   */
+  getSessionNodes(sessionId: string): HistoryNode[] {
+    return Array.from(this.nodeCache.values())
+      .filter(node => node.sessionId === sessionId)
+      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
   }
   
   /**
