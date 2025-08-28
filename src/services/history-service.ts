@@ -15,7 +15,7 @@ export class HistoryService {
   private nodeCache = new Map<string, HistoryNode>();
   private itemNodeMap = new Map<number, string[]>(); // itemId -> nodeIds
   
-  constructor(private databaseService: DatabaseService) {
+  constructor(public databaseService: DatabaseService) {
     this.currentSessionId = this.generateSessionId();
     this.lastActivityTime = Date.now();
   }
