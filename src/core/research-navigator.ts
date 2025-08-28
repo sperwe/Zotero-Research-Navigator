@@ -174,7 +174,8 @@ export class ResearchNavigator {
             const currentId = selected[0].id;
             if (currentId !== lastSelectedId) {
               lastSelectedId = currentId;
-              Zotero.log(`[ResearchNavigator] Item selected (detected): ${currentId}`, "info");
+              const item = selected[0];
+              Zotero.log(`[ResearchNavigator] Item selected (detected): ${currentId}, Type: ${item.itemType}, Title: ${item.getField('title')}`, "info");
               this.handleItemSelect([currentId]).catch(error => {
                 Zotero.logError(`[ResearchNavigator] Error handling selection: ${error}`);
               });
@@ -236,6 +237,12 @@ export class ResearchNavigator {
     const item = await Zotero.Items.getAsync(itemId);
     
     if (!item) return;
+    
+    // 只记录常规文献项目和附件，跳过独立笔记
+    if (item.isNote() && item.isTopLevelItem()) {
+      Zotero.log(`[Research Navigator] Skipping standalone note: ${item.id}`, "info");
+      return;
+    }
     
     // 记录到历史
     Zotero.log(`[Research Navigator] Item selected: ${item.getField('title')}`, "info");

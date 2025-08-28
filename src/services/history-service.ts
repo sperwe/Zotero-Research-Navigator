@@ -131,9 +131,10 @@ export class HistoryService {
     }
 
     // 创建新节点
-    const parentId = options.parentId || this.currentNode?.id || null;
+    // 如果使用 force 选项，不设置父节点（避免外键约束问题）
+    const parentId = options.force ? null : (options.parentId || this.currentNode?.id || null);
     const path =
-      parentId && this.currentNode
+      parentId && this.currentNode && !options.force
         ? [...this.currentNode.path, this.currentNode.id]
         : [];
 
