@@ -94,6 +94,19 @@ async function shutdown(data, reason) {
   }
 }
 
+// Forward main window events to compiled functions if available
+async function onMainWindowLoad({ window }, reason) {
+  if (loadedFunctions.onMainWindowLoad) {
+    await loadedFunctions.onMainWindowLoad({ window }, reason);
+  }
+}
+
+async function onMainWindowUnload({ window }, reason) {
+  if (loadedFunctions.onMainWindowUnload) {
+    await loadedFunctions.onMainWindowUnload({ window }, reason);
+  }
+}
+
 function install(data, reason) {
   if (loadedFunctions.install) {
     loadedFunctions.install(data, reason);
