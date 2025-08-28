@@ -1,4 +1,4 @@
-name: Development Auto-Release (Private Repo)
+name: Development Auto-Release
 
 on:
   push:
@@ -11,8 +11,6 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 jobs:
   release:
@@ -30,7 +28,7 @@ jobs:
       
       - name: Build Development XPI with Auto-Update URL
         run: |
-          # 创建带有 GitHub Pages 更新 URL 的 manifest
+          # 创建带有开发更新 URL 的 manifest
           cat > addon/manifest.json << EOF
           {
             "manifest_version": 2,
@@ -41,7 +39,7 @@ jobs:
             "applications": {
               "zotero": {
                 "id": "research-navigator@zotero.org",
-                "update_url": "https://sperwe.github.io/Zotero-Research-Navigator/update-dev.json",
+                "update_url": "https://raw.githubusercontent.com/sperwe/Zotero-Research-Navigator/fix/typescript-errors-and-functionality/update-dev.json",
                 "strict_min_version": "7.0",
                 "strict_max_version": "7.1.*"
               }
@@ -67,22 +65,19 @@ jobs:
           body: |
             Development build from commit ${{ github.sha }}
             
-            This build auto-updates from GitHub Pages.
+            This build auto-updates from the development branch.
       
-      - name: Prepare GitHub Pages
+      - name: Update development update.json
         run: |
-          mkdir -p gh-pages
-          cp build/zotero-research-navigator.xpi gh-pages/zotero-research-navigator-dev.xpi
-          
-          # 创建 update.json 指向 GitHub Pages
-          cat > gh-pages/update-dev.json << EOF
+          # 更新 update-dev.json 指向最新的 release
+          cat > update-dev.json << EOF
           {
             "addons": {
               "research-navigator@zotero.org": {
                 "updates": [
                   {
                     "version": "${{ steps.version.outputs.VERSION }}",
-                    "update_link": "https://sperwe.github.io/Zotero-Research-Navigator/zotero-research-navigator-dev.xpi",
+                    "update_link": "https://github.com/sperwe/Zotero-Research-Navigator/releases/download/dev-v${{ steps.version.outputs.VERSION }}-${{ github.run_number }}/zotero-research-navigator.xpi",
                     "applications": {
                       "zotero": {
                         "strict_min_version": "7.0",
@@ -96,24 +91,8 @@ jobs:
           }
           EOF
           
-          # 创建 index.html
-          cat > gh-pages/index.html << EOF
-          <!DOCTYPE html>
-          <html>
-          <head>
-              <title>Zotero Research Navigator Dev Builds</title>
-          </head>
-          <body>
-              <h1>Zotero Research Navigator Development Builds</h1>
-              <p>Latest version: ${{ steps.version.outputs.VERSION }}</p>
-              <p><a href="zotero-research-navigator-dev.xpi">Download Latest Dev Build</a></p>
-          </body>
-          </html>
-          EOF
-      
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./gh-pages
-          keep_files: false
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add update-dev.json
+          git commit -m "chore: update dev release to v${{ steps.version.outputs.VERSION }}.${{ github.run_number }}"
+          git push
