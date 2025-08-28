@@ -72,29 +72,25 @@ export class UIManager {
     while (retries < 30) {
       // 最多等待3秒
       const win = Zotero.getMainWindow();
-      if (win && win.document && win.document.readyState === "complete" && win.document.body) {
+      if (win && win.document) {
+        // 降低要求，只要有 document 就继续
+        Zotero.log(`[UIManager] Window state: readyState=${win.document.readyState}, hasBody=${!!win.document.body}`, "info");
         return;
       }
       await new Promise((resolve) => {
-        const win = Zotero.getMainWindow();
-        if (win && win.setTimeout) {
-          win.setTimeout(resolve, 100);
-        } else {
-          // Fallback: 使用 Zotero 的延迟机制
-          resolve();
-        }
+        setTimeout(resolve, 100);
       });
       retries++;
     }
     
-    // 如果还没准备好，尝试使用当前窗口
+    // 最后的尝试
     const win = Zotero.getMainWindow();
-    if (win && win.document) {
-      Zotero.log("[UIManager] Main window not fully ready, proceeding anyway", "warn");
+    if (win) {
+      Zotero.log("[UIManager] Main window exists but document not ready, proceeding anyway", "warn");
       return;
     }
     
-    throw new Error("Main window not ready");
+    throw new Error("Main window not available after 3 seconds");
   }
 
   /**
@@ -182,13 +178,25 @@ export class UIManager {
    */
   private getAllWindows(): Window[] {
     const windows: Window[] = [];
-    const enumerator = Services.wm.getEnumerator("navigator:browser");
-
-    while (enumerator.hasMoreElements()) {
-      const win = enumerator.getNext();
-      if (win.Zotero) {
-        windows.push(win);
+    
+    // 首先确保主窗口被包含
+    const mainWindow = Zotero.getMainWindow();
+    if (mainWindow) {
+      windows.push(mainWindow);
+      Zotero.log("[UIManager] Added main window", "info");
+    }
+    
+    // 然后检查其他窗口
+    try {
+      const enumerator = Services.wm.getEnumerator("navigator:browser");
+      while (enumerator.hasMoreElements()) {
+        const win = enumerator.getNext();
+        if (win && win.Zotero && win !== mainWindow) {
+          windows.push(win);
+        }
       }
+    } catch (e) {
+      Zotero.log("[UIManager] Error enumerating windows: " + e, "warn");
     }
 
     return windows;
