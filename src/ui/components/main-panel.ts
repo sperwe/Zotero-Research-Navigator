@@ -78,16 +78,23 @@ export class MainPanel {
     // 创建调整大小的手柄
     this.createResizers(doc);
 
-    // 添加样式
-    this.injectStyles(doc);
-    
     // 添加到文档
     if (doc.body) {
       doc.body.appendChild(this.container);
+      // 在添加到 DOM 后注入样式
+      this.injectStyles(doc);
     } else {
-      // 如果 body 还不存在，添加到根元素
-      const root = doc.documentElement || doc;
-      root.appendChild(this.container);
+      // 如果 body 还不存在，等待 DOM 准备好
+      Zotero.log("[MainPanel] Waiting for document.body", "info");
+      const checkBody = () => {
+        if (doc.body) {
+          doc.body.appendChild(this.container);
+          this.injectStyles(doc);
+        } else {
+          this.window.setTimeout(checkBody, 50);
+        }
+      };
+      checkBody();
     }
 
     // 初始化标签页
@@ -396,7 +403,21 @@ export class MainPanel {
       }
     `;
     
-    doc.head.appendChild(style);
+    // 确保 head 存在
+    if (doc.head) {
+      doc.head.appendChild(style);
+    } else if (doc.documentElement) {
+      // 如果 head 不存在，添加到 documentElement
+      doc.documentElement.appendChild(style);
+    } else {
+      // 最后的备选方案：等待 DOM 加载完成
+      Zotero.log("[MainPanel] Warning: doc.head not available, deferring style injection", "warning");
+      this.window.setTimeout(() => {
+        if (doc.head) {
+          doc.head.appendChild(style);
+        }
+      }, 100);
+    }
   }
 
   /**

@@ -210,7 +210,11 @@ export class ResizablePanel {
         `,
       },
     });
-    doc.head.appendChild(style);
+    if (doc.head) {
+      doc.head.appendChild(style);
+    } else if (doc.documentElement) {
+      doc.documentElement.appendChild(style);
+    }
   }
 
   /**
