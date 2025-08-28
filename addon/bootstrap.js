@@ -1330,6 +1330,9 @@ var ResearchNavigator = {
     
     // 获取树形数据
     const sessions = this.getTreeData();
+    if (!this.currentSessionId && sessions.length > 0) {
+      this.currentSessionId = sessions[0].id;
+    }
     
     if (sessions.length === 0) {
       const emptyMsg = doc.createXULElement('vbox');
@@ -1540,6 +1543,33 @@ var ResearchNavigator = {
     if (!this.compactMode) headerEl.appendChild(iconEl);
     headerEl.appendChild(titleEl);
     headerEl.appendChild(countEl);
+
+    // 删除该会话按钮
+    const delSessBtn = doc.createXULElement('button');
+    delSessBtn.setAttribute('label', '✕');
+    delSessBtn.setAttribute('tooltiptext', 'Delete this session');
+    delSessBtn.style.cssText = 'margin-left: 8px; min-width: 20px;';
+    delSessBtn.addEventListener('command', () => {
+      // 设置当前会话为目标会话并删除
+      this.currentSessionId = session.id;
+      this.treeRoots = this.treeRoots.filter(r => r.sessionId !== session.id);
+      const remain = new Map();
+      this.nodeMap.forEach((n, id) => { if (n.sessionId !== session.id) remain.set(id, n); });
+      this.nodeMap = remain;
+      // 重建 itemNodeMap
+      this.itemNodeMap.clear();
+      this.treeRoots.forEach(root => {
+        const stack = [root];
+        while (stack.length) {
+          const n = stack.pop();
+          if (!this.itemNodeMap.has(n.itemId)) this.itemNodeMap.set(n.itemId, []);
+          this.itemNodeMap.get(n.itemId).push(n);
+          if (n.children) n.children.forEach(c => stack.push(c));
+        }
+      });
+      this.updateTreeDisplay();
+    });
+    headerEl.appendChild(delSessBtn);
     
     // 树容器
     const treeEl = doc.createXULElement('vbox');
@@ -1760,6 +1790,7 @@ var ResearchNavigator = {
         if (n.children) n.children.forEach(c => stack.push(c));
       }
       this.updateTreeDisplay();
+      this.updateNavigationButtons();
     });
     contentEl.appendChild(delBtn);
     
@@ -1969,6 +2000,17 @@ var ResearchNavigator = {
     });
     popup.appendChild(openNotes);
     
+    // 移除所有关联笔记（不删除 Note Items，仅断开关联）
+    const unlinkNotes = doc.createXULElement('menuitem');
+    unlinkNotes.setAttribute('label', 'Unlink Notes');
+    unlinkNotes.setAttribute('disabled', !(node.noteItemIds && node.noteItemIds.length));
+    unlinkNotes.addEventListener('command', async () => {
+      node.noteItemIds = [];
+      await this.db.saveNode(node);
+      this.updateTreeDisplay();
+    });
+    popup.appendChild(unlinkNotes);
+    
     // 显示菜单
     popup.openPopupAtScreen(event.screenX, event.screenY, true);
     doc.documentElement.appendChild(popup);
@@ -2081,10 +2123,10 @@ var ResearchNavigator = {
   // 清除所有历史
   async clearAllHistory() {
     if (confirm('Are you sure you want to clear all history? This cannot be undone.')) {
-      await this.db.clearAll();
+      try { await this.db.clearAll(); } catch (e) {}
       this.treeRoots = [];
-      this.nodeMap.clear();
-      this.itemNodeMap.clear();
+      this.nodeMap = new Map();
+      this.itemNodeMap = new Map();
       this.tabNodeMap.clear();
       this.navigationHistory = [];
       this.navigationIndex = -1;
