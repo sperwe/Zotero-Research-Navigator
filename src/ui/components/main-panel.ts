@@ -305,7 +305,7 @@ export class MainPanel {
     content.innerHTML = "";
 
     // 渲染标签页
-    const tabContent = tab.render();
+    const tabContent = tab.create();
     content.appendChild(tabContent);
   }
 
