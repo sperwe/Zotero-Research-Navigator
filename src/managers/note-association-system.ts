@@ -114,6 +114,34 @@ export class NoteAssociationSystem {
       relationType = "created_during";
     }
 
+    // 规则2.5：附件的笔记（增强）
+    // 如果当前节点是附件（PDF、EPUB、HTML等），检查笔记的父项是否是该附件的父项
+    if (this.autoAssociationRules.sameParent && !shouldAssociate) {
+      try {
+        const currentItem = await Zotero.Items.getAsync(currentNode.itemId);
+        if (currentItem && currentItem.isAttachment()) {
+          // 当前节点是附件
+          const attachmentParentID = currentItem.parentID;
+          if (attachmentParentID && note.parentID === attachmentParentID) {
+            // 笔记和附件有相同的父项
+            shouldAssociate = true;
+            relationType = "created_during";
+            Zotero.log(`[NoteAssociationSystem] Auto-associating note to attachment ${currentNode.title}`, "info");
+          }
+        } else if (currentItem && note.parentID) {
+          // 检查笔记的父项是否是当前项的附件
+          const noteParent = await Zotero.Items.getAsync(note.parentID);
+          if (noteParent && noteParent.isAttachment() && noteParent.parentID === currentNode.itemId) {
+            shouldAssociate = true;
+            relationType = "created_during";
+            Zotero.log(`[NoteAssociationSystem] Auto-associating note to parent item via attachment`, "info");
+          }
+        }
+      } catch (error) {
+        Zotero.logError(`[NoteAssociationSystem] Error checking attachment association: ${error}`);
+      }
+    }
+
     // 规则3：标题提及
     if (this.autoAssociationRules.titleMention) {
       const noteContent = note.getNote();
@@ -157,6 +185,9 @@ export class NoteAssociationSystem {
 
     // 增强关联信息
     const associations: NoteAssociation[] = [];
+    const processedNoteIds = new Set<number>();
+    
+    // 1. 获取直接关联的笔记
     for (const relation of relations) {
       try {
         const note = await Zotero.Items.getAsync(relation.noteId);
@@ -165,6 +196,7 @@ export class NoteAssociationSystem {
             ...relation,
             note,
           });
+          processedNoteIds.add(relation.noteId);
         }
       } catch (error) {
         // 笔记可能已被删除
@@ -173,6 +205,49 @@ export class NoteAssociationSystem {
           "warn",
         );
       }
+    }
+
+    // 2. 如果节点是附件，也获取同父项的笔记
+    try {
+      const node = await this.databaseService.getHistoryNode(nodeId);
+      if (node) {
+        const item = await Zotero.Items.getAsync(node.itemId);
+        if (item && item.isAttachment() && item.parentID) {
+          // 获取附件的父项
+          const parentItem = await Zotero.Items.getAsync(item.parentID);
+          if (parentItem) {
+            // 获取父项的所有笔记
+            const parentNoteIds = parentItem.getNotes();
+            for (const noteId of parentNoteIds) {
+              if (!processedNoteIds.has(noteId)) {
+                const note = await Zotero.Items.getAsync(noteId);
+                if (note) {
+                  // 创建一个虚拟关联
+                  associations.push({
+                    id: -1, // 虚拟ID
+                    noteId: note.id,
+                    nodeId: nodeId,
+                    relationType: "created_during" as RelationType,
+                    createdAt: new Date(),
+                    context: {
+                      sessionId: node.sessionId,
+                      autoAssociated: true,
+                      fromAttachmentParent: true
+                    },
+                    note,
+                  });
+                  Zotero.log(
+                    `[NoteAssociationSystem] Found attachment parent note: ${note.id} for node: ${nodeId}`,
+                    "info"
+                  );
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      Zotero.logError(`[NoteAssociationSystem] Error getting attachment notes: ${error}`);
     }
 
     return associations;
