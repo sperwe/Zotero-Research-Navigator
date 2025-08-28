@@ -48,19 +48,13 @@ export class MainPanel {
       top: 80px;
       width: ${this.width}px;
       height: ${this.height}px;
-      background: rgba(255, 255, 255, 0.98);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      border-radius: 12px;
-      box-shadow: 
-        0 20px 25px -5px rgba(0, 0, 0, 0.1),
-        0 10px 10px -5px rgba(0, 0, 0, 0.04),
-        0 0 0 1px rgba(0, 0, 0, 0.05);
+      background: var(--panel-background);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
       display: none;
       flex-direction: column;
       z-index: 1000;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     `;
 
     // 创建标题栏
@@ -103,8 +97,6 @@ export class MainPanel {
           
           if (targetBody) {
             targetBody.appendChild(this.container);
-            // 在添加到 DOM 后注入样式
-            this.injectStyles(targetDoc);
             
             // 初始化标签页
             await this.initializeTabs();
@@ -145,13 +137,10 @@ export class MainPanel {
     header.style.cssText = `
       display: flex;
       align-items: center;
-      padding: 16px 20px;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--panel-border);
       cursor: move;
-      background: linear-gradient(to bottom, rgba(0, 0, 0, 0.02), transparent);
-      border-radius: 12px 12px 0 0;
-      user-select: none;
-      -webkit-user-select: none;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.05), transparent);
     `;
 
     // 标题
@@ -160,11 +149,10 @@ export class MainPanel {
     title.style.cssText = `
       margin: 0;
       flex: 1;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 600;
-      color: #1a1a1a;
+      color: var(--text-color);
       letter-spacing: -0.3px;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     `;
     header.appendChild(title);
 
@@ -174,28 +162,12 @@ export class MainPanel {
     dockButton.innerHTML = this.isDocked ? "⬜" : "📌";
     dockButton.title = this.isDocked ? "Undock" : "Dock to sidebar";
     dockButton.style.cssText = `
-      background: transparent;
+      background: none;
       border: none;
-      padding: 6px;
+      padding: 4px;
       cursor: pointer;
-      opacity: 0.6;
-      transition: all 0.2s ease;
-      border-radius: 4px;
-      font-size: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 28px;
-      height: 28px;
+      opacity: 0.7;
     `;
-    dockButton.addEventListener("mouseenter", () => {
-      dockButton.style.opacity = "1";
-      dockButton.style.background = "rgba(0, 0, 0, 0.06)";
-    });
-    dockButton.addEventListener("mouseleave", () => {
-      dockButton.style.opacity = "0.6";
-      dockButton.style.background = "transparent";
-    });
     dockButton.addEventListener("click", () => this.toggleDock());
     header.appendChild(dockButton);
 
@@ -205,31 +177,12 @@ export class MainPanel {
     closeButton.innerHTML = "✕";
     closeButton.title = "Close";
     closeButton.style.cssText = `
-      background: transparent;
+      background: none;
       border: none;
-      padding: 6px;
+      padding: 4px;
       cursor: pointer;
-      opacity: 0.6;
-      transition: all 0.2s ease;
-      border-radius: 4px;
-      font-size: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 28px;
-      height: 28px;
-      margin-left: 8px;
+      opacity: 0.7;
     `;
-    closeButton.addEventListener("mouseenter", () => {
-      closeButton.style.opacity = "1";
-      closeButton.style.background = "rgba(220, 53, 69, 0.1)";
-      closeButton.style.color = "#dc3545";
-    });
-    closeButton.addEventListener("mouseleave", () => {
-      closeButton.style.opacity = "0.6";
-      closeButton.style.background = "transparent";
-      closeButton.style.color = "inherit";
-    });
     closeButton.addEventListener("click", () => this.hide());
     header.appendChild(closeButton);
 
@@ -247,10 +200,9 @@ export class MainPanel {
     tabBar.className = "panel-tab-bar";
     tabBar.style.cssText = `
       display: flex;
-      padding: 0 12px;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-      background: rgba(0, 0, 0, 0.02);
-      backdrop-filter: blur(5px);
+      padding: 0 8px;
+      border-bottom: 1px solid var(--panel-border);
+      background: var(--panel-background);
     `;
 
     const tabs = [
@@ -266,29 +218,13 @@ export class MainPanel {
         background: none;
         border: none;
         border-bottom: 2px solid transparent;
-        padding: 10px 16px;
+        padding: 8px 12px;
         cursor: pointer;
-        font-size: 14px;
-        color: ${tab.id === this.activeTab ? "#0066cc" : "#666"};
-        font-weight: ${tab.id === this.activeTab ? "500" : "400"};
-        opacity: ${tab.id === this.activeTab ? "1" : "0.8"};
-        transition: all 0.2s ease;
-        ${tab.id === this.activeTab ? "border-bottom-color: #0066cc;" : ""}
+        font-size: 13px;
+        color: var(--text-color);
+        opacity: ${tab.id === this.activeTab ? "1" : "0.7"};
+        ${tab.id === this.activeTab ? "border-bottom-color: var(--accent-blue);" : ""}
       `;
-      
-      tabButton.addEventListener("mouseenter", () => {
-        if (tab.id !== this.activeTab) {
-          tabButton.style.opacity = "1";
-          tabButton.style.color = "#0066cc";
-        }
-      });
-      
-      tabButton.addEventListener("mouseleave", () => {
-        if (tab.id !== this.activeTab) {
-          tabButton.style.opacity = "0.8";
-          tabButton.style.color = "#666";
-        }
-      });
       tabButton.innerHTML = `${tab.icon} ${tab.label}`;
 
       tabButton.addEventListener("click", () => this.switchTab(tab.id));
@@ -333,121 +269,6 @@ export class MainPanel {
 
     this.makeResizable(resizer);
     this.container.appendChild(resizer);
-  }
-  
-  /**
-   * 注入样式
-   */
-  private injectStyles(doc: Document): void {
-    const styleId = "research-navigator-panel-styles";
-    if (doc.getElementById(styleId)) return;
-    
-    const style = doc.createElement("style");
-    style.id = styleId;
-    style.textContent = `
-      @keyframes fadeInScale {
-        from {
-          opacity: 0;
-          transform: scale(0.95) translateY(-10px);
-        }
-        to {
-          opacity: 1;
-          transform: scale(1) translateY(0);
-        }
-      }
-      
-      @keyframes fadeOutScale {
-        from {
-          opacity: 1;
-          transform: scale(1) translateY(0);
-        }
-        to {
-          opacity: 0;
-          transform: scale(0.95) translateY(-10px);
-        }
-      }
-      
-      .research-navigator-panel.animate-in {
-        animation: fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-      }
-      
-      .research-navigator-panel.animate-out {
-        animation: fadeOutScale 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-      }
-      
-      /* 滚动条美化 */
-      .research-navigator-panel ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-      
-      .research-navigator-panel ::-webkit-scrollbar-track {
-        background: rgba(0, 0, 0, 0.03);
-        border-radius: 4px;
-      }
-      
-      .research-navigator-panel ::-webkit-scrollbar-thumb {
-        background: rgba(0, 0, 0, 0.15);
-        border-radius: 4px;
-        transition: background 0.2s;
-      }
-      
-      .research-navigator-panel ::-webkit-scrollbar-thumb:hover {
-        background: rgba(0, 0, 0, 0.25);
-      }
-      
-      /* 输入框美化 */
-      .research-navigator-panel input[type="text"],
-      .research-navigator-panel input[type="search"] {
-        background: rgba(0, 0, 0, 0.04);
-        border: 1px solid rgba(0, 0, 0, 0.08);
-        border-radius: 6px;
-        padding: 8px 12px;
-        font-size: 14px;
-        transition: all 0.2s ease;
-        outline: none;
-      }
-      
-      .research-navigator-panel input[type="text"]:focus,
-      .research-navigator-panel input[type="search"]:focus {
-        background: white;
-        border-color: #0066cc;
-        box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
-      }
-      
-      /* 按钮美化 */
-      .research-navigator-panel button {
-        transition: all 0.2s ease;
-      }
-      
-      .research-navigator-panel button:active {
-        transform: scale(0.95);
-      }
-      
-      /* 悬浮时的阴影增强 */
-      .research-navigator-panel:hover {
-        box-shadow: 
-          0 25px 30px -5px rgba(0, 0, 0, 0.12),
-          0 15px 15px -5px rgba(0, 0, 0, 0.06),
-          0 0 0 1px rgba(0, 0, 0, 0.08);
-      }
-    `;
-    
-    // 确保 head 存在
-    if (doc.head) {
-      doc.head.appendChild(style);
-    } else if (doc.documentElement) {
-      // 如果 head 不存在，添加到 documentElement
-      doc.documentElement.appendChild(style);
-    } else {
-      // 最后的备选方案：等待 DOM 加载完成
-      Zotero.log("[MainPanel] Warning: doc.head not available, deferring style injection", "warning");
-      this.window.setTimeout(() => {
-        if (doc.head) {
-          doc.head.appendChild(style);
-        }
-      }, 100);
-    }
   }
 
   /**
@@ -643,54 +464,18 @@ export class MainPanel {
    * 显示面板
    */
   show(): void {
-    if (!this.container) {
-      Zotero.logError("[MainPanel] Cannot show: container is null");
-      return;
-    }
+    if (!this.container) return;
 
-    try {
-      // 确保容器在 DOM 中
-      if (!this.container.parentNode) {
-        Zotero.log("[MainPanel] Container not in DOM, attempting to attach", "info");
-        
-        // 尝试附加到 DOM
-        const mainWindow = Zotero.getMainWindow();
-        if (mainWindow && mainWindow.document && mainWindow.document.body) {
-          mainWindow.document.body.appendChild(this.container);
-          Zotero.log("[MainPanel] Container attached to main window body", "info");
-        } else if (this.window && this.window.document && this.window.document.body) {
-          this.window.document.body.appendChild(this.container);
-          Zotero.log("[MainPanel] Container attached to window body", "info");
-        } else {
-          Zotero.logError("[MainPanel] No document body available to attach container");
-          return;
-        }
-      }
-      
-      // 强制显示
-      this.container.style.display = "flex";
-      this.container.style.visibility = "visible";
-      this.container.style.opacity = "1";
-      
-      // 添加动画类（如果支持）
-      if (this.container.classList) {
-        this.container.classList.add("animate-in");
-        
-        // 移除动画类
-        this.window.setTimeout(() => {
-          if (this.container && this.container.classList) {
-            this.container.classList.remove("animate-in");
-          }
-        }, 300);
-      }
-      
-      this.isVisible = true;
-      this.saveState();
-      
-      Zotero.log(`[MainPanel] Panel shown successfully. Display: ${this.container.style.display}, Visibility: ${this.container.style.visibility}`, "info");
-    } catch (error) {
-      Zotero.logError(`[MainPanel] Error showing panel: ${error}`);
-    }
+    this.container.style.display = "flex";
+    this.container.classList.add("animate-in");
+    this.isVisible = true;
+
+    // 移除动画类
+    setTimeout(() => {
+      this.container?.classList.remove("animate-in");
+    }, 300);
+
+    this.saveState();
   }
 
   /**
@@ -709,7 +494,6 @@ export class MainPanel {
    * 切换显示/隐藏
    */
   toggle(): void {
-    Zotero.log(`[MainPanel] Toggle called. Current visibility: ${this.isVisible}`, "info");
     if (this.isVisible) {
       this.hide();
     } else {
