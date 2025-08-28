@@ -83,25 +83,31 @@ export class MainPanel {
       doc.body.appendChild(this.container);
       // 在添加到 DOM 后注入样式
       this.injectStyles(doc);
+      
+      // 初始化标签页
+      await this.initializeTabs();
+      
+      // 加载保存的状态
+      this.loadState();
     } else {
       // 如果 body 还不存在，等待 DOM 准备好
       Zotero.log("[MainPanel] Waiting for document.body", "info");
-      const checkBody = () => {
+      const checkBody = async () => {
         if (doc.body) {
           doc.body.appendChild(this.container);
           this.injectStyles(doc);
+          
+          // 初始化标签页
+          await this.initializeTabs();
+          
+          // 加载保存的状态
+          this.loadState();
         } else {
           this.window.setTimeout(checkBody, 50);
         }
       };
       checkBody();
     }
-
-    // 初始化标签页
-    await this.initializeTabs();
-
-    // 加载保存的状态
-    this.loadState();
 
     Zotero.log("[MainPanel] Created successfully", "info");
   }
@@ -619,19 +625,33 @@ export class MainPanel {
     }
 
     try {
+      // 确保容器在 DOM 中
+      if (!this.container.parentNode) {
+        Zotero.logError("[MainPanel] Container not in DOM, cannot show");
+        return;
+      }
+      
+      // 强制显示
       this.container.style.display = "flex";
-      this.container.classList.add("animate-in");
+      this.container.style.visibility = "visible";
+      this.container.style.opacity = "1";
+      
+      // 添加动画类（如果支持）
+      if (this.container.classList) {
+        this.container.classList.add("animate-in");
+        
+        // 移除动画类
+        this.window.setTimeout(() => {
+          if (this.container && this.container.classList) {
+            this.container.classList.remove("animate-in");
+          }
+        }, 300);
+      }
+      
       this.isVisible = true;
-
-      // 移除动画类
-      this.window.setTimeout(() => {
-        if (this.container) {
-          this.container.classList.remove("animate-in");
-        }
-      }, 300);
-
       this.saveState();
-      Zotero.log("[MainPanel] Panel shown successfully", "info");
+      
+      Zotero.log(`[MainPanel] Panel shown successfully. Display: ${this.container.style.display}, Visibility: ${this.container.style.visibility}`, "info");
     } catch (error) {
       Zotero.logError(`[MainPanel] Error showing panel: ${error}`);
     }
@@ -653,6 +673,7 @@ export class MainPanel {
    * 切换显示/隐藏
    */
   toggle(): void {
+    Zotero.log(`[MainPanel] Toggle called. Current visibility: ${this.isVisible}`, "info");
     if (this.isVisible) {
       this.hide();
     } else {
