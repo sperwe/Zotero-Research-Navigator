@@ -93,6 +93,7 @@ class TreeNode {
     this.key = '';
     this.doi = '';
     this.abstract = '';
+    this.noteItemIds = [];
   }
   
   generateId() {
@@ -135,7 +136,8 @@ class TreeNode {
       itemType: this.itemType,
       year: this.year,
       key: this.key,
-      doi: this.doi
+      doi: this.doi,
+      noteItemIds: this.noteItemIds
     };
   }
   
@@ -145,6 +147,7 @@ class TreeNode {
     node.timestamp = new Date(data.timestamp);
     node.lastVisit = new Date(data.lastVisit);
     node.children = [];
+    if (!node.noteItemIds) node.noteItemIds = [];
     return node;
   }
 }
@@ -779,6 +782,31 @@ var ResearchNavigator = {
     // 同步标签
     const itemTags = item.getTags().map(t => t.tag);
     newNode.tags = itemTags;
+
+    // 自动关联现有笔记（同一文献或其附件关联的笔记）
+    try {
+      // 对常规条目：直接获取其附属笔记；对附件：尝试关联到父 regular item 的笔记
+      let baseItem = item;
+      if (item.isAttachment() && item.parentItem) {
+        baseItem = Zotero.Items.get(item.parentItem.id) || item;
+      }
+      const attachments = baseItem.getAttachments ? baseItem.getAttachments() : [];
+      const candidateIds = new Set();
+      // 直接检查同图书条目下的 Note
+      const allChildren = (baseItem.getNotes ? baseItem.getNotes() : []).concat(attachments || []);
+      for (let cid of allChildren) {
+        const child = Zotero.Items.get(cid);
+        if (child && child.isNote && child.isNote()) {
+          candidateIds.add(child.id);
+        }
+      }
+      // 若 regular item 本身有 related notes（极少数场景），也可加入
+      // 去重并保存
+      newNode.noteItemIds = Array.from(candidateIds);
+    } catch (e) {
+      this.debug(`Auto-link notes failed: ${e}`);
+      newNode.noteItemIds = newNode.noteItemIds || [];
+    }
     
     // 添加到映射
     this.nodeMap.set(newNode.id, newNode);
@@ -1918,6 +1946,28 @@ var ResearchNavigator = {
       }
     });
     popup.appendChild(showItem);
+    
+    // 分隔符
+    popup.appendChild(doc.createXULElement('menuseparator'));
+    
+    // 打开关联笔记
+    const openNotes = doc.createXULElement('menuitem');
+    openNotes.setAttribute('label', node.noteItemIds && node.noteItemIds.length ? `Open ${node.noteItemIds.length} Linked Notes` : 'No Linked Notes');
+    openNotes.setAttribute('disabled', !(node.noteItemIds && node.noteItemIds.length));
+    openNotes.addEventListener('command', async () => {
+      if (node.noteItemIds && node.noteItemIds.length) {
+        for (let nid of node.noteItemIds) {
+          const note = await Zotero.Items.getAsync(nid);
+          if (note) {
+            var win = Services.wm.getMostRecentWindow("navigator:browser");
+            if (win && win.ZoteroPane) {
+              win.ZoteroPane.selectItem(note.id);
+            }
+          }
+        }
+      }
+    });
+    popup.appendChild(openNotes);
     
     // 显示菜单
     popup.openPopupAtScreen(event.screenX, event.screenY, true);
