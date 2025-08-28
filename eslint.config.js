@@ -1,6 +1,6 @@
 export default [
   {
-    files: ["**/*.js", "**/*.ts", "**/*.mjs", "**/*.cjs"],
+    files: ["**/*.js", "**/*.mjs", "**/*.cjs"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
@@ -15,6 +15,14 @@ export default [
         require: "readonly",
         global: "writable",
         URL: "readonly",
+        Zotero: "readonly",
+        Services: "readonly",
+        Components: "readonly",
+        ChromeUtils: "readonly",
+        Ci: "readonly",
+        Cc: "readonly",
+        Cu: "readonly",
+        dump: "readonly",
       },
     },
     rules: {
@@ -31,6 +39,13 @@ export default [
       "*.min.js",
       "coverage/**",
       ".git/**",
+      "addon/bootstrap-archive/**",
+      "addon/bootstrap-old.js",
+      "clean-build/**",
+      "plugin-development/**",
+      "releases/**",
+      "test-*.js",
+      "debug-*.js",
     ],
   },
 ];
