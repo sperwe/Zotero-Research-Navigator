@@ -7,7 +7,6 @@ import { ClosedTabsManager } from "../../managers/closed-tabs-manager";
 import { NoteAssociationSystem } from "../../managers/note-association-system";
 import { HistoryService } from "../../services/history-service";
 import { HistoryTreeTab } from "./tabs/history-tree-tab";
-import { ClosedTabsTab } from "./tabs/closed-tabs-tab";
 import { NoteRelationsTab } from "./tabs/note-relations-tab";
 
 export interface MainPanelOptions {
@@ -170,7 +169,6 @@ export class MainPanel {
 
     const tabs = [
       { id: "history", label: "History Tree", icon: "🌳" },
-      { id: "closed", label: "Closed Tabs", icon: "💤" },
       { id: "notes", label: "Note Relations", icon: "📝" },
     ];
 
@@ -248,10 +246,7 @@ export class MainPanel {
     this.tabs.set("history", historyTab);
 
     // 已关闭标签页
-    const closedTab = new ClosedTabsTab(this.window, {
-      closedTabsManager: this.options.closedTabsManager,
-    });
-    this.tabs.set("closed", closedTab);
+    // 已关闭标签页功能整合到历史树中，不需要单独标签
 
     // 笔记关联标签页
     const notesTab = new NoteRelationsTab(
@@ -564,6 +559,19 @@ export class MainPanel {
     }
     
     return contentWrapper;
+  }
+  
+  /**
+   * 刷新历史标签页
+   */
+  refreshHistoryTab(): void {
+    const historyTab = this.tabs.get("history");
+    if (historyTab && this.activeTab === "history") {
+      // 触发历史树的刷新
+      if ('refresh' in historyTab && typeof historyTab.refresh === 'function') {
+        (historyTab as any).refresh();
+      }
+    }
   }
   
   /**

@@ -192,6 +192,23 @@ export class HistoryService {
   }
 
   /**
+   * 获取所有会话
+   */
+  getAllSessions(): any[] {
+    // TODO: 从数据库获取所有会话
+    // 临时返回当前会话
+    if (this.currentSessionId) {
+      return [{
+        id: this.currentSessionId,
+        name: `Session ${new Date().toLocaleDateString()}`,
+        startTime: new Date(),
+        nodes: []
+      }];
+    }
+    return [];
+  }
+  
+  /**
    * 获取节点的子节点
    */
   getChildNodes(nodeId: string): HistoryNode[] {

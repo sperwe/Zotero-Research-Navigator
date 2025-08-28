@@ -104,7 +104,7 @@ export class HistoryTreeTab {
   /**
    * 刷新历史树
    */
-  private async refresh(): Promise<void> {
+  async refresh(): Promise<void> {
     if (!this.treeContainer) return;
     
     const doc = this.window.document;

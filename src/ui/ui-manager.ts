@@ -480,7 +480,7 @@ export class UIManager {
    */
   refreshHistoryTab(): void {
     if (this.mainPanel) {
-      // TODO: 实现刷新逻辑
+      this.mainPanel.refreshHistoryTab();
       Zotero.log("[UIManager] Refreshing history tab", "info");
     }
   }

@@ -42,8 +42,22 @@ export class SidebarManager {
   private registerSidebar(): void {
     const doc = this.window.document;
     
-    // 查找侧边栏容器
-    const sidebarContainer = doc.getElementById("zotero-view-splitter");
+    // 查找侧边栏容器 - 尝试多个可能的位置
+    let sidebarContainer = doc.getElementById("zotero-view-splitter");
+    if (!sidebarContainer) {
+      sidebarContainer = doc.getElementById("zotero-items-splitter");
+    }
+    if (!sidebarContainer) {
+      // 查找主要的内容区域
+      const mainHbox = doc.getElementById("zotero-main-hbox") || 
+                      doc.querySelector("#main-window > hbox") ||
+                      doc.querySelector("hbox#browser");
+      if (mainHbox) {
+        // 在主容器的最右侧添加
+        sidebarContainer = mainHbox;
+      }
+    }
+    
     if (!sidebarContainer) {
       throw new Error("Sidebar container not found");
     }
