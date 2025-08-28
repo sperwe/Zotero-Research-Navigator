@@ -60,8 +60,8 @@ async function startup(
     (Zotero as any).ResearchNavigator.debug = {
       getNavigator: () => navigator,
       checkStatus: () => {
-        console.log("Navigator initialized:", navigator.initialized);
-        console.log("Navigator instance:", navigator);
+        Zotero.log(`Navigator initialized: ${navigator.initialized}`, "info");
+        Zotero.log(`Navigator instance: ${navigator}`, "info");
         return navigator.initialized;
       }
     };

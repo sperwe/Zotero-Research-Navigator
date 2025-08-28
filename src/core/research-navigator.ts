@@ -399,15 +399,15 @@ export class ResearchNavigator {
           latestSession: sessions[0]
         };
         
-        console.log("=== Research Navigator Statistics ===");
-        console.log(`Sessions: ${stats.sessions}`);
-        console.log(`Total History Nodes: ${stats.totalNodes}`);
-        console.log(`Closed Tabs: ${stats.closedTabs}`);
-        console.log(`Current Session: ${stats.currentSessionId}`);
+        Zotero.log("=== Research Navigator Statistics ===", "info");
+        Zotero.log(`Sessions: ${stats.sessions}`, "info");
+        Zotero.log(`Total History Nodes: ${stats.totalNodes}`, "info");
+        Zotero.log(`Closed Tabs: ${stats.closedTabs}`, "info");
+        Zotero.log(`Current Session: ${stats.currentSessionId}`, "info");
         if (stats.latestSession) {
-          console.log(`Latest Session: ${stats.latestSession.name} (${stats.latestSession.nodeCount} nodes)`);
+          Zotero.log(`Latest Session: ${stats.latestSession.name} (${stats.latestSession.nodeCount} nodes)`, "info");
         }
-        console.log("=====================================");
+        Zotero.log("=====================================", "info");
         
         return stats;
       },
@@ -417,9 +417,9 @@ export class ResearchNavigator {
         const selected = Zotero.getActiveZoteroPane()?.getSelectedItems();
         if (selected && selected.length > 0) {
           await this.handleItemSelect(selected.map(item => item.id));
-          console.log("Created history node for selected item");
+          Zotero.log("Created history node for selected item", "info");
         } else {
-          console.log("No item selected");
+          Zotero.log("No item selected", "warning");
         }
       },
       
