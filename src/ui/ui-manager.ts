@@ -8,6 +8,7 @@ import { NoteAssociationSystem } from "../managers/note-association-system";
 import { HistoryService } from "../services/history-service";
 import { MainPanel } from "./components/main-panel";
 import { ToolbarButton } from "./components/toolbar-button";
+import { registerMenuItems } from "../modules/ui-components/menu-items";
 import { config } from "../../package.json";
 
 export interface UIManagerOptions {
@@ -123,6 +124,12 @@ export class UIManager {
 
       // 添加样式
       this.injectStyles(win);
+
+      // 注册菜单入口（Tools 菜单、右键菜单）
+      await this.registerMenus(win);
+
+      // 创建右下角浮动按钮（作为常驻入口）
+      this.createFloatingButton(win);
       Zotero.log("[UIManager] Window initialization completed", "info");
     } catch (error) {
       Zotero.logError(error);
@@ -214,6 +221,35 @@ export class UIManager {
         }
       }
       
+      /* 右下角浮动按钮样式 */
+      #research-navigator-floating-button {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1000;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: #3182ce;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s;
+      }
+
+      #research-navigator-floating-button:hover {
+        transform: scale(1.08);
+        background: #2563eb;
+      }
+
+      #research-navigator-floating-button img {
+        width: 24px;
+        height: 24px;
+        filter: brightness(0) invert(1);
+      }
+
       /* 动画 */
       @keyframes slideIn {
         from {
@@ -237,6 +273,66 @@ export class UIManager {
       // 如果 head 还不存在，稍后重试
       const root = doc.documentElement || doc;
       root.appendChild(style);
+    }
+  }
+
+  /**
+   * 注册菜单（Tools 菜单、右键菜单）
+   */
+  private async registerMenus(win: Window): Promise<void> {
+    try {
+      await registerMenuItems(win as any, {
+        onOpenHistory: () => this.toggleMainPanel(),
+        onClearHistory: () => {
+          // 简化：提示用户使用面板内清空功能或后续实现
+          this.showNotification("Use panel to clear history (coming soon)", "info");
+        },
+        onExportHistory: async () => {
+          try {
+            const nodes = await this.historyService.getCurrentSessionNodes();
+            const json = JSON.stringify(nodes, null, 2);
+            const filePicker = (Components.classes[
+              "@mozilla.org/filepicker;1"
+            ] as any).createInstance(Components.interfaces.nsIFilePicker);
+            filePicker.init(null, "Export Research History", Components.interfaces.nsIFilePicker.modeSave);
+            filePicker.appendFilter("JSON Files", "*.json");
+            filePicker.defaultString = `research-history-${new Date().toISOString().split("T")[0]}.json`;
+            const result = await new Promise((resolve) => filePicker.open(resolve));
+            if (result === Components.interfaces.nsIFilePicker.returnOK) {
+              Zotero.File.putContents(filePicker.file, json);
+              this.showNotification("History exported", "success");
+            }
+          } catch (e) {
+            Zotero.logError(e);
+            this.showNotification("Export failed", "error");
+          }
+        },
+      });
+    } catch (e) {
+      Zotero.log(`[UIManager] Register menus failed: ${e}`, "warn");
+    }
+  }
+
+  /**
+   * 创建右下角浮动按钮
+   */
+  private createFloatingButton(win: Window): void {
+    try {
+      const doc = win.document;
+      if (doc.getElementById("research-navigator-floating-button")) return;
+
+      const container = doc.createElement("div");
+      container.id = "research-navigator-floating-button";
+      const icon = doc.createElement("img");
+      icon.src = `chrome://${config.addonRef}/content/icons/icon.svg`;
+      container.appendChild(icon);
+
+      container.addEventListener("click", () => this.toggleMainPanel());
+
+      const root = doc.getElementById("main-window") || doc.body || doc.documentElement;
+      root.appendChild(container);
+    } catch (e) {
+      Zotero.log(`[UIManager] Create floating button failed: ${e}`, "warn");
     }
   }
 
