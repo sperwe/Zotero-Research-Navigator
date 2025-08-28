@@ -301,12 +301,23 @@ export class MainPanel {
     const content = this.container?.querySelector(".panel-content");
     if (!content) return;
 
+    const doc = this.window.document;
+
     // 清空内容
     content.innerHTML = "";
 
     // 渲染标签页
-    const tabContent = tab.create();
-    content.appendChild(tabContent);
+    if ('create' in tab && typeof tab.create === 'function') {
+      // 某些标签页使用 create(container) 方法
+      const container = doc.createElement('div');
+      container.style.cssText = 'height: 100%; width: 100%;';
+      content.appendChild(container);
+      (tab as any).create(container);
+    } else if ('render' in tab && typeof tab.render === 'function') {
+      // 其他标签页可能使用 render() 方法
+      const tabContent = (tab as any).render();
+      content.appendChild(tabContent);
+    }
   }
 
   /**
