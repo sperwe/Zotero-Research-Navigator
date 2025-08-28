@@ -9,6 +9,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
     
     strategy:
       matrix:
@@ -17,6 +20,8 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        persist-credentials: false
     
     - name: Setup Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
