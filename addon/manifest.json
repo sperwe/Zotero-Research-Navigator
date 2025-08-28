@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Zotero Research Navigator",
-  "version": "2.0.3",
+  "version": "2.1.0",
   "description": "Track research history and enhance note navigation in Zotero",
   "homepage_url": "https://github.com/sperwe/Zotero-Research-Navigator",
   "applications": {
