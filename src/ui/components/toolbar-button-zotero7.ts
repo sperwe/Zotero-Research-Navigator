@@ -6,9 +6,11 @@
 export class ToolbarButtonZotero7 {
   private window: Window;
   private button: any = null;
+  private onPanelToggle: (() => void) | null = null;
 
-  constructor(window: Window) {
+  constructor(window: Window, options?: { onPanelToggle?: () => void }) {
     this.window = window;
+    this.onPanelToggle = options?.onPanelToggle || null;
   }
 
   async create(): Promise<void> {
@@ -33,13 +35,26 @@ export class ToolbarButtonZotero7 {
     this.button.setAttribute("data-l10n-id", "research-navigator-button");
     this.button.setAttribute("tooltiptext", "Research Navigator");
     
-    // 设置图标样式
-    this.button.style.listStyleImage = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path fill="context-fill" d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 1.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11zm0 2a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm0 1.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></svg>')`;
+    // 设置图标样式 - 使用一个导航/历史图标
+    this.button.style.listStyleImage = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path fill="context-fill" fill-opacity="context-fill-opacity" d="M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2zM3 8a5 5 0 0 1 8.66-3.41L11 5.24V3h1v4H8V6h2.24l-.9.9A4 4 0 1 0 12 8h1a5 5 0 0 1-10 0z"/><circle cx="8" cy="8" r="1" fill="context-fill"/></svg>')`;
+    
+    // 添加悬停效果
+    this.button.addEventListener("mouseenter", () => {
+      this.button.style.opacity = "0.8";
+    });
+    
+    this.button.addEventListener("mouseleave", () => {
+      this.button.style.opacity = "1";
+    });
     
     // 点击事件
     this.button.addEventListener("command", (event: Event) => {
       Zotero.log("[ToolbarButtonZotero7] Button clicked", "info");
-      this.showPanel();
+      if (this.onPanelToggle) {
+        this.onPanelToggle();
+      } else {
+        this.showPanel();
+      }
     });
     
     // 找到最佳插入位置
