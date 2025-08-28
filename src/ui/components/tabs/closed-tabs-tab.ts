@@ -14,13 +14,9 @@ export class ClosedTabsTab {
     private options: ClosedTabsTabOptions,
   ) {}
 
-  async initialize(): Promise<void> {}
-
-  render(): HTMLElement {
+  create(container: HTMLElement): void {
     const doc = this.window.document;
-    const container = doc.createElement("div");
     container.innerHTML = "<p>Closed tabs view coming soon...</p>";
-    return container;
   }
 
   onHide(): void {}
