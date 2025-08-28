@@ -301,7 +301,7 @@ export class ClosedTabsManager {
    */
   private getZoteroTabs(): any {
     const win = Zotero.getMainWindow();
-    return win?.Zotero_Tabs;
+    return win?.Zotero_Tabs || null;
   }
 
   /**

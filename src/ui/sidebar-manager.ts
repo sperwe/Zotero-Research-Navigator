@@ -261,20 +261,8 @@ export class SidebarManager {
       this.sidebarPane.style.width = `${savedWidth}px`;
     }
     
-    // 监听宽度变化
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === "attributes" && mutation.attributeName === "width") {
-          const newWidth = parseInt(this.sidebarPane.getAttribute("width") || "350");
-          Zotero.Prefs.set("extensions.zotero.researchnavigator.sidebarWidth", newWidth);
-        }
-      });
-    });
-    
-    observer.observe(this.sidebarPane, {
-      attributes: true,
-      attributeFilter: ["width"]
-    });
+    // 监听宽度变化 - 使用 Zotero 的方式
+    // MutationObserver 在 Zotero 环境中不可用
   }
   
   /**

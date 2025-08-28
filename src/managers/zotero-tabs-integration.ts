@@ -3,7 +3,7 @@
  * 深度集成 Zotero 的标签页系统
  */
 
-declare const Zotero_Tabs: any;
+// Zotero_Tabs 需要从窗口对象获取
 
 export interface ZoteroTabData {
   id: string;
@@ -25,26 +25,45 @@ export interface ZoteroClosedTabGroup {
 export class ZoteroTabsIntegration {
   private historyChangeListeners: Set<() => void> = new Set();
   private originalUndoClose: any;
+  private Zotero_Tabs: any;
   
   constructor() {
-    this.setupHooks();
+    // 延迟初始化，等待 Zotero_Tabs 可用
+    const win = Zotero.getMainWindow();
+    if (win && win.setTimeout) {
+      win.setTimeout(() => this.setupHooks(), 1000);
+    } else {
+      // 立即尝试
+      this.setupHooks();
+    }
+  }
+  
+  /**
+   * 获取 Zotero_Tabs 对象
+   */
+  private getZoteroTabs(): any {
+    const win = Zotero.getMainWindow();
+    return win?.Zotero_Tabs || null;
   }
   
   /**
    * 设置钩子以监听标签页变化
    */
   private setupHooks(): void {
-    if (typeof Zotero_Tabs === "undefined") {
+    this.Zotero_Tabs = this.getZoteroTabs();
+    if (!this.Zotero_Tabs) {
       Zotero.log("[ZoteroTabsIntegration] Zotero_Tabs not available", "warn");
       return;
     }
     
+    const Zotero_Tabs = this.Zotero_Tabs;
+    
     // 保存原始方法
-    this.originalUndoClose = Zotero_Tabs.undoClose;
+    this.originalUndoClose = this.Zotero_Tabs.undoClose;
     
     // 监听标签页关闭
-    const originalClose = Zotero_Tabs.close;
-    Zotero_Tabs.close = (tabID: string) => {
+    const originalClose = this.Zotero_Tabs.close;
+    this.Zotero_Tabs.close = (tabID: string) => {
       const tabData = this.getTabData(tabID);
       const result = originalClose.call(Zotero_Tabs, tabID);
       
@@ -56,7 +75,7 @@ export class ZoteroTabsIntegration {
     };
     
     // 监听撤销关闭
-    Zotero_Tabs.undoClose = () => {
+    this.Zotero_Tabs.undoClose = () => {
       const result = this.originalUndoClose.call(Zotero_Tabs);
       this.onHistoryChanged();
       return result;
@@ -69,17 +88,17 @@ export class ZoteroTabsIntegration {
    * 获取标签页数据
    */
   private getTabData(tabID: string): ZoteroTabData | null {
-    if (!Zotero_Tabs._tabs || !Zotero_Tabs._tabs[tabID]) {
+    if (!this.Zotero_Tabs || !this.this.Zotero_Tabs._tabs || !this.this.Zotero_Tabs._tabs[tabID]) {
       return null;
     }
     
-    const tab = Zotero_Tabs._tabs[tabID];
+    const tab = this.this.Zotero_Tabs._tabs[tabID];
     return {
       id: tabID,
       type: tab.type,
       title: tab.title || "",
       data: tab.data,
-      index: Zotero_Tabs._getTabIndex(tabID),
+      index: this.this.Zotero_Tabs._getTabIndex(tabID),
       windowId: tab.windowId,
       state: tab.state
     };
@@ -89,16 +108,16 @@ export class ZoteroTabsIntegration {
    * 获取所有已关闭的标签页
    */
   getClosedTabs(): ZoteroClosedTabGroup[] {
-    if (!Zotero_Tabs._history) {
+    if (!this.Zotero_Tabs || !this.this.Zotero_Tabs._history) {
       return [];
     }
     
     const groups: ZoteroClosedTabGroup[] = [];
     
-    // Zotero_Tabs._history 是一个二维数组
+    // this.Zotero_Tabs._history 是一个二维数组
     // 外层数组的每个元素代表一次关闭操作（可能关闭多个标签）
-    for (let i = 0; i < Zotero_Tabs._history.length; i++) {
-      const historyGroup = Zotero_Tabs._history[i];
+    for (let i = 0; i < this.Zotero_Tabs._history.length; i++) {
+      const historyGroup = this.Zotero_Tabs._history[i];
       const tabs: ZoteroTabData[] = [];
       
       for (const tabData of historyGroup) {
@@ -199,7 +218,7 @@ export class ZoteroTabsIntegration {
           if (tabData.data?.libraryID) {
             const library = Zotero.Libraries.get(tabData.data.libraryID);
             if (library) {
-              Zotero_Tabs.add({
+              this.Zotero_Tabs.add({
                 type: "library",
                 data: tabData.data,
                 title: tabData.title
@@ -212,7 +231,7 @@ export class ZoteroTabsIntegration {
         case "search":
           // 恢复搜索
           if (tabData.data?.query) {
-            Zotero_Tabs.add({
+            this.Zotero_Tabs.add({
               type: "search",
               data: tabData.data,
               title: tabData.title
@@ -226,7 +245,7 @@ export class ZoteroTabsIntegration {
           if (tabData.data?.itemID) {
             const item = await Zotero.Items.getAsync(tabData.data.itemID);
             if (item && item.isNote()) {
-              Zotero_Tabs.add({
+              this.Zotero_Tabs.add({
                 type: "note",
                 data: tabData.data,
                 title: tabData.title
@@ -260,7 +279,7 @@ export class ZoteroTabsIntegration {
     // 等待标签页完全加载
     await new Promise(resolve => {
       const checkInterval = setInterval(() => {
-        const tab = Zotero_Tabs._tabs[tabID];
+        const tab = this.Zotero_Tabs._tabs[tabID];
         if (tab && tab.loaded) {
           clearInterval(checkInterval);
           resolve(undefined);
@@ -275,7 +294,7 @@ export class ZoteroTabsIntegration {
     });
     
     // 应用状态
-    const tab = Zotero_Tabs._tabs[tabID];
+    const tab = this.Zotero_Tabs._tabs[tabID];
     if (tab && state) {
       Object.assign(tab.state || {}, state);
     }
@@ -285,8 +304,8 @@ export class ZoteroTabsIntegration {
    * 清空已关闭标签页历史
    */
   clearHistory(): void {
-    if (Zotero_Tabs._history) {
-      Zotero_Tabs._history.length = 0;
+    if (this.Zotero_Tabs._history) {
+      this.Zotero_Tabs._history.length = 0;
       this.onHistoryChanged();
     }
   }
@@ -339,7 +358,7 @@ export class ZoteroTabsIntegration {
   destroy(): void {
     // 恢复原始方法
     if (this.originalUndoClose && Zotero_Tabs) {
-      Zotero_Tabs.undoClose = this.originalUndoClose;
+      this.Zotero_Tabs.undoClose = this.originalUndoClose;
     }
     
     this.historyChangeListeners.clear();
