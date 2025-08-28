@@ -48,6 +48,30 @@ export class ClosedTabsManager {
 
     Zotero.log("[ClosedTabsManager] Initialized", "info");
   }
+  
+  /**
+   * 创建测试历史（仅用于开发测试）
+   */
+  async createTestHistory(): Promise<void> {
+    const Zotero_Tabs = this.getZoteroTabs();
+    if (!Zotero_Tabs || !Zotero_Tabs._history) return;
+    
+    // 添加一些测试历史
+    Zotero_Tabs._history.push([
+      {
+        index: 1,
+        data: {
+          itemID: 123456789  // 一个不存在的项目，会创建幽灵节点
+        }
+      }
+    ]);
+    
+    // 重新同步
+    await this.syncWithZoteroHistory();
+    this.notifyClosedTabsChanged();
+    
+    Zotero.log("[ClosedTabsManager] Test history created", "info");
+  }
 
   /**
    * 从数据库加载已关闭的标签页
@@ -269,7 +293,7 @@ export class ClosedTabsManager {
         const inHistory = Zotero_Tabs._history.some((group: any[]) =>
           group.some(
             (historyItem) =>
-              historyItem.data?.itemID === closedTab.tabData.itemID
+              historyItem.data?.itemID === closedTab.node.itemId
           ),
         );
 

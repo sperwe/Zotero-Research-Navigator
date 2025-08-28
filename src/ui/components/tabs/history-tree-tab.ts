@@ -80,6 +80,19 @@ export class HistoryTreeTab {
     });
     toolbar.appendChild(testBtn);
     
+    // 测试按钮 - 创建测试历史
+    const testHistoryBtn = doc.createElement("button");
+    testHistoryBtn.textContent = "Test Ghost Nodes";
+    testHistoryBtn.style.cssText = `
+      background: #9C27B0;
+      color: white;
+    `;
+    testHistoryBtn.addEventListener("click", async () => {
+      await this.closedTabsManager.createTestHistory();
+      this.refresh();
+    });
+    toolbar.appendChild(testHistoryBtn);
+    
     // 清除已关闭标签页按钮
     const clearClosedBtn = doc.createElement("button");
     clearClosedBtn.textContent = "Clear Closed Tabs";
