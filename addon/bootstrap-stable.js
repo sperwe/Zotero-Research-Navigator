@@ -805,15 +805,19 @@ function shutdown({ id, version, resourceURI, rootURI }, reason) {
   // 清理监听器
   ResearchNavigator.cleanupListeners();
   
-  // 移除监听器
-  Services.wm.removeListener(windowListener);
+  // 移除监听器（测试/无窗口环境下跳过）
+  if (typeof Services !== "undefined" && Services.wm && Services.wm.removeListener) {
+    try { Services.wm.removeListener(windowListener); } catch (e) {}
+  }
   
-  // 移除所有窗口的 UI
-  var windows = Services.wm.getEnumerator("navigator:browser");
-  while (windows.hasMoreElements()) {
-    let win = windows.getNext();
-    if (win.document) {
-      removeUI(win);
+  // 移除所有窗口的 UI（测试/无窗口环境下跳过）
+  if (typeof Services !== "undefined" && Services.wm && Services.wm.getEnumerator) {
+    var windows = Services.wm.getEnumerator("navigator:browser");
+    while (windows.hasMoreElements()) {
+      let win = windows.getNext();
+      if (win.document) {
+        removeUI(win);
+      }
     }
   }
   

@@ -488,8 +488,17 @@ var ResearchNavigator = {
   // 初始化
   async init() {
     this.initSession();
-    await this.db.init();
-    await this.loadHistoryFromDB();
+    // 数据库在测试环境中可能不可用，做容错
+    try {
+      if (Zotero && Zotero.DB && typeof Zotero.DB.queryAsync === 'function') {
+        await this.db.init();
+        await this.loadHistoryFromDB();
+      } else {
+        this.debug('Zotero.DB not available; skipping DB init');
+      }
+    } catch (e) {
+      this.debug(`DB init/load skipped due to error: ${e}`);
+    }
     this.setupShortcuts();
   },
   
@@ -544,12 +553,14 @@ var ResearchNavigator = {
   // 设置快捷键
   setupShortcuts() {
     // 这里需要根据Zotero的具体API来实现
-    // 暂时使用简单的键盘事件监听
-    var windows = Services.wm.getEnumerator("navigator:browser");
-    while (windows.hasMoreElements()) {
-      let win = windows.getNext();
-      if (win.document) {
-        win.document.addEventListener('keydown', this.handleShortcut.bind(this));
+    // 暂时使用简单的键盘事件监听（测试/无窗口环境下跳过）
+    if (typeof Services !== "undefined" && Services.wm && Services.wm.getEnumerator) {
+      var windows = Services.wm.getEnumerator("navigator:browser");
+      while (windows.hasMoreElements()) {
+        let win = windows.getNext();
+        if (win.document) {
+          win.document.addEventListener('keydown', this.handleShortcut.bind(this));
+        }
       }
     }
   },
@@ -2030,23 +2041,29 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
     // 初始化现有标签页
     await ResearchNavigator.initializeTabs();
     
-    // 确保在所有已打开的窗口中添加 UI
-    var windows = Services.wm.getEnumerator("navigator:browser");
-    let windowCount = 0;
-    while (windows.hasMoreElements()) {
-      let win = windows.getNext();
-      windowCount++;
-      ResearchNavigator.debug(`Checking window ${windowCount}...`);
-      if (win.Zotero && win.document.readyState === "complete") {
-        ResearchNavigator.debug(`Adding UI to window ${windowCount}`);
-        addUI(win);
-      } else {
-        ResearchNavigator.debug(`Window ${windowCount} not ready or no Zotero`);
+    // 确保在所有已打开的窗口中添加 UI（测试/无窗口环境下跳过）
+    if (typeof Services !== "undefined" && Services.wm && Services.wm.getEnumerator) {
+      var windows = Services.wm.getEnumerator("navigator:browser");
+      let windowCount = 0;
+      while (windows.hasMoreElements()) {
+        let win = windows.getNext();
+        windowCount++;
+        ResearchNavigator.debug(`Checking window ${windowCount}...`);
+        if (win.Zotero && win.document.readyState === "complete") {
+          ResearchNavigator.debug(`Adding UI to window ${windowCount}`);
+          addUI(win);
+        } else {
+          ResearchNavigator.debug(`Window ${windowCount} not ready or no Zotero`);
+        }
       }
+      
+      // 监听新窗口
+      if (Services.wm.addListener) {
+        Services.wm.addListener(windowListener);
+      }
+    } else {
+      ResearchNavigator.debug("Services.wm not available; skipping UI injection in headless env");
     }
-    
-    // 监听新窗口
-    Services.wm.addListener(windowListener);
     
     ResearchNavigator.debug('Research Navigator started successfully');
   } catch (e) {
@@ -2066,15 +2083,19 @@ function shutdown({ id, version, resourceURI, rootURI }, reason) {
   // 清理监听器
   ResearchNavigator.cleanupListeners();
   
-  // 移除监听器
-  Services.wm.removeListener(windowListener);
+  // 移除监听器（测试/无窗口环境下跳过）
+  if (typeof Services !== "undefined" && Services.wm && Services.wm.removeListener) {
+    try { Services.wm.removeListener(windowListener); } catch (e) {}
+  }
   
-  // 移除所有窗口的 UI
-  var windows = Services.wm.getEnumerator("navigator:browser");
-  while (windows.hasMoreElements()) {
-    let win = windows.getNext();
-    if (win.document) {
-      removeUI(win);
+  // 移除所有窗口的 UI（测试/无窗口环境下跳过）
+  if (typeof Services !== "undefined" && Services.wm && Services.wm.getEnumerator) {
+    var windows = Services.wm.getEnumerator("navigator:browser");
+    while (windows.hasMoreElements()) {
+      let win = windows.getNext();
+      if (win.document) {
+        removeUI(win);
+      }
     }
   }
   
