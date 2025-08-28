@@ -75,6 +75,12 @@ interface Window {
     ...args: any[]
   ): Window;
   Zotero?: typeof Zotero;
+  ZoteroPane?: {
+    selectItem: (itemID: number, inLibraryRoot?: boolean) => Promise<void>;
+    itemsView?: any;
+    [key: string]: any;
+  };
+  setTimeout?: (callback: Function, delay: number) => number;
 }
 
 declare const Services: {

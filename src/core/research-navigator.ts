@@ -121,6 +121,8 @@ export class ResearchNavigator {
     const notifierID = Zotero.Notifier.registerObserver({
       notify: async (event: string, type: string, ids: number[] | string[], extraData?: any) => {
         try {
+          Zotero.log(`[ResearchNavigator] Event: ${event}, Type: ${type}, IDs: ${ids}`, "info");
+          
           // 处理标签页事件
           if (type === "tab") {
             await this.handleTabEvent(event, ids, extraData);
@@ -143,6 +145,42 @@ export class ResearchNavigator {
     
     // 保存 notifier ID 以便清理
     this.notifierID = notifierID;
+    
+    // 另外添加一个定时器来监听 ZoteroPane 的选择变化
+    this.setupSelectionListener();
+  }
+  
+  /**
+   * 设置选择监听器（备用方案）
+   */
+  private setupSelectionListener(): void {
+    const win = Zotero.getMainWindow();
+    if (!win || !win.ZoteroPane) {
+      Zotero.log("[ResearchNavigator] ZoteroPane not available yet, retrying...", "info");
+      win.setTimeout(() => this.setupSelectionListener(), 1000);
+      return;
+    }
+    
+    // 保存原始的 selectItem 方法
+    const originalSelectItem = win.ZoteroPane.selectItem;
+    
+    // 重写 selectItem 方法
+    win.ZoteroPane.selectItem = async (itemID: number, ...args: any[]) => {
+      // 调用原始方法
+      const result = await originalSelectItem.call(win.ZoteroPane, itemID, ...args);
+      
+      // 记录历史
+      try {
+        Zotero.log(`[ResearchNavigator] Item selected via ZoteroPane: ${itemID}`, "info");
+        await this.handleItemSelect([itemID]);
+      } catch (error) {
+        Zotero.logError(`[ResearchNavigator] Error handling selection: ${error}`);
+      }
+      
+      return result;
+    };
+    
+    Zotero.log("[ResearchNavigator] Selection listener setup completed", "info");
   }
   
   private notifierID?: string;
