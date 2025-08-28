@@ -493,20 +493,20 @@ ${initialContent || "<p>Your notes here...</p>"}
     
     for (const relation of relations) {
       try {
-        const note = await Zotero.Items.getAsync(relation.noteId);
-        if (note) {
+        // relation 已经包含了 note 对象
+        if (relation.note) {
           notes.push({
             id: relation.id,
             noteId: relation.noteId,
             nodeId: relation.nodeId,
             relationType: relation.relationType,
-            title: note.getField('title') || 'Untitled Note',
-            content: note.getNote(),
-            dateModified: new Date(note.getField('dateModified'))
+            title: relation.note.getField('title') || 'Untitled Note',
+            content: relation.note.getNote(),
+            dateModified: new Date(relation.note.getField('dateModified'))
           });
         }
       } catch (error) {
-        Zotero.logError(`Failed to get note ${relation.noteId}: ${error}`);
+        Zotero.logError(`Failed to process note ${relation.noteId}: ${error}`);
       }
     }
     

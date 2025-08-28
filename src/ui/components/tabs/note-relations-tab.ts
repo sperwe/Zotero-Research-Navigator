@@ -300,7 +300,9 @@ export class NoteRelationsTab {
     `;
     
     // 加载关联的笔记
+    Zotero.log(`[NoteRelationsTab] Loading notes for node: ${this.selectedNode.id}`, "info");
     const associatedNotes = await this.noteAssociationSystem.getAssociatedNotes(this.selectedNode.id);
+    Zotero.log(`[NoteRelationsTab] Found ${associatedNotes.length} associated notes`, "info");
     
     if (associatedNotes.length > 0) {
       const associatedSection = this.createAssociatedSection(doc, associatedNotes);
@@ -309,6 +311,7 @@ export class NoteRelationsTab {
     
     // 加载建议的笔记
     const suggestedNotes = await this.noteAssociationSystem.getSuggestedNotes(this.selectedNode.id);
+    Zotero.log(`[NoteRelationsTab] Found ${suggestedNotes.length} suggested notes`, "info");
     
     if (suggestedNotes.length > 0) {
       const suggestedSection = this.createSuggestedSection(doc, suggestedNotes);
@@ -469,15 +472,14 @@ export class NoteRelationsTab {
     title.textContent = note.title;
     titleContainer.appendChild(title);
     
-    if (note.parentItem) {
-      const parent = doc.createElement("div");
-      parent.style.cssText = `
-        font-size: 0.9em;
-        color: var(--fill-secondary);
-      `;
-      parent.textContent = `Parent: ${note.parentItem.getDisplayTitle()}`;
-      titleContainer.appendChild(parent);
-    }
+    // 显示关联类型
+    const relationType = doc.createElement("div");
+    relationType.style.cssText = `
+      font-size: 0.9em;
+      color: var(--fill-secondary);
+    `;
+    relationType.textContent = `Type: ${note.relationType}`;
+    titleContainer.appendChild(relationType);
     
     header.appendChild(titleContainer);
     
@@ -496,8 +498,9 @@ export class NoteRelationsTab {
         font-size: 0.9em;
       `;
       removeBtn.addEventListener("click", async () => {
-        if (this.selectedNode) {
-          await this.noteAssociationSystem.dissociateNote(note.id, this.selectedNode.id);
+        if (this.selectedNode && note.id > 0) {
+          // note.id 是关联记录的ID，不是笔记ID
+          await this.noteAssociationSystem.removeAssociation(note.id);
           await this.loadNodeAssociations();
         }
       });
@@ -511,7 +514,7 @@ export class NoteRelationsTab {
       `;
       addBtn.addEventListener("click", async () => {
         if (this.selectedNode) {
-          await this.noteAssociationSystem.associateNote(note.id, this.selectedNode.id);
+          await this.noteAssociationSystem.associateNote(note.noteId, this.selectedNode.id, "manual");
           await this.loadNodeAssociations();
         }
       });
@@ -525,7 +528,12 @@ export class NoteRelationsTab {
       font-size: 0.9em;
     `;
     openBtn.addEventListener("click", () => {
-      Zotero.openNoteWindow(note.id);
+      // 打开笔记窗口
+      const noteItem = Zotero.Items.get(note.noteId);
+      if (noteItem) {
+        const libraryID = noteItem.libraryID;
+        const noteWindow = Zotero.getMainWindow().Zotero_Browser.noteEditor.open(note.noteId, libraryID);
+      }
     });
     actions.appendChild(openBtn);
     
@@ -561,11 +569,7 @@ export class NoteRelationsTab {
     date.textContent = `Modified: ${note.dateModified.toLocaleDateString()}`;
     meta.appendChild(date);
     
-    if (note.tags.length > 0) {
-      const tags = doc.createElement("span");
-      tags.textContent = `Tags: ${note.tags.slice(0, 3).join(", ")}${note.tags.length > 3 ? "..." : ""}`;
-      meta.appendChild(tags);
-    }
+    // 移除 tags 相关代码，因为 AssociatedNote 接口中没有 tags 属性
     
     card.appendChild(meta);
     
