@@ -77,8 +77,8 @@ export class ToolbarButton {
       }
     });
 
-    // 插入到工具栏
-    toolbar.parentNode?.insertBefore(this.button, toolbar.nextSibling);
+    // 插入到工具栏内部，确保可见
+    toolbar.appendChild(this.button);
 
     // 更新菜单内容
     this.updateMenu();

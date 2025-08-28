@@ -196,7 +196,7 @@ export class UIManager {
     style.textContent = `
       /* Research Navigator 全局样式 */
       .research-navigator-button {
-        list-style-image: url(chrome://researchnavigator/content/icons/icon.png);
+        list-style-image: url(chrome://researchnavigator/content/icons/icon.svg);
       }
       
       .research-navigator-panel {
