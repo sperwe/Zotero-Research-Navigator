@@ -259,11 +259,6 @@ export class MainPanel {
     );
     this.tabs.set("notes", notesTab);
 
-    // 初始化所有标签页
-    for (const tab of this.tabs.values()) {
-      await tab.initialize();
-    }
-
     // 显示初始标签页
     this.showTab(this.activeTab);
   }
