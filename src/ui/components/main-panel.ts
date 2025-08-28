@@ -307,16 +307,15 @@ export class MainPanel {
     content.innerHTML = "";
 
     // 渲染标签页
-    if ('create' in tab && typeof tab.create === 'function') {
-      // 某些标签页使用 create(container) 方法
-      const container = doc.createElement('div');
-      container.style.cssText = 'height: 100%; width: 100%;';
-      content.appendChild(container);
+    const container = doc.createElement('div');
+    container.style.cssText = 'height: 100%; width: 100%;';
+    content.appendChild(container);
+    
+    // 所有标签页都应该有 create 方法
+    if (tab && typeof (tab as any).create === 'function') {
       (tab as any).create(container);
-    } else if ('render' in tab && typeof tab.render === 'function') {
-      // 其他标签页可能使用 render() 方法
-      const tabContent = (tab as any).render();
-      content.appendChild(tabContent);
+    } else {
+      Zotero.logError(`Tab ${tabId} does not have a create method`);
     }
   }
 
