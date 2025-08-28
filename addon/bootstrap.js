@@ -93,6 +93,14 @@ class TreeNode {
     this.key = '';
     this.doi = '';
     this.abstract = '';
+    
+    // 标签页状态
+    this.isClosed = false;
+    this.closedAt = null;
+    this.closedContext = null;
+    
+    // 笔记关联
+    this.hasNotes = false;
   }
   
   generateId() {
@@ -161,13 +169,30 @@ class DatabaseManager {
     if (this.initialized) return;
     
     try {
+      // 创建主历史表
       await Zotero.DB.queryAsync(
         `CREATE TABLE IF NOT EXISTS ${this.tableName} (
           id TEXT PRIMARY KEY,
           data TEXT NOT NULL,
           timestamp INTEGER NOT NULL,
           sessionId TEXT NOT NULL,
-          itemId INTEGER NOT NULL
+          itemId INTEGER NOT NULL,
+          status TEXT DEFAULT 'open',
+          closedAt INTEGER,
+          closedContext TEXT
+        )`
+      );
+      
+      // 创建笔记关联表
+      await Zotero.DB.queryAsync(
+        `CREATE TABLE IF NOT EXISTS research_navigator_note_relations (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          noteId INTEGER NOT NULL,
+          nodeId TEXT NOT NULL,
+          relationType TEXT DEFAULT 'created_during',
+          createdAt INTEGER NOT NULL,
+          context TEXT,
+          UNIQUE(noteId, nodeId)
         )`
       );
       
@@ -183,8 +208,18 @@ class DatabaseManager {
         `CREATE INDEX IF NOT EXISTS idx_timestamp ON ${this.tableName} (timestamp)`
       );
       
+      await Zotero.DB.queryAsync(
+        `CREATE INDEX IF NOT EXISTS idx_note_relations_note 
+         ON research_navigator_note_relations (noteId)`
+      );
+      
+      await Zotero.DB.queryAsync(
+        `CREATE INDEX IF NOT EXISTS idx_note_relations_node 
+         ON research_navigator_note_relations (nodeId)`
+      );
+      
       this.initialized = true;
-      ResearchNavigator.debug('Database initialized');
+      ResearchNavigator.debug('Database initialized with note relations support');
     } catch (e) {
       ResearchNavigator.debug(`Database init error: ${e}`);
     }
@@ -285,6 +320,103 @@ class DatabaseManager {
     } catch (e) {
       ResearchNavigator.debug(`Import data error: ${e}`);
       return false;
+    }
+  }
+  
+  // 笔记关联方法
+  async createNoteRelation(relation) {
+    try {
+      await Zotero.DB.queryAsync(
+        `INSERT INTO research_navigator_note_relations 
+         (noteId, nodeId, relationType, createdAt, context)
+         VALUES (?, ?, ?, ?, ?)`,
+        [
+          relation.noteId,
+          relation.nodeId,
+          relation.relationType || 'created_during',
+          Date.now(),
+          JSON.stringify(relation.context || {})
+        ]
+      );
+      return true;
+    } catch (e) {
+      ResearchNavigator.debug(`Create note relation error: ${e}`);
+      return false;
+    }
+  }
+  
+  async getNoteRelation(noteId, nodeId) {
+    try {
+      const result = await Zotero.DB.queryAsync(
+        `SELECT * FROM research_navigator_note_relations
+         WHERE noteId = ? AND nodeId = ?`,
+        [noteId, nodeId]
+      );
+      
+      if (result.length > 0) {
+        const row = result[0];
+        return {
+          ...row,
+          createdAt: new Date(row.createdAt),
+          context: JSON.parse(row.context || '{}')
+        };
+      }
+      return null;
+    } catch (e) {
+      ResearchNavigator.debug(`Get note relation error: ${e}`);
+      return null;
+    }
+  }
+  
+  async getNoteRelationsForNode(nodeId) {
+    try {
+      const result = await Zotero.DB.queryAsync(
+        `SELECT * FROM research_navigator_note_relations
+         WHERE nodeId = ?
+         ORDER BY createdAt DESC`,
+        [nodeId]
+      );
+      
+      return result.map(row => ({
+        ...row,
+        createdAt: new Date(row.createdAt),
+        context: JSON.parse(row.context || '{}')
+      }));
+    } catch (e) {
+      ResearchNavigator.debug(`Get note relations error: ${e}`);
+      return [];
+    }
+  }
+  
+  async removeNoteRelation(noteId, nodeId) {
+    try {
+      await Zotero.DB.queryAsync(
+        `DELETE FROM research_navigator_note_relations
+         WHERE noteId = ? AND nodeId = ?`,
+        [noteId, nodeId]
+      );
+      return true;
+    } catch (e) {
+      ResearchNavigator.debug(`Remove note relation error: ${e}`);
+      return false;
+    }
+  }
+  
+  async getAllNoteRelations() {
+    try {
+      const result = await Zotero.DB.queryAsync(
+        `SELECT * FROM research_navigator_note_relations
+         ORDER BY createdAt DESC`
+      );
+      
+      return result.map(row => ({
+        ...row,
+        createdAt: new Date(row.createdAt),
+        context: JSON.parse(row.context || '{}')
+      }));
+    } catch (e) {
+      ResearchNavigator.debug(`Get all note relations error: ${e}`);
+      return [];
     }
   }
 }
@@ -435,6 +567,10 @@ var ResearchNavigator = {
   searchEngine: new SearchEngine(),
   recommendationEngine: new RecommendationEngine(),
   
+  // 新增：UI 组件
+  toolbarManager: null,
+  resizablePanel: null,
+  
   // 树状历史数据
   treeRoots: [],
   nodeMap: new Map(),
@@ -491,6 +627,25 @@ var ResearchNavigator = {
     await this.db.init();
     await this.loadHistoryFromDB();
     this.setupShortcuts();
+    
+    // 初始化新的 UI 组件
+    await this.initializeUIComponents();
+  },
+  
+  // 初始化 UI 组件
+  async initializeUIComponents() {
+    try {
+      // 暂时注释掉，等待模块系统完善
+      // this.toolbarManager = new ToolbarManager(this);
+      // await this.toolbarManager.init();
+      
+      // this.resizablePanel = new ResizablePanel(this);
+      // await this.resizablePanel.init();
+      
+      this.debug('UI components initialized');
+    } catch (e) {
+      this.debug(`Error initializing UI components: ${e}`);
+    }
   },
   
   // 初始化会话
@@ -2007,6 +2162,58 @@ var ResearchNavigator = {
     );
     
     return stats;
+  },
+  
+  // 添加工具栏按钮
+  addToolbarButton() {
+    try {
+      var doc = Services.wm.getMostRecentWindow('navigator:browser').document;
+      
+      // 查找参考位置
+      var referenceNode = doc.getElementById('zotero-tb-advanced-search');
+      if (!referenceNode) {
+        this.debug('Reference toolbar button not found');
+        return;
+      }
+      
+      // 创建按钮
+      var button = doc.createXULElement('toolbarbutton');
+      button.id = 'research-navigator-toolbar-button';
+      button.className = 'zotero-tb-button';
+      button.setAttribute('tooltiptext', 'Research Navigator');
+      button.setAttribute('type', 'button');
+      button.style.listStyleImage = `url(chrome://${ResearchNavigator.id}/content/icons/icon.png)`;
+      
+      // 点击事件
+      button.addEventListener('command', () => {
+        this.togglePanel();
+      });
+      
+      // 插入按钮
+      referenceNode.parentNode.insertBefore(button, referenceNode.nextSibling);
+      this.addedElementIds.push(button.id);
+      
+      this.debug('Toolbar button added successfully');
+    } catch (e) {
+      this.debug(`Error adding toolbar button: ${e}`);
+    }
+  },
+  
+  // 切换面板显示
+  togglePanel() {
+    const panels = this.historyPanels;
+    if (panels.size === 0) {
+      this.debug('No panels to toggle');
+      return;
+    }
+    
+    // 切换第一个面板的显示状态
+    const firstPanel = panels.values().next().value;
+    if (firstPanel) {
+      const isVisible = firstPanel.style.display !== 'none';
+      firstPanel.style.display = isVisible ? 'none' : 'block';
+      this.debug(`Panel ${isVisible ? 'hidden' : 'shown'}`);
+    }
   }
 };
 
@@ -2075,6 +2282,9 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
     
     // 监听新窗口
     Services.wm.addListener(windowListener);
+    
+    // 添加工具栏按钮
+    ResearchNavigator.addToolbarButton();
     
     ResearchNavigator.debug('Research Navigator started successfully');
   } catch (e) {
