@@ -863,7 +863,7 @@ var ResearchNavigator = {
       this.nodeMap.delete(n.id);
       const itemNodes = this.itemNodeMap.get(n.itemId);
       if (itemNodes) {
-        this.itemNodeMap.set(n.itemId, itemNodes.filter(in => in.id !== n.id));
+        this.itemNodeMap.set(n.itemId, itemNodes.filter(item => item.id !== n.id));
       }
       n.children.forEach(child => deleteRecursive(child));
     };
