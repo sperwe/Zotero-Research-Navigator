@@ -24,36 +24,24 @@ export class ToolbarButtonZotero7 {
     Zotero.log("[ToolbarButtonZotero7] Starting creation...", "info");
     
     // 基于 Zotero 7 源代码，主要工具栏是 zotero-items-toolbar
-    // 查找 Zotero 工具栏 - 尝试多个位置
-    let toolbar = null;
+    // 它在 <hbox id="zotero-items-toolbar"> 内
+    let toolbar = doc.getElementById("zotero-items-toolbar");
     
-    // Zotero 7 的可能位置
-    const toolbarSelectors = [
-      'zotero-items-toolbar',
-      'zotero-toolbar', 
-      'zotero-collections-toolbar',
-      'zotero-main-toolbar',
-      'zotero-tb-advanced-search'
-    ];
-    
-    for (const id of toolbarSelectors) {
-      toolbar = doc.getElementById(id);
-      if (toolbar) {
-        Zotero.log(`[ToolbarButtonZotero7] Found toolbar with id: ${id}`, "info");
-        break;
-      }
+    if (!toolbar) {
+      // 备选：尝试集合工具栏
+      toolbar = doc.getElementById("zotero-collections-toolbar");
     }
     
     if (!toolbar) {
-      // 尝试查询选择器
-      toolbar = doc.querySelector('toolbar') || doc.querySelector('[role="toolbar"]');
+      // 最后尝试：标签栏工具栏
+      toolbar = doc.getElementById("zotero-tabs-toolbar");
     }
     
     if (!toolbar) {
-      throw new Error("No toolbar found in document");
+      throw new Error("No Zotero toolbar found");
     }
     
-    Zotero.log("[ToolbarButtonZotero7] Found toolbar: zotero-items-toolbar", "info");
+    Zotero.log(`[ToolbarButtonZotero7] Found toolbar: ${toolbar.id}`, "info");
     
     // 创建按钮 - 使用 Zotero 的标准样式
     this.button = doc.createXULElement("toolbarbutton");
@@ -96,39 +84,59 @@ export class ToolbarButtonZotero7 {
     
     if (insertPosition) {
       toolbar.insertBefore(this.button, insertPosition);
+      Zotero.log(`[ToolbarButtonZotero7] Button inserted at specified position`, "info");
     } else {
       // 在搜索框之前插入（spacer 之前）
       const spacer = toolbar.querySelector("spacer[flex='1']");
       if (spacer) {
         toolbar.insertBefore(this.button, spacer);
+        Zotero.log("[ToolbarButtonZotero7] Button inserted before spacer", "info");
       } else {
         // 默认添加到末尾
         toolbar.appendChild(this.button);
+        Zotero.log("[ToolbarButtonZotero7] Button appended to toolbar", "info");
       }
     }
+    
+    // 调试：列出工具栏中的所有子元素
+    const toolbarChildren = Array.from(toolbar.children).map((child: any) => 
+      child.id || child.className || child.tagName
+    );
+    Zotero.log(`[ToolbarButtonZotero7] Toolbar children: ${toolbarChildren.join(", ")}`, "info");
     
     Zotero.log("[ToolbarButtonZotero7] Button created and inserted", "info");
   }
   
   private findInsertPosition(toolbar: any): any {
-    // 按照 Zotero 的布局，我们应该在这些按钮之后插入：
-    // 1. 附件按钮 (zotero-tb-attachment-add)
-    // 2. 笔记按钮 (zotero-tb-note-add)
-    // 3. 标签按钮 (如果存在)
+    const doc = toolbar.ownerDocument;
     
-    const positions = [
-      "#zotero-tb-attachment-add",
-      "#zotero-tb-note-add",
-      "#zotero-tb-tag"
-    ];
+    // 基于 Zotero 7 源代码，最佳位置是在 spacer 之前（笔记按钮之后）
+    // 布局：[add] [attachment] [note] [我们的按钮] <spacer flex="1"/> [search]
     
-    for (const selector of positions) {
-      const element = toolbar.querySelector(selector);
-      if (element && element.nextSibling) {
-        return element.nextSibling;
-      }
+    // 1. 首先尝试找到笔记按钮
+    const noteButton = doc.getElementById("zotero-tb-note-add");
+    if (noteButton && noteButton.nextSibling) {
+      return noteButton.nextSibling;
     }
     
+    // 2. 如果没有笔记按钮，尝试附件按钮
+    const attachmentButton = doc.getElementById("zotero-tb-attachment-add");
+    if (attachmentButton && attachmentButton.nextSibling) {
+      return attachmentButton.nextSibling;
+    }
+    
+    // 3. 尝试找到 spacer（在搜索框之前）
+    const searchBox = doc.getElementById("zotero-tb-search");
+    if (searchBox && searchBox.previousElementSibling?.tagName === "spacer") {
+      return searchBox.previousElementSibling;
+    }
+    
+    // 4. 如果都没找到，在搜索框之前插入
+    if (searchBox) {
+      return searchBox;
+    }
+    
+    // 5. 最后的选择，返回 null 添加到末尾
     return null;
   }
   
