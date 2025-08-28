@@ -88,17 +88,17 @@ export class ZoteroTabsIntegration {
    * 获取标签页数据
    */
   private getTabData(tabID: string): ZoteroTabData | null {
-    if (!this.Zotero_Tabs || !this.this.Zotero_Tabs._tabs || !this.this.Zotero_Tabs._tabs[tabID]) {
+    if (!this.Zotero_Tabs || !this.Zotero_Tabs._tabs || !this.Zotero_Tabs._tabs[tabID]) {
       return null;
     }
     
-    const tab = this.this.Zotero_Tabs._tabs[tabID];
+    const tab = this.Zotero_Tabs._tabs[tabID];
     return {
       id: tabID,
       type: tab.type,
       title: tab.title || "",
       data: tab.data,
-      index: this.this.Zotero_Tabs._getTabIndex(tabID),
+      index: this.Zotero_Tabs._getTabIndex(tabID),
       windowId: tab.windowId,
       state: tab.state
     };
@@ -108,7 +108,7 @@ export class ZoteroTabsIntegration {
    * 获取所有已关闭的标签页
    */
   getClosedTabs(): ZoteroClosedTabGroup[] {
-    if (!this.Zotero_Tabs || !this.this.Zotero_Tabs._history) {
+    if (!this.Zotero_Tabs || !this.Zotero_Tabs._history) {
       return [];
     }
     

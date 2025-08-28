@@ -67,6 +67,19 @@ export class HistoryTreeTab {
     refreshBtn.addEventListener("click", () => this.refresh());
     toolbar.appendChild(refreshBtn);
     
+    // 测试按钮 - 创建测试数据
+    const testBtn = doc.createElement("button");
+    testBtn.textContent = "Create Test Data";
+    testBtn.style.cssText = `
+      background: #4CAF50;
+      color: white;
+    `;
+    testBtn.addEventListener("click", async () => {
+      await this.createTestData();
+      this.refresh();
+    });
+    toolbar.appendChild(testBtn);
+    
     // 清除已关闭标签页按钮
     const clearClosedBtn = doc.createElement("button");
     clearClosedBtn.textContent = "Clear Closed Tabs";
@@ -506,6 +519,35 @@ export class HistoryTreeTab {
     
     // TODO: 实现搜索过滤
     Zotero.log("[HistoryTreeTab] Search: " + query, "info");
+  }
+  
+  /**
+   * 创建测试数据
+   */
+  private async createTestData(): Promise<void> {
+    Zotero.log("[HistoryTreeTab] Creating test data...", "info");
+    
+    try {
+      // 获取库中的一些项目
+      const items = await Zotero.Items.getAll(1); // 从库 1 获取所有项目
+      const regularItems = items.filter((item: any) => item.isRegularItem()).slice(0, 5); // 获取前5个常规项目
+      
+      if (regularItems.length === 0) {
+        this.window.alert("No items found in library. Please add some items first.");
+        return;
+      }
+      
+      // 为每个项目创建历史节点
+      for (const item of regularItems) {
+        await this.historyService.createOrUpdateNode(item.id);
+        Zotero.log(`[HistoryTreeTab] Created history node for item: ${item.getField('title')}`, "info");
+      }
+      
+      this.window.alert(`Created history nodes for ${regularItems.length} items`);
+    } catch (error) {
+      Zotero.logError(`[HistoryTreeTab] Failed to create test data: ${error}`);
+      this.window.alert(`Failed to create test data: ${error}`);
+    }
   }
   
   /**

@@ -47,8 +47,12 @@ export class DatabaseService {
   private initialized = false;
 
   async initialize(): Promise<void> {
-    if (this.initialized) return;
+    if (this.initialized) {
+      Zotero.log("[DatabaseService] Already initialized", "info");
+      return;
+    }
 
+    Zotero.log("[DatabaseService] Starting initialization...", "info");
     try {
       // 创建历史表
       await Zotero.DB.queryAsync(`
@@ -163,9 +167,11 @@ export class DatabaseService {
    * 获取所有历史节点
    */
   async getAllHistoryNodes(): Promise<HistoryNode[]> {
+    Zotero.log("[DatabaseService] Getting all history nodes...", "info");
     const results = await Zotero.DB.queryAsync(
       `SELECT * FROM ${this.HISTORY_TABLE} ORDER BY timestamp DESC`,
     );
+    Zotero.log(`[DatabaseService] Found ${results.length} history nodes in database`, "info");
 
     return results.map((row) => this.rowToHistoryNode(row));
   }
