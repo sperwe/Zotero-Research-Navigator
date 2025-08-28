@@ -50,12 +50,24 @@ async function startup(
       "info",
     );
 
-    // 获取插件实例并初始化
+    // 获取插件实例
     const navigator = getResearchNavigator();
-    await navigator.initialize();
-
-    // 注册到全局对象，便于调试和外部访问
+    
+    // 立即注册到全局对象，便于调试和外部访问
     (Zotero as any).ResearchNavigator = navigator;
+    
+    // 添加基本的调试方法（在初始化之前就可用）
+    (Zotero as any).ResearchNavigator.debug = {
+      getNavigator: () => navigator,
+      checkStatus: () => {
+        console.log("Navigator initialized:", navigator.initialized);
+        console.log("Navigator instance:", navigator);
+        return navigator.initialized;
+      }
+    };
+    
+    // 初始化
+    await navigator.initialize();
 
     // 注册关闭处理器
     Zotero.addShutdownListener(shutdown);

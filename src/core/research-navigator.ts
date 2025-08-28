@@ -378,10 +378,13 @@ export class ResearchNavigator {
     // 添加到 Zotero 全局对象
     const zotero = Zotero as any;
     
-    // 检查历史记录数量
-    zotero.ResearchNavigator = {
-      ...zotero.ResearchNavigator,
-      
+    // 确保对象存在
+    if (!zotero.ResearchNavigator) {
+      zotero.ResearchNavigator = {};
+    }
+    
+    // 添加调试方法
+    Object.assign(zotero.ResearchNavigator, {
       // 获取历史记录统计
       getStats: async () => {
         const sessions = await this.historyService.getAllSessions();
@@ -428,8 +431,23 @@ export class ResearchNavigator {
       // 获取当前选中的项目
       getSelectedItems: () => {
         return Zotero.getActiveZoteroPane()?.getSelectedItems();
-      }
-    };
+      },
+      
+      // 获取导航器实例
+      getInstance: () => this,
+      
+      // 检查初始化状态
+      isInitialized: () => this.initialized,
+      
+      // 获取服务实例
+      getServices: () => ({
+        database: this.databaseService,
+        history: this.historyService,
+        closedTabs: this.closedTabsManager,
+        noteAssociation: this.noteAssociationSystem,
+        ui: this.uiManager
+      })
+    });
     
     Zotero.log("[Research Navigator] Debug methods added. Use Zotero.ResearchNavigator.getStats() in console", "info");
   }
