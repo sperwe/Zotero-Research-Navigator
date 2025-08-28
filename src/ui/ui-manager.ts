@@ -110,9 +110,13 @@ export class UIManager {
         
         // 尝试使用 Zotero 7 专用的工具栏按钮
         try {
-          const buttonZ7 = new ToolbarButtonZotero7(win);
+          const buttonZ7 = new ToolbarButtonZotero7(win, {
+            onPanelToggle: () => this.toggleMainPanel()
+          });
           await buttonZ7.create();
           Zotero.log("[UIManager] Toolbar button Zotero7 created successfully", "info");
+          // 保存引用以便清理
+          (this as any)._buttonZ7 = buttonZ7;
         } catch (z7Error) {
           Zotero.log("[UIManager] Failed to create Zotero7 button, trying V2: " + z7Error, "warn");
           

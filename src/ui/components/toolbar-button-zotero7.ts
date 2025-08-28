@@ -35,8 +35,8 @@ export class ToolbarButtonZotero7 {
     this.button.setAttribute("data-l10n-id", "research-navigator-button");
     this.button.setAttribute("tooltiptext", "Research Navigator");
     
-    // 设置图标样式 - 使用一个导航/历史图标
-    this.button.style.listStyleImage = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path fill="context-fill" fill-opacity="context-fill-opacity" d="M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2zM3 8a5 5 0 0 1 8.66-3.41L11 5.24V3h1v4H8V6h2.24l-.9.9A4 4 0 1 0 12 8h1a5 5 0 0 1-10 0z"/><circle cx="8" cy="8" r="1" fill="context-fill"/></svg>')`;
+    // 设置图标样式 - 使用树形图标
+    this.button.style.listStyleImage = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path fill="context-fill" fill-opacity="context-fill-opacity" d="M3 2v3h2v7H3v3h4v-3h2V8h2v4H9v3h4v-3h-2V7H9V5h2V2H9v3H7V2H3zm1 1h2v1H4V3zm6 0h2v1h-2V3zm0 9h2v1h-2v-1zM4 12h2v1H4v-1z"/></svg>')`;
     
     // 添加悬停效果
     this.button.addEventListener("mouseenter", () => {
