@@ -286,7 +286,7 @@ export class NoteRelationsTab {
     }
     
     // 加载建议的笔记
-    const suggestedNotes = await this.noteAssociationSystem.getSuggestedAssociations(this.selectedNode.id);
+    const suggestedNotes = await this.noteAssociationSystem.getSuggestedNotes(this.selectedNode.id);
     
     if (suggestedNotes.length > 0) {
       const suggestedSection = this.createSuggestedSection(doc, suggestedNotes);
@@ -733,6 +733,26 @@ export class NoteRelationsTab {
       }, 300);
     });
     
+    // 遮罩层
+    const overlay = doc.createElement("div");
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 9999;
+    `;
+    
+    // 关闭对话框函数（提前定义）
+    const closeDialog = () => {
+      doc.body.removeChild(overlay);
+      doc.body.removeChild(dialog);
+    };
+    
+    overlay.addEventListener("click", closeDialog);
+    
     // 按钮容器
     const buttonContainer = doc.createElement("div");
     buttonContainer.style.cssText = `
@@ -749,25 +769,6 @@ export class NoteRelationsTab {
     buttonContainer.appendChild(cancelBtn);
     
     dialog.appendChild(buttonContainer);
-    
-    // 遮罩层
-    const overlay = doc.createElement("div");
-    overlay.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 9999;
-    `;
-    overlay.addEventListener("click", closeDialog);
-    
-    // 关闭对话框函数
-    const closeDialog = () => {
-      doc.body.removeChild(overlay);
-      doc.body.removeChild(dialog);
-    };
     
     // 显示对话框
     doc.body.appendChild(overlay);
