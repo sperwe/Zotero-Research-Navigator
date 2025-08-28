@@ -831,19 +831,17 @@ var ResearchNavigator = {
     if (!item) return;
     
     var win = Services.wm.getMostRecentWindow("navigator:browser");
-    if (!win || !win.ZoteroPane) return;
+    if (!win) return;
     
     try {
-      // 先在库中选择项目
-      win.ZoteroPane.selectItem(item.id);
+      let tabOpened = false;
       
       if (item.isAttachment()) {
-        // 如果是附件，处理打开逻辑
-        await this.openOrSwitchToAttachment(win, item);
+        // 如果是附件，直接尝试打开/切换标签页
+        tabOpened = await this.openOrSwitchToAttachment(win, item);
       } else if (item.isRegularItem()) {
         // 如果是常规项目，尝试打开最佳附件
         const attachments = item.getAttachments();
-        let attachmentOpened = false;
         
         // 优先级：PDF > EPUB > HTML
         const priorities = [
@@ -856,13 +854,17 @@ var ResearchNavigator = {
           for (let id of attachments) {
             const attachment = Zotero.Items.get(id);
             if (attachment && priority.check(attachment)) {
-              await this.openOrSwitchToAttachment(win, attachment);
-              attachmentOpened = true;
-              break;
+              tabOpened = await this.openOrSwitchToAttachment(win, attachment);
+              if (tabOpened) break;
             }
           }
-          if (attachmentOpened) break;
+          if (tabOpened) break;
         }
+      }
+      
+      // 只有在没有成功打开/切换标签页时，才在库中选择项目
+      if (!tabOpened && win.ZoteroPane) {
+        win.ZoteroPane.selectItem(item.id);
       }
     } catch (e) {
       this.debug(`Error opening item: ${e}`);
@@ -871,7 +873,7 @@ var ResearchNavigator = {
   
   // 打开或切换到附件
   async openOrSwitchToAttachment(win, attachment) {
-    if (!attachment || !attachment.isAttachment()) return;
+    if (!attachment || !attachment.isAttachment()) return false;
     
     // 检查标签页是否已经打开
     if (win.Zotero_Tabs && win.Zotero_Tabs.getTabIDByItemID) {
@@ -881,7 +883,7 @@ var ResearchNavigator = {
         // 标签页已存在，切换到该标签页
         this.debug(`Switching to existing tab for item ${attachment.id}`);
         win.Zotero_Tabs.select(existingTabID);
-        return;
+        return true; // 成功切换到标签页
       }
     }
     
@@ -893,18 +895,29 @@ var ResearchNavigator = {
       // PDF、EPUB、HTML 快照可以在内部阅读器打开
       try {
         await Zotero.Reader.open(attachment.id);
+        return true; // 成功打开新标签页
       } catch (e) {
         this.debug(`Error opening in reader: ${e}`);
         // 如果 Reader API 失败，尝试旧的方式
         if (attachment.isPDFAttachment()) {
-          Zotero.OpenPDF.openToPage(attachment, null, null);
-        } else {
-          attachment.openAttachment();
+          try {
+            Zotero.OpenPDF.openToPage(attachment, null, null);
+            return true; // 成功打开
+          } catch (e2) {
+            this.debug(`Error with OpenPDF: ${e2}`);
+          }
         }
       }
-    } else {
-      // 其他类型使用默认处理
+    }
+    
+    // 其他类型或失败情况，使用默认处理
+    try {
       attachment.openAttachment();
+      // 对于外部打开的文件，我们也认为是成功的
+      return true;
+    } catch (e) {
+      this.debug(`Error opening attachment: ${e}`);
+      return false;
     }
   },
   
