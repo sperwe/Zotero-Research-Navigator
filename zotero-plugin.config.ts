@@ -34,7 +34,7 @@ export default defineConfig({
         },
         bundle: true,
         target: "firefox115",
-        outfile: `build/addon/bootstrap.js`,
+        outfile: `build/addon/bootstrap-compiled.js`,
         format: "iife",
         banner: {
           js: `// Research Navigator Bootstrap\n// Auto-generated from TypeScript source\n`,

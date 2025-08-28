@@ -3,7 +3,6 @@
  * 提供 Zotero 插件所需的生命周期函数
  */
 
-import { BasicTool } from "zotero-plugin-toolkit";
 import { getResearchNavigator } from "./core/research-navigator";
 import { config } from "../package.json";
 
@@ -33,7 +32,9 @@ async function startup(
 ): Promise<void> {
   try {
     // 等待 Zotero 初始化
-    await BasicTool.waitForZotero();
+    while (typeof Zotero === "undefined" || !Zotero.initialized) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
     
     // 记录启动信息
     Zotero.log(`[Research Navigator] Starting up... Version: ${version}, Reason: ${reason}`, "info");

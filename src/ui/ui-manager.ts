@@ -22,17 +22,28 @@ export class UIManager {
   private toolbarButton: ToolbarButton | null = null;
   private windows = new Set<Window>();
   
-  constructor(private options: UIManagerOptions) {}
+  constructor(
+    private historyService: HistoryService,
+    private closedTabsManager: ClosedTabsManager,
+    private noteAssociationSystem: NoteAssociationSystem
+  ) {
+    Zotero.log("[UIManager] Constructor called", "info");
+  }
   
   async initialize(): Promise<void> {
     if (this.initialized) return;
     
     try {
+      Zotero.log("[UIManager] Starting initialization...", "info");
+      
       // 等待主窗口加载
       await this.waitForMainWindow();
+      Zotero.log("[UIManager] Main window ready", "info");
       
       // 初始化所有已打开的窗口
       const windows = this.getAllWindows();
+      Zotero.log(`[UIManager] Found ${windows.length} windows`, "info");
+      
       for (const win of windows) {
         await this.initializeWindow(win);
       }
@@ -41,7 +52,7 @@ export class UIManager {
       this.registerWindowListener();
       
       this.initialized = true;
-      Zotero.log("[UIManager] Initialized", "info");
+      Zotero.log("[UIManager] Initialization completed", "info");
     } catch (error) {
       Zotero.logError(error);
       throw new Error(`Failed to initialize UI: ${error}`);
@@ -70,33 +81,44 @@ export class UIManager {
   private async initializeWindow(win: Window): Promise<void> {
     if (this.windows.has(win)) return;
     
+    Zotero.log("[UIManager] Initializing window...", "info");
     this.windows.add(win);
     
-    // 创建工具栏按钮
-    if (!this.toolbarButton) {
-      this.toolbarButton = new ToolbarButton(win, {
-        onTogglePanel: () => this.toggleMainPanel(),
-        onQuickNote: () => this.quickCreateNote(),
-        onSearchHistory: () => this.openSearchDialog(),
-        onOpenPreferences: () => this.openPreferences(),
-        closedTabsManager: this.options.closedTabsManager,
-        historyService: this.options.historyService
-      });
-      await this.toolbarButton.create();
+    try {
+      // 创建工具栏按钮
+      if (!this.toolbarButton) {
+        Zotero.log("[UIManager] Creating toolbar button...", "info");
+        this.toolbarButton = new ToolbarButton(win, {
+          onTogglePanel: () => this.toggleMainPanel(),
+          onQuickNote: () => this.quickCreateNote(),
+          onSearchHistory: () => this.openSearchDialog(),
+          onOpenPreferences: () => this.openPreferences(),
+          closedTabsManager: this.closedTabsManager,
+          historyService: this.historyService
+        });
+        await this.toolbarButton.create();
+        Zotero.log("[UIManager] Toolbar button created", "info");
+      }
+      
+      // 创建主面板
+      if (!this.mainPanel) {
+        Zotero.log("[UIManager] Creating main panel...", "info");
+        this.mainPanel = new MainPanel(win, {
+          closedTabsManager: this.closedTabsManager,
+          noteAssociationSystem: this.noteAssociationSystem,
+          historyService: this.historyService
+        });
+        await this.mainPanel.create();
+        Zotero.log("[UIManager] Main panel created", "info");
+      }
+      
+      // 添加样式
+      this.injectStyles(win);
+      Zotero.log("[UIManager] Window initialization completed", "info");
+    } catch (error) {
+      Zotero.logError(error);
+      throw new Error(`Failed to initialize window: ${error}`);
     }
-    
-    // 创建主面板
-    if (!this.mainPanel) {
-      this.mainPanel = new MainPanel(win, {
-        closedTabsManager: this.options.closedTabsManager,
-        noteAssociationSystem: this.options.noteAssociationSystem,
-        historyService: this.options.historyService
-      });
-      await this.mainPanel.create();
-    }
-    
-    // 添加样式
-    this.injectStyles(win);
   }
   
   /**
@@ -210,14 +232,14 @@ export class UIManager {
    * 快速创建笔记
    */
   async quickCreateNote(): Promise<void> {
-    const currentNode = this.options.historyService.getCurrentNode();
+    const currentNode = this.historyService.getCurrentNode();
     if (!currentNode) {
       this.showNotification("No active research context", "warning");
       return;
     }
     
     try {
-      const note = await this.options.noteAssociationSystem.createContextualNote(
+      const note = await this.noteAssociationSystem.createContextualNote(
         currentNode.id,
         "<p>Quick note created from toolbar</p>"
       );

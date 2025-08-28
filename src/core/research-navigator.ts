@@ -104,11 +104,11 @@ export class ResearchNavigator {
    * 初始化 UI
    */
   private async initializeUI(): Promise<void> {
-    this.uiManager = new UIManager({
-      closedTabsManager: this.closedTabsManager,
-      noteAssociationSystem: this.noteAssociationSystem,
-      historyService: this.historyService
-    });
+    this.uiManager = new UIManager(
+      this.historyService,
+      this.closedTabsManager,
+      this.noteAssociationSystem
+    );
     
     await this.uiManager.initialize();
   }

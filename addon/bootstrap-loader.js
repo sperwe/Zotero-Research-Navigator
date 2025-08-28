@@ -41,38 +41,59 @@ async function waitForZotero() {
   }
 }
 
+// 创建一个作用域对象来存储加载的函数
+var loadedFunctions = {};
+
 // Bootstrap 函数
 async function startup({ id, version, rootURI }, reason) {
   await waitForZotero();
   
-  // 加载编译后的 TypeScript 代码
-  Services.scriptloader.loadSubScript(rootURI + "bootstrap.js", {
-    startup,
-    shutdown,
-    install,
-    uninstall
-  });
-  
-  // 调用真正的 startup
-  if (typeof window !== 'undefined' && window.startup) {
-    await window.startup({ id, version, rootURI }, reason);
+  try {
+    // 创建一个沙箱作用域
+    var scope = {
+      Zotero: Zotero,
+      Services: Services,
+      window: {}
+    };
+    
+      // 加载编译后的 TypeScript 代码
+  Services.scriptloader.loadSubScript(rootURI + "bootstrap-compiled.js", scope);
+    
+    // 保存加载的函数
+    if (scope.window) {
+      loadedFunctions = scope.window;
+    }
+    
+    // 调用真正的 startup
+    if (loadedFunctions.startup) {
+      await loadedFunctions.startup({ id, version, rootURI }, reason);
+    } else {
+      throw new Error("Startup function not found in compiled code");
+    }
+  } catch (error) {
+    Zotero.logError(error);
+    Services.prompt.alert(
+      null,
+      "Research Navigator",
+      "Failed to load: " + error.message
+    );
   }
 }
 
-function shutdown(data, reason) {
-  if (typeof window !== 'undefined' && window.shutdown) {
-    window.shutdown(data, reason);
+async function shutdown(data, reason) {
+  if (loadedFunctions.shutdown) {
+    await loadedFunctions.shutdown(data, reason);
   }
 }
 
 function install(data, reason) {
-  if (typeof window !== 'undefined' && window.install) {
-    window.install(data, reason);
+  if (loadedFunctions.install) {
+    loadedFunctions.install(data, reason);
   }
 }
 
 function uninstall(data, reason) {
-  if (typeof window !== 'undefined' && window.uninstall) {
-    window.uninstall(data, reason);
+  if (loadedFunctions.uninstall) {
+    loadedFunctions.uninstall(data, reason);
   }
 }

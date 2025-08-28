@@ -26,11 +26,34 @@ export class ToolbarButton {
   async create(): Promise<void> {
     const doc = this.window.document;
     
-    // 查找工具栏
-    const toolbar = doc.getElementById("zotero-tb-advanced-search");
+    Zotero.log("[ToolbarButton] Starting creation...", "info");
+    
+    // 尝试多个工具栏位置
+    const toolbarIds = [
+      "zotero-tb-advanced-search",
+      "zotero-items-toolbar",
+      "zotero-toolbar"
+    ];
+    
+    let toolbar = null;
+    for (const id of toolbarIds) {
+      toolbar = doc.getElementById(id);
+      if (toolbar) {
+        Zotero.log(`[ToolbarButton] Found toolbar: ${id}`, "info");
+        break;
+      }
+    }
+    
     if (!toolbar) {
-      Zotero.log("[ToolbarButton] Toolbar not found", "warn");
-      return;
+      Zotero.log("[ToolbarButton] No suitable toolbar found, trying fallback", "warn");
+      // 尝试查找任何工具栏
+      const toolbars = doc.getElementsByTagName("toolbar");
+      if (toolbars.length > 0) {
+        toolbar = toolbars[0];
+        Zotero.log("[ToolbarButton] Using first available toolbar", "info");
+      } else {
+        throw new Error("No toolbar found in window");
+      }
     }
     
     // 创建按钮
@@ -77,7 +100,7 @@ export class ToolbarButton {
   /**
    * 更新菜单内容
    */
-  private updateMenu(): void {
+  private async updateMenu(): Promise<void> {
     if (!this.popup) return;
     
     const doc = this.window.document;
@@ -101,7 +124,7 @@ export class ToolbarButton {
     this.addMenuSeparator();
     
     // 最近项目
-    this.addRecentItemsSection();
+    await this.addRecentItemsSection();
     this.addMenuSeparator();
     
     // 设置
@@ -187,8 +210,8 @@ export class ToolbarButton {
   /**
    * 添加最近项目部分
    */
-  private addRecentItemsSection(): void {
-    const currentSession = this.options.historyService.getCurrentSessionNodes();
+  private async addRecentItemsSection(): Promise<void> {
+    const currentSession = await this.options.historyService.getCurrentSessionNodes();
     const recentItems = currentSession.slice(-5).reverse(); // 最近5个
     
     if (recentItems.length === 0) {
