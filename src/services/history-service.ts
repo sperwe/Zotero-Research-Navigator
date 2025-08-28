@@ -192,6 +192,22 @@ export class HistoryService {
   }
 
   /**
+   * 获取单个节点
+   */
+  getNode(nodeId: string): HistoryNode | undefined {
+    return this.nodeCache.get(nodeId);
+  }
+  
+  /**
+   * 根据文献ID获取节点
+   */
+  async getNodesByItemId(itemId: number): Promise<HistoryNode[]> {
+    return Array.from(this.nodeCache.values())
+      .filter(node => node.itemId === itemId)
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  }
+  
+  /**
    * 获取所有会话
    */
   getAllSessions(): any[] {

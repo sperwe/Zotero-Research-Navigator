@@ -408,4 +408,67 @@ ${initialContent || "<p>Your notes here...</p>"}
   async destroy(): Promise<void> {
     // 清理资源
   }
+  
+  /**
+   * 获取节点的关联笔记（带详细信息）
+   */
+  async getAssociatedNotes(nodeId: string): Promise<any[]> {
+    const relations = await this.getNodeNotes(nodeId);
+    const notes: any[] = [];
+    
+    for (const relation of relations) {
+      try {
+        const note = await Zotero.Items.getAsync(relation.noteId);
+        if (note) {
+          notes.push({
+            id: relation.id,
+            noteId: relation.noteId,
+            nodeId: relation.nodeId,
+            relationType: relation.relationType,
+            title: note.getField('title') || 'Untitled Note',
+            content: note.getNote(),
+            dateModified: new Date(note.getField('dateModified'))
+          });
+        }
+      } catch (error) {
+        Zotero.logError(`Failed to get note ${relation.noteId}: ${error}`);
+      }
+    }
+    
+    return notes;
+  }
+  
+  /**
+   * 获取推荐的笔记
+   */
+  async getSuggestedNotes(nodeId: string): Promise<any[]> {
+    const node = this.historyService.getNode(nodeId);
+    if (!node) return [];
+    
+    try {
+      // 获取同一文献的其他笔记
+      const itemNotes = await this.databaseService.query(`
+        SELECT DISTINCT itemID as noteId, title, dateModified
+        FROM items
+        WHERE parentItemID = ? AND itemType = 'note'
+        AND itemID NOT IN (
+          SELECT noteId FROM note_relations WHERE nodeId = ?
+        )
+        ORDER BY dateModified DESC
+        LIMIT 5
+      `, [node.itemId, nodeId]);
+      
+      return itemNotes.map(row => ({
+        noteId: row.noteId,
+        title: row.title || 'Untitled Note',
+        dateModified: new Date(row.dateModified),
+        relationType: 'suggested'
+      }));
+    } catch (error) {
+      Zotero.logError(`Failed to get suggested notes: ${error}`);
+      return [];
+    }
+  }
+  
+
 }

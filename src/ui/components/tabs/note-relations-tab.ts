@@ -3,25 +3,30 @@
  * 显示和管理历史节点与笔记的双向关联
  */
 
-import { NoteAssociationEnhanced, AssociatedNote } from "../../../managers/note-association-enhanced";
+import { NoteAssociationSystem } from "../../../managers/note-association-system";
 import { HistoryService } from "../../../services/history-service";
 import { HistoryNode } from "../../../services/database-service";
+
+export interface AssociatedNote {
+  id: number;
+  noteId: number;
+  nodeId: string;
+  relationType: string;
+  title: string;
+  content: string;
+  dateModified: Date;
+}
 
 export class NoteRelationsTab {
   private container: HTMLElement | null = null;
   private contentContainer: HTMLElement | null = null;
   private selectedNode: HistoryNode | null = null;
-  private noteAssociation: NoteAssociationEnhanced;
   
   constructor(
     private window: Window,
     private historyService: HistoryService,
-    noteAssociationSystem: any
-  ) {
-    this.noteAssociation = new NoteAssociationEnhanced(
-      (historyService as any).databaseService
-    );
-  }
+    private noteAssociationSystem: NoteAssociationSystem
+  ) {}
   
   create(container: HTMLElement): void {
     this.container = container;
@@ -178,7 +183,7 @@ export class NoteRelationsTab {
     element.appendChild(title);
     
     // 关联数量
-    this.noteAssociation.getNodeNotes(node.id).then(notes => {
+    this.noteAssociationSystem.getNodeNotes(node.id).then(notes => {
       if (notes.length > 0) {
         const badge = doc.createElement("span");
         badge.style.cssText = `
@@ -273,7 +278,7 @@ export class NoteRelationsTab {
     `;
     
     // 加载关联的笔记
-    const associatedNotes = await this.noteAssociation.getNodeNotesDetailed(this.selectedNode.id);
+    const associatedNotes = await this.noteAssociationSystem.getNodeNotesDetailed(this.selectedNode.id);
     
     if (associatedNotes.length > 0) {
       const associatedSection = this.createAssociatedSection(doc, associatedNotes);
@@ -281,7 +286,7 @@ export class NoteRelationsTab {
     }
     
     // 加载建议的笔记
-    const suggestedNotes = await this.noteAssociation.getSuggestedAssociations(this.selectedNode.id);
+    const suggestedNotes = await this.noteAssociationSystem.getSuggestedAssociations(this.selectedNode.id);
     
     if (suggestedNotes.length > 0) {
       const suggestedSection = this.createSuggestedSection(doc, suggestedNotes);
@@ -341,7 +346,7 @@ export class NoteRelationsTab {
     searchBox.addEventListener("input", async (e) => {
       const query = (e.target as HTMLInputElement).value;
       if (query && this.selectedNode) {
-        const results = await this.noteAssociation.searchRelatedNotes(query, this.selectedNode.id);
+        const results = await this.noteAssociationSystem.searchRelatedNotes(query, this.selectedNode.id);
         this.showSearchResults(results);
       }
     });
@@ -470,7 +475,7 @@ export class NoteRelationsTab {
       `;
       removeBtn.addEventListener("click", async () => {
         if (this.selectedNode) {
-          await this.noteAssociation.dissociateNote(note.id, this.selectedNode.id);
+          await this.noteAssociationSystem.dissociateNote(note.id, this.selectedNode.id);
           await this.loadNodeAssociations();
         }
       });
@@ -484,7 +489,7 @@ export class NoteRelationsTab {
       `;
       addBtn.addEventListener("click", async () => {
         if (this.selectedNode) {
-          await this.noteAssociation.associateNote(note.id, this.selectedNode.id);
+          await this.noteAssociationSystem.associateNote(note.id, this.selectedNode.id);
           await this.loadNodeAssociations();
         }
       });
@@ -600,7 +605,7 @@ export class NoteRelationsTab {
     // TODO: 实现笔记选择对话框
     const noteId = prompt("Enter note ID to associate:");
     if (noteId) {
-      await this.noteAssociation.associateNote(parseInt(noteId), this.selectedNode.id);
+      await this.noteAssociationSystem.associateNote(parseInt(noteId), this.selectedNode.id);
       await this.loadNodeAssociations();
     }
   }
@@ -626,7 +631,7 @@ export class NoteRelationsTab {
     await note.saveTx();
     
     // 自动关联
-    await this.noteAssociation.createContextualAssociation(
+    await this.noteAssociationSystem.createContextualAssociation(
       note.id,
       this.selectedNode.id,
       "Created from history node",
@@ -663,6 +668,6 @@ export class NoteRelationsTab {
     this.container = null;
     this.contentContainer = null;
     this.selectedNode = null;
-    this.noteAssociation.clearCache();
+    this.noteAssociationSystem.clearCache();
   }
 }
