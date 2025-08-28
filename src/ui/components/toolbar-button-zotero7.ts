@@ -7,10 +7,15 @@ export class ToolbarButtonZotero7 {
   private window: Window;
   private button: any = null;
   private onPanelToggle: (() => void) | null = null;
+  private onModeChange: ((mode: "floating" | "sidebar") => void) | null = null;
 
-  constructor(window: Window, options?: { onPanelToggle?: () => void }) {
+  constructor(window: Window, options?: { 
+    onPanelToggle?: () => void;
+    onModeChange?: (mode: "floating" | "sidebar") => void;
+  }) {
     this.window = window;
     this.onPanelToggle = options?.onPanelToggle || null;
+    this.onModeChange = options?.onModeChange || null;
   }
 
   async create(): Promise<void> {
@@ -55,6 +60,12 @@ export class ToolbarButtonZotero7 {
       } else {
         this.showPanel();
       }
+    });
+    
+    // 右键菜单
+    this.button.addEventListener("contextmenu", (event: Event) => {
+      event.preventDefault();
+      this.showContextMenu(event);
     });
     
     // 找到最佳插入位置
@@ -173,6 +184,68 @@ export class ToolbarButtonZotero7 {
     } else {
       doc.documentElement.appendChild(panel);
     }
+  }
+  
+  /**
+   * 显示右键菜单
+   */
+  private showContextMenu(event: Event): void {
+    const doc = this.window.document;
+    const mouseEvent = event as MouseEvent;
+    
+    // 创建弹出菜单
+    const popup = doc.createXULElement("menupopup");
+    popup.id = "research-navigator-context-menu";
+    
+    // 浮动面板选项
+    const floatingItem = doc.createXULElement("menuitem");
+    floatingItem.setAttribute("label", "Floating Panel");
+    floatingItem.setAttribute("type", "radio");
+    floatingItem.setAttribute("name", "display-mode");
+    floatingItem.setAttribute("checked", "true");
+    floatingItem.addEventListener("command", () => {
+      if (this.onModeChange) {
+        this.onModeChange("floating");
+      }
+      popup.hidePopup();
+    });
+    popup.appendChild(floatingItem);
+    
+    // 侧边栏选项
+    const sidebarItem = doc.createXULElement("menuitem");
+    sidebarItem.setAttribute("label", "Sidebar");
+    sidebarItem.setAttribute("type", "radio");
+    sidebarItem.setAttribute("name", "display-mode");
+    sidebarItem.addEventListener("command", () => {
+      if (this.onModeChange) {
+        this.onModeChange("sidebar");
+      }
+      popup.hidePopup();
+    });
+    popup.appendChild(sidebarItem);
+    
+    // 分隔线
+    const separator = doc.createXULElement("menuseparator");
+    popup.appendChild(separator);
+    
+    // 设置选项
+    const settingsItem = doc.createXULElement("menuitem");
+    settingsItem.setAttribute("label", "Settings...");
+    settingsItem.addEventListener("command", () => {
+      // TODO: 打开设置对话框
+      Zotero.log("[ToolbarButtonZotero7] Settings clicked", "info");
+      popup.hidePopup();
+    });
+    popup.appendChild(settingsItem);
+    
+    // 添加到文档并显示
+    doc.documentElement.appendChild(popup);
+    popup.openPopupAtScreen(mouseEvent.screenX, mouseEvent.screenY, true);
+    
+    // 自动清理
+    popup.addEventListener("popuphidden", () => {
+      popup.remove();
+    });
   }
   
   destroy(): void {

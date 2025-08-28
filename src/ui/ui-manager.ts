@@ -10,6 +10,7 @@ import { MainPanel } from "./components/main-panel";
 import { ToolbarButton } from "./components/toolbar-button";
 import { ToolbarButtonV2 } from "./components/toolbar-button-v2";
 import { ToolbarButtonZotero7 } from "./components/toolbar-button-zotero7";
+import { SidebarManager } from "./sidebar-manager";
 import { config } from "../../package.json";
 
 export interface UIManagerOptions {
@@ -21,8 +22,10 @@ export interface UIManagerOptions {
 export class UIManager {
   private initialized = false;
   private mainPanel: MainPanel | null = null;
+  private sidebarManager: SidebarManager | null = null;
   private toolbarButton: ToolbarButton | null = null;
   private windows = new Set<Window>();
+  private displayMode: "floating" | "sidebar" = "floating";
 
   constructor(
     private historyService: HistoryService,
@@ -111,7 +114,8 @@ export class UIManager {
         // 尝试使用 Zotero 7 专用的工具栏按钮
         try {
           const buttonZ7 = new ToolbarButtonZotero7(win, {
-            onPanelToggle: () => this.toggleMainPanel()
+            onPanelToggle: () => this.toggleDisplay(),
+            onModeChange: (mode) => this.setDisplayMode(mode)
           });
           await buttonZ7.create();
           Zotero.log("[UIManager] Toolbar button Zotero7 created successfully", "info");
@@ -153,6 +157,15 @@ export class UIManager {
         });
         await this.mainPanel.create();
         Zotero.log("[UIManager] Main panel created", "info");
+      }
+      
+      // 初始化侧边栏
+      await this.initializeSidebar(win);
+      
+      // 恢复显示模式
+      const savedMode = Zotero.Prefs.get("extensions.zotero.researchnavigator.displayMode") as string;
+      if (savedMode === "sidebar") {
+        this.displayMode = "sidebar";
       }
 
       // 添加样式
@@ -275,12 +288,92 @@ export class UIManager {
   }
 
   /**
+   * 初始化侧边栏
+   */
+  private async initializeSidebar(win: Window): Promise<void> {
+    if (!this.sidebarManager) {
+      this.sidebarManager = new SidebarManager(win, () => {
+        // 提供内容给侧边栏
+        if (this.mainPanel) {
+          const content = this.mainPanel.getContent();
+          return content;
+        }
+        return null;
+      });
+      
+      await this.sidebarManager.initialize();
+      
+      // 监听模式切换事件
+      win.addEventListener("research-navigator-toggle-mode", () => {
+        this.toggleDisplayMode();
+      });
+    }
+  }
+  
+  /**
+   * 切换显示
+   */
+  toggleDisplay(): void {
+    if (this.displayMode === "floating") {
+      this.toggleMainPanel();
+    } else {
+      this.toggleSidebar();
+    }
+  }
+  
+  /**
    * 切换主面板显示/隐藏
    */
   toggleMainPanel(): void {
     if (this.mainPanel) {
       this.mainPanel.toggle();
     }
+  }
+  
+  /**
+   * 切换侧边栏显示
+   */
+  toggleSidebar(): void {
+    if (!this.sidebarManager) return;
+    
+    this.sidebarManager.toggle();
+  }
+  
+  /**
+   * 设置显示模式
+   */
+  setDisplayMode(mode: "floating" | "sidebar"): void {
+    if (this.displayMode === mode) return;
+    
+    Zotero.log(`[UIManager] Switching display mode to: ${mode}`, "info");
+    
+    // 隐藏当前模式
+    if (this.displayMode === "floating" && this.mainPanel) {
+      this.mainPanel.hide();
+    } else if (this.displayMode === "sidebar" && this.sidebarManager) {
+      this.sidebarManager.hide();
+    }
+    
+    // 切换模式
+    this.displayMode = mode;
+    
+    // 保存偏好
+    Zotero.Prefs.set("extensions.zotero.researchnavigator.displayMode", mode);
+    
+    // 显示新模式
+    if (mode === "floating" && this.mainPanel) {
+      this.mainPanel.show();
+    } else if (mode === "sidebar" && this.sidebarManager) {
+      this.sidebarManager.show();
+    }
+  }
+  
+  /**
+   * 切换显示模式
+   */
+  toggleDisplayMode(): void {
+    const newMode = this.displayMode === "floating" ? "sidebar" : "floating";
+    this.setDisplayMode(newMode);
   }
 
   /**

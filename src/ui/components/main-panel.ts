@@ -517,6 +517,49 @@ export class MainPanel {
   }
 
   /**
+   * 获取内容容器（用于侧边栏模式）
+   */
+  getContent(): HTMLElement | null {
+    if (!this.container) return null;
+    
+    // 创建一个新的容器，包含标签页内容
+    const doc = this.window.document;
+    const contentWrapper = doc.createElement("div");
+    contentWrapper.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    `;
+    
+    // 复制标签栏
+    const tabBar = this.container.querySelector(".panel-tab-bar");
+    if (tabBar) {
+      const tabBarClone = tabBar.cloneNode(true) as HTMLElement;
+      // 重新绑定事件
+      const buttons = tabBarClone.querySelectorAll("button[data-tab]");
+      buttons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const tabName = btn.getAttribute("data-tab");
+          if (tabName) {
+            this.switchTab(tabName);
+          }
+        });
+      });
+      contentWrapper.appendChild(tabBarClone);
+    }
+    
+    // 复制内容区域
+    const content = this.container.querySelector(".panel-content");
+    if (content) {
+      const contentClone = content.cloneNode(true) as HTMLElement;
+      contentWrapper.appendChild(contentClone);
+    }
+    
+    return contentWrapper;
+  }
+  
+  /**
    * 销毁组件
    */
   destroy(): void {
