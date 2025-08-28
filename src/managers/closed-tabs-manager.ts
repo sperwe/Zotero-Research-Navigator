@@ -69,13 +69,14 @@ export class ClosedTabsManager {
     // Zotero_Tabs._history 是一个数组的数组
     // 每个元素代表一次关闭操作，可能包含多个标签页
     for (const closedGroup of Zotero_Tabs._history) {
-      for (const tabData of closedGroup) {
-        if (tabData.type === "reader" && tabData.data?.itemID) {
+      for (const historyItem of closedGroup) {
+        // historyItem 包含 { index, data }
+        const tabData = historyItem.data;
+        if (tabData && tabData.itemID) {
           // 检查是否已经在我们的历史中
           const exists = this.closedTabs.some(
             (ct) =>
-              ct.tabData.data?.itemID === tabData.data.itemID &&
-              ct.closedAt.getTime() === (tabData.closedAt || Date.now()),
+              ct.tabData.itemID === tabData.itemID
           );
 
           if (!exists) {
@@ -85,10 +86,10 @@ export class ClosedTabsManager {
             if (ghostNode) {
               this.closedTabs.unshift({
                 node: ghostNode,
-                tabData,
-                closedAt: new Date(tabData.closedAt || Date.now()),
-                windowId: tabData.windowId || 0,
-                index: tabData.index || 0,
+                tabData: tabData,
+                closedAt: new Date(),
+                windowId: 0,
+                index: historyItem.index,
               });
             }
           }
@@ -149,7 +150,7 @@ export class ClosedTabsManager {
    */
   private async createGhostNode(tabData: any): Promise<HistoryNode | null> {
     try {
-      const itemId = tabData.data?.itemID;
+      const itemId = tabData.itemID;
       if (!itemId) return null;
 
       // 获取现有节点
@@ -164,7 +165,7 @@ export class ClosedTabsManager {
           const ghostNode: HistoryNode = {
             id: `ghost_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             itemId: itemId,
-            libraryId: tabData.data?.libraryID || Zotero.Libraries.userLibraryID,
+            libraryId: tabData.libraryID || Zotero.Libraries.userLibraryID,
             parentId: null,
             sessionId: "ghost_session",
             timestamp: new Date(tabData.closedAt || Date.now()),
@@ -175,13 +176,9 @@ export class ClosedTabsManager {
             status: "closed",
             closedAt: new Date(tabData.closedAt || Date.now()),
             closedContext: {
-              tabData: {
-                type: tabData.type,
-                data: tabData.data,
-                title: tabData.title,
-              },
-              windowId: tabData.windowId || 0,
-              index: tabData.index || 0,
+              tabData: tabData,
+              windowId: 0,
+              index: 0,
               isGhost: true
             },
             hasNotes: false,
@@ -214,13 +211,9 @@ export class ClosedTabsManager {
     tabData: any,
   ): Promise<void> {
     const closedContext = {
-      tabData: {
-        type: tabData.type,
-        data: tabData.data,
-        title: tabData.title,
-      },
-      windowId: tabData.windowId || 0,
-      index: tabData.index || 0,
+      tabData: tabData,
+      windowId: 0,
+      index: 0,
     };
 
     await this.databaseService.updateNodeStatus(
@@ -250,9 +243,8 @@ export class ClosedTabsManager {
         // 检查是否在 Zotero 的历史中
         const inHistory = Zotero_Tabs._history.some((group: any[]) =>
           group.some(
-            (tab) =>
-              tab.data?.itemID === closedTab.tabData.data?.itemID &&
-              tab.closedAt === closedTab.closedAt.getTime(),
+            (historyItem) =>
+              historyItem.data?.itemID === closedTab.tabData.itemID
           ),
         );
 
