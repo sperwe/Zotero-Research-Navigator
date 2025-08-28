@@ -33,7 +33,14 @@ async function startup(
   try {
     // 等待 Zotero 初始化
     while (typeof Zotero === "undefined" || !Zotero.initialized) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => {
+      // 在 Zotero 环境中使用 ChromeUtils.idleDispatch 或直接 resolve
+      if (typeof ChromeUtils !== "undefined" && ChromeUtils.idleDispatch) {
+        ChromeUtils.idleDispatch(resolve);
+      } else {
+        resolve();
+      }
+    });
     }
 
     // 记录启动信息

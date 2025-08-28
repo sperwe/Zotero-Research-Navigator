@@ -28,7 +28,7 @@ export default defineConfig({
     },
     esbuildOptions: [
       {
-        entryPoints: ["src/bootstrap.ts"],
+        entryPoints: [process.env.DEBUG_BUILD ? "src/bootstrap-debug.ts" : "src/bootstrap.ts"],
         define: {
           __env__: `"${process.env.NODE_ENV || "development"}"`,
         },

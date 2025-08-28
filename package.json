@@ -28,6 +28,7 @@
     "build": "zotero-plugin build",
     "typecheck": "tsc --noEmit",
     "build-prod": "NODE_ENV=production zotero-plugin build",
+    "build-debug": "DEBUG_BUILD=true zotero-plugin build",
     "build-minimal": "zotero-plugin build --source src/minimal-bootstrap.ts",
     "lint:check": "prettier --check . && eslint .",
     "lint:fix": "prettier --write . && eslint . --fix",

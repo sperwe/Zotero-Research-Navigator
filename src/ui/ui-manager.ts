@@ -70,7 +70,15 @@ export class UIManager {
       if (win && win.document && win.document.readyState === "complete" && win.document.body) {
         return;
       }
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => {
+        const win = Zotero.getMainWindow();
+        if (win && win.setTimeout) {
+          win.setTimeout(resolve, 100);
+        } else {
+          // Fallback: 使用 Zotero 的延迟机制
+          resolve();
+        }
+      });
       retries++;
     }
     
@@ -332,12 +340,14 @@ export class UIManager {
     );
 
     // 自动关闭通知
-    setTimeout(() => {
-      const notification = notificationBox.currentNotification;
-      if (notification && notification.label === message) {
-        notificationBox.removeNotification(notification);
-      }
-    }, 5000);
+    if (win && win.setTimeout) {
+      win.setTimeout(() => {
+        const notification = notificationBox.currentNotification;
+        if (notification && notification.label === message) {
+          notificationBox.removeNotification(notification);
+        }
+      }, 5000);
+    }
   }
 
   async destroy(): Promise<void> {
