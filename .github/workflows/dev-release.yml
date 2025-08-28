@@ -1,0 +1,79 @@
+name: Development Auto-Release
+
+on:
+  push:
+    branches:
+      - fix/typescript-errors-and-functionality
+    paths:
+      - 'package.json'
+      - 'src/**'
+      - 'addon/**'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build Development XPI
+        run: |
+          cp addon/manifest-dev.json addon/manifest.json
+          npm run build-prod
+      
+      - name: Get version
+        id: version
+        run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+      
+      - name: Create Development Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: dev-v${{ steps.version.outputs.VERSION }}-${{ github.run_number }}
+          name: Dev Build ${{ steps.version.outputs.VERSION }}.${{ github.run_number }}
+          draft: false
+          prerelease: true
+          files: build/zotero-research-navigator.xpi
+          body: |
+            Development build from commit ${{ github.sha }}
+            
+            This build auto-updates from the development branch.
+      
+      - name: Update development update.json
+        run: |
+          # Update to point to the latest dev release
+          cat > update-dev.json << EOF
+          {
+            "addons": {
+              "research-navigator@zotero.org": {
+                "updates": [
+                  {
+                    "version": "${{ steps.version.outputs.VERSION }}",
+                    "update_link": "https://github.com/sperwe/Zotero-Research-Navigator/releases/download/dev-v${{ steps.version.outputs.VERSION }}-${{ github.run_number }}/zotero-research-navigator.xpi",
+                    "applications": {
+                      "zotero": {
+                        "strict_min_version": "7.0",
+                        "strict_max_version": "7.1.*"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+          EOF
+          
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add update-dev.json
+          git commit -m "chore: update dev release to v${{ steps.version.outputs.VERSION }}.${{ github.run_number }}"
+          git push
