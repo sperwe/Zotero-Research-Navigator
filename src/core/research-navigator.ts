@@ -161,7 +161,32 @@ export class ResearchNavigator {
       return;
     }
     
-    // 保存原始的 selectItem 方法
+    // 方法1：监听 itemsView 的选择变化
+    if (win.ZoteroPane.itemsView) {
+      // 保存上次选择的项目ID
+      let lastSelectedId: number | null = null;
+      
+      // 定期检查选择变化
+      this.selectionCheckInterval = win.setInterval(() => {
+        try {
+          const selected = win.ZoteroPane.itemsView.getSelectedItems();
+          if (selected && selected.length > 0) {
+            const currentId = selected[0].id;
+            if (currentId !== lastSelectedId) {
+              lastSelectedId = currentId;
+              Zotero.log(`[ResearchNavigator] Item selected (detected): ${currentId}`, "info");
+              this.handleItemSelect([currentId]).catch(error => {
+                Zotero.logError(`[ResearchNavigator] Error handling selection: ${error}`);
+              });
+            }
+          }
+        } catch (error) {
+          // 忽略错误，可能是视图还未准备好
+        }
+      }, 500); // 每500ms检查一次
+    }
+    
+    // 方法2：保存原始的 selectItem 方法
     const originalSelectItem = win.ZoteroPane.selectItem;
     
     // 重写 selectItem 方法
@@ -171,7 +196,7 @@ export class ResearchNavigator {
       
       // 记录历史
       try {
-        Zotero.log(`[ResearchNavigator] Item selected via ZoteroPane: ${itemID}`, "info");
+        Zotero.log(`[ResearchNavigator] Item selected via selectItem: ${itemID}`, "info");
         await this.handleItemSelect([itemID]);
       } catch (error) {
         Zotero.logError(`[ResearchNavigator] Error handling selection: ${error}`);
@@ -182,6 +207,8 @@ export class ResearchNavigator {
     
     Zotero.log("[ResearchNavigator] Selection listener setup completed", "info");
   }
+  
+  private selectionCheckInterval?: number;
   
   private notifierID?: string;
   
@@ -281,6 +308,14 @@ export class ResearchNavigator {
       Zotero.Notifier.unregisterObserver(this.notifierID);
     }
     
+    // 清理选择检查定时器
+    if (this.selectionCheckInterval) {
+      const win = Zotero.getMainWindow();
+      if (win) {
+        win.clearInterval(this.selectionCheckInterval);
+      }
+    }
+    
     // 关闭 UI
     if (this.uiManager) {
       await this.uiManager.destroy();
@@ -324,6 +359,7 @@ export class ResearchNavigator {
   get history(): HistoryService {
     return this.historyService;
   }
+  
 }
 
 // 导出单例获取函数
