@@ -13,10 +13,5 @@
     "no-unused-vars": "warn",
     "no-console": "off"
   },
-  "ignorePatterns": [
-    "node_modules/",
-    "build/",
-    "dist/",
-    "*.min.js"
-  ]
+  "ignorePatterns": ["node_modules/", "build/", "dist/", "*.min.js"]
 }
