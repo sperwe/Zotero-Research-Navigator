@@ -602,12 +602,182 @@ export class NoteRelationsTab {
   private async showAddNoteDialog(): Promise<void> {
     if (!this.selectedNode) return;
     
-    // TODO: 实现笔记选择对话框
-    const noteId = this.window.prompt("Enter note ID to associate:");
-    if (noteId) {
-      await this.noteAssociationSystem.associateNote(parseInt(noteId), this.selectedNode.id);
-      await this.loadNodeAssociations();
-    }
+    const doc = this.window.document;
+    
+    // 创建模态对话框
+    const dialog = doc.createElement("div");
+    dialog.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--material-background);
+      border: 1px solid var(--material-border-quarternary);
+      border-radius: 10px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+      padding: 20px;
+      z-index: 10000;
+      width: 400px;
+      max-height: 600px;
+      display: flex;
+      flex-direction: column;
+    `;
+    
+    // 标题
+    const title = doc.createElement("h3");
+    title.textContent = "Select Note to Associate";
+    title.style.cssText = `
+      margin: 0 0 15px 0;
+      font-size: 16px;
+    `;
+    dialog.appendChild(title);
+    
+    // 搜索框
+    const searchInput = doc.createElement("input");
+    searchInput.type = "text";
+    searchInput.placeholder = "Search notes...";
+    searchInput.style.cssText = `
+      padding: 8px;
+      border: 1px solid var(--material-border-quarternary);
+      border-radius: 5px;
+      margin-bottom: 10px;
+    `;
+    dialog.appendChild(searchInput);
+    
+    // 笔记列表容器
+    const noteListContainer = doc.createElement("div");
+    noteListContainer.style.cssText = `
+      flex: 1;
+      overflow-y: auto;
+      max-height: 400px;
+      border: 1px solid var(--material-border-quarternary);
+      border-radius: 5px;
+      padding: 10px;
+    `;
+    dialog.appendChild(noteListContainer);
+    
+    // 加载所有笔记
+    const loadNotes = async (filter = "") => {
+      noteListContainer.innerHTML = "";
+      
+      // 获取所有笔记
+      const s = new Zotero.Search();
+      s.libraryID = this.selectedNode.libraryId || Zotero.Libraries.userLibraryID;
+      s.addCondition('itemType', 'is', 'note');
+      if (filter) {
+        s.addCondition('title', 'contains', filter);
+      }
+      
+      const noteIDs = await s.search();
+      const notes = await Zotero.Items.getAsync(noteIDs);
+      
+      if (notes.length === 0) {
+        noteListContainer.innerHTML = "<p>No notes found</p>";
+        return;
+      }
+      
+      // 显示笔记列表
+      for (const note of notes.slice(0, 50)) { // 限制显示前50个
+        const noteItem = doc.createElement("div");
+        noteItem.style.cssText = `
+          padding: 10px;
+          border-bottom: 1px solid var(--material-border-quarternary);
+          cursor: pointer;
+        `;
+        
+        // 笔记标题
+        const noteTitle = doc.createElement("div");
+        noteTitle.style.fontWeight = "bold";
+        noteTitle.textContent = note.getNoteTitle() || "Untitled Note";
+        noteItem.appendChild(noteTitle);
+        
+        // 笔记预览
+        const notePreview = doc.createElement("div");
+        notePreview.style.cssText = `
+          font-size: 12px;
+          color: var(--fill-secondary);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        `;
+        const noteContent = note.getNote();
+        const plainText = noteContent.replace(/<[^>]*>/g, '').trim();
+        notePreview.textContent = plainText.substring(0, 100) + (plainText.length > 100 ? "..." : "");
+        noteItem.appendChild(notePreview);
+        
+        // 点击选择
+        noteItem.addEventListener("click", async () => {
+          await this.noteAssociationSystem.associateNote(note.id, this.selectedNode.id);
+          await this.loadNodeAssociations();
+          closeDialog();
+        });
+        
+        // 悬停效果
+        noteItem.addEventListener("mouseenter", () => {
+          noteItem.style.background = "var(--material-mix-quinary)";
+        });
+        noteItem.addEventListener("mouseleave", () => {
+          noteItem.style.background = "";
+        });
+        
+        noteListContainer.appendChild(noteItem);
+      }
+    };
+    
+    // 搜索事件
+    let searchTimeout: any;
+    searchInput.addEventListener("input", () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        loadNotes(searchInput.value);
+      }, 300);
+    });
+    
+    // 按钮容器
+    const buttonContainer = doc.createElement("div");
+    buttonContainer.style.cssText = `
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 15px;
+    `;
+    
+    // 取消按钮
+    const cancelBtn = doc.createElement("button");
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.addEventListener("click", closeDialog);
+    buttonContainer.appendChild(cancelBtn);
+    
+    dialog.appendChild(buttonContainer);
+    
+    // 遮罩层
+    const overlay = doc.createElement("div");
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 9999;
+    `;
+    overlay.addEventListener("click", closeDialog);
+    
+    // 关闭对话框函数
+    const closeDialog = () => {
+      doc.body.removeChild(overlay);
+      doc.body.removeChild(dialog);
+    };
+    
+    // 显示对话框
+    doc.body.appendChild(overlay);
+    doc.body.appendChild(dialog);
+    
+    // 初始加载
+    await loadNotes();
+    
+    // 聚焦搜索框
+    searchInput.focus();
   }
   
   /**

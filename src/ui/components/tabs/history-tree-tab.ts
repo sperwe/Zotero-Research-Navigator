@@ -464,6 +464,81 @@ export class HistoryTreeTab {
       }
     });
     
+    // 右键菜单
+    content.addEventListener("contextmenu", async (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // 创建上下文菜单
+      const menu = doc.createElement("div");
+      menu.style.cssText = `
+        position: absolute;
+        left: ${e.pageX}px;
+        top: ${e.pageY}px;
+        background: var(--material-background);
+        border: 1px solid var(--material-border-quarternary);
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        padding: 5px 0;
+        z-index: 1000;
+        min-width: 150px;
+      `;
+      
+      // 删除选项
+      const deleteOption = doc.createElement("div");
+      deleteOption.textContent = "Delete Node";
+      deleteOption.style.cssText = `
+        padding: 8px 15px;
+        cursor: pointer;
+        color: #ff4444;
+      `;
+      deleteOption.addEventListener("mouseenter", () => {
+        deleteOption.style.background = "var(--material-mix-quinary)";
+      });
+      deleteOption.addEventListener("mouseleave", () => {
+        deleteOption.style.background = "";
+      });
+      deleteOption.addEventListener("click", async () => {
+        doc.body.removeChild(menu);
+        if (this.window.confirm(`Delete history node "${node.title}"?`)) {
+          await this.deleteNode(node);
+        }
+      });
+      menu.appendChild(deleteOption);
+      
+      // 在库中显示选项
+      if (node.itemId) {
+        const showInLibraryOption = doc.createElement("div");
+        showInLibraryOption.textContent = "Show in Library";
+        showInLibraryOption.style.cssText = `
+          padding: 8px 15px;
+          cursor: pointer;
+        `;
+        showInLibraryOption.addEventListener("mouseenter", () => {
+          showInLibraryOption.style.background = "var(--material-mix-quinary)";
+        });
+        showInLibraryOption.addEventListener("mouseleave", () => {
+          showInLibraryOption.style.background = "";
+        });
+        showInLibraryOption.addEventListener("click", async () => {
+          doc.body.removeChild(menu);
+          await this.showInLibrary(node.itemId);
+        });
+        menu.appendChild(showInLibraryOption);
+      }
+      
+      // 点击其他地方关闭菜单
+      const closeMenu = () => {
+        if (doc.body.contains(menu)) {
+          doc.body.removeChild(menu);
+        }
+        doc.removeEventListener("click", closeMenu);
+      };
+      setTimeout(() => doc.addEventListener("click", closeMenu), 0);
+      
+      doc.body.appendChild(menu);
+    });
+    
     // 悬停效果
     content.addEventListener("mouseenter", () => {
       content.style.background = "var(--material-mix-quinary)";
@@ -540,8 +615,47 @@ export class HistoryTreeTab {
       return;
     }
     
-    // TODO: 实现搜索过滤
-    Zotero.log("[HistoryTreeTab] Search: " + query, "info");
+    const doc = this.window.document;
+    
+    // 获取所有节点和会话元素
+    const allNodes = this.treeContainer?.querySelectorAll(".history-node") || [];
+    const allSessions = this.treeContainer?.querySelectorAll(".history-session") || [];
+    
+    // 过滤节点
+    let matchedNodeCount = 0;
+    allNodes.forEach((nodeElement: any) => {
+      const nodeText = nodeElement.textContent?.toLowerCase() || "";
+      const matches = nodeText.includes(query);
+      
+      if (matches) {
+        nodeElement.style.display = "";
+        matchedNodeCount++;
+        
+        // 确保父元素也显示
+        let parent = nodeElement.parentElement;
+        while (parent && parent !== this.treeContainer) {
+          if (parent.style) parent.style.display = "";
+          parent = parent.parentElement;
+        }
+      } else {
+        nodeElement.style.display = "none";
+      }
+    });
+    
+    // 处理会话 - 如果会话内没有匹配的节点，隐藏整个会话
+    allSessions.forEach((sessionElement: any) => {
+      const visibleNodes = sessionElement.querySelectorAll(".history-node:not([style*='display: none'])");
+      if (visibleNodes.length === 0) {
+        sessionElement.style.display = "none";
+      }
+    });
+    
+    // 显示搜索结果统计
+    if (this.searchInput) {
+      this.searchInput.title = `Found ${matchedNodeCount} items`;
+    }
+    
+    Zotero.log(`[HistoryTreeTab] Search: "${query}" - found ${matchedNodeCount} items`, "info");
   }
   
   /**
@@ -606,6 +720,34 @@ export class HistoryTreeTab {
     }
   }
   
+  /**
+   * 删除单个节点
+   */
+  private async deleteNode(node: HistoryNode): Promise<void> {
+    try {
+      await this.historyService.deleteNode(node.id);
+      Zotero.log(`[HistoryTreeTab] Deleted node ${node.id}`, "info");
+      this.refresh();
+    } catch (error) {
+      Zotero.logError(`[HistoryTreeTab] Failed to delete node: ${error}`);
+      this.window.alert(`Failed to delete node: ${error}`);
+    }
+  }
+  
+  /**
+   * 在库中显示项目
+   */
+  private async showInLibrary(itemId: number): Promise<void> {
+    try {
+      const ZoteroPane = Zotero.getActiveZoteroPane();
+      if (ZoteroPane) {
+        await ZoteroPane.selectItem(itemId);
+      }
+    } catch (error) {
+      Zotero.logError(`[HistoryTreeTab] Failed to show item in library: ${error}`);
+    }
+  }
+
   /**
    * 展开所有
    */
