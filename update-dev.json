@@ -3,8 +3,8 @@
     "research-navigator@zotero.org": {
       "updates": [
         {
-          "version": "2.3.17",
-          "update_link": "https://github.com/sperwe/Zotero-Research-Navigator/releases/download/dev-v2.3.17-20/zotero-research-navigator.xpi",
+          "version": "2.3.18",
+          "update_link": "https://github.com/sperwe/Zotero-Research-Navigator/releases/download/dev-v2.3.18-21/zotero-research-navigator.xpi",
           "applications": {
             "zotero": {
               "strict_min_version": "7.0",
