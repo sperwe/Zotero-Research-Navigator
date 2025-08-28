@@ -24,10 +24,33 @@ export class ToolbarButtonZotero7 {
     Zotero.log("[ToolbarButtonZotero7] Starting creation...", "info");
     
     // 基于 Zotero 7 源代码，主要工具栏是 zotero-items-toolbar
-    const toolbar = doc.getElementById("zotero-items-toolbar");
+    // 查找 Zotero 工具栏 - 尝试多个位置
+    let toolbar = null;
+    
+    // Zotero 7 的可能位置
+    const toolbarSelectors = [
+      'zotero-items-toolbar',
+      'zotero-toolbar', 
+      'zotero-collections-toolbar',
+      'zotero-main-toolbar',
+      'zotero-tb-advanced-search'
+    ];
+    
+    for (const id of toolbarSelectors) {
+      toolbar = doc.getElementById(id);
+      if (toolbar) {
+        Zotero.log(`[ToolbarButtonZotero7] Found toolbar with id: ${id}`, "info");
+        break;
+      }
+    }
     
     if (!toolbar) {
-      throw new Error("Zotero items toolbar not found");
+      // 尝试查询选择器
+      toolbar = doc.querySelector('toolbar') || doc.querySelector('[role="toolbar"]');
+    }
+    
+    if (!toolbar) {
+      throw new Error("No toolbar found in document");
     }
     
     Zotero.log("[ToolbarButtonZotero7] Found toolbar: zotero-items-toolbar", "info");

@@ -176,7 +176,12 @@ export class ResearchNavigator {
     Zotero.log(`[Research Navigator] Item selected: ${item.getField('title')}`, "info");
     
     // 创建或更新历史节点
-    await this.historyService.createOrUpdateNode(itemId);
+    const node = await this.historyService.createOrUpdateNode(itemId);
+    
+    // 显示通知
+    if (this.uiManager) {
+      this.uiManager.showNotification(`📚 Added to history: ${item.getField('title')}`);
+    }
     
     // 刷新 UI
     if (this.uiManager) {
