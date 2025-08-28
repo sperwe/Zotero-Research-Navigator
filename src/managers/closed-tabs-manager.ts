@@ -34,6 +34,17 @@ export class ClosedTabsManager {
 
     // 同步 Zotero 的已关闭标签页历史
     await this.syncWithZoteroHistory();
+    
+    // 如果初始同步失败，延迟重试
+    if (this.closedTabs.length === 0) {
+      setTimeout(async () => {
+        Zotero.log("[ClosedTabsManager] Retrying sync after delay...", "info");
+        await this.syncWithZoteroHistory();
+        if (this.closedTabs.length > 0) {
+          this.notifyClosedTabsChanged();
+        }
+      }, 2000); // 2秒后重试
+    }
 
     Zotero.log("[ClosedTabsManager] Initialized", "info");
   }
@@ -62,9 +73,23 @@ export class ClosedTabsManager {
    */
   private async syncWithZoteroHistory(): Promise<void> {
     const Zotero_Tabs = this.getZoteroTabs();
-    if (!Zotero_Tabs || !Zotero_Tabs._history) return;
+    
+    if (!Zotero_Tabs) {
+      Zotero.log("[ClosedTabsManager] Zotero_Tabs not available yet", "warning");
+      return;
+    }
+    
+    if (!Zotero_Tabs._history) {
+      Zotero.log("[ClosedTabsManager] Zotero_Tabs._history not available", "warning");
+      return;
+    }
 
     Zotero.log(`[ClosedTabsManager] Syncing with Zotero history: ${Zotero_Tabs._history.length} groups`, "info");
+    
+    // 打印更多调试信息
+    if (Zotero_Tabs._history.length > 0) {
+      Zotero.log(`[ClosedTabsManager] First history group has ${Zotero_Tabs._history[0].length} items`, "info");
+    }
 
     // Zotero_Tabs._history 是一个数组的数组
     // 每个元素代表一次关闭操作，可能包含多个标签页
