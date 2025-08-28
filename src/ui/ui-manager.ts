@@ -9,6 +9,7 @@ import { HistoryService } from "../services/history-service";
 import { MainPanel } from "./components/main-panel";
 import { ToolbarButton } from "./components/toolbar-button";
 import { ToolbarButtonV2 } from "./components/toolbar-button-v2";
+import { ToolbarButtonZotero7 } from "./components/toolbar-button-zotero7";
 import { config } from "../../package.json";
 
 export interface UIManagerOptions {
@@ -107,25 +108,34 @@ export class UIManager {
       if (!this.toolbarButton) {
         Zotero.log("[UIManager] Creating toolbar button...", "info");
         
-        // 尝试使用新版本的工具栏按钮
+        // 尝试使用 Zotero 7 专用的工具栏按钮
         try {
-          const buttonV2 = new ToolbarButtonV2(win);
-          await buttonV2.create();
-          Zotero.log("[UIManager] Toolbar button V2 created successfully", "info");
-        } catch (v2Error) {
-          Zotero.log("[UIManager] Failed to create V2 button, trying V1: " + v2Error, "warn");
+          const buttonZ7 = new ToolbarButtonZotero7(win);
+          await buttonZ7.create();
+          Zotero.log("[UIManager] Toolbar button Zotero7 created successfully", "info");
+        } catch (z7Error) {
+          Zotero.log("[UIManager] Failed to create Zotero7 button, trying V2: " + z7Error, "warn");
           
-          // 回退到原版本
-          this.toolbarButton = new ToolbarButton(win, {
-            onTogglePanel: () => this.toggleMainPanel(),
-            onQuickNote: () => this.quickCreateNote(),
-            onSearchHistory: () => this.openSearchDialog(),
-            onOpenPreferences: () => this.openPreferences(),
-            closedTabsManager: this.closedTabsManager,
-            historyService: this.historyService,
-          });
-          await this.toolbarButton.create();
-          Zotero.log("[UIManager] Toolbar button V1 created", "info");
+          // 尝试使用 V2 版本
+          try {
+            const buttonV2 = new ToolbarButtonV2(win);
+            await buttonV2.create();
+            Zotero.log("[UIManager] Toolbar button V2 created successfully", "info");
+          } catch (v2Error) {
+            Zotero.log("[UIManager] Failed to create V2 button, trying V1: " + v2Error, "warn");
+            
+            // 回退到原版本
+            this.toolbarButton = new ToolbarButton(win, {
+              onTogglePanel: () => this.toggleMainPanel(),
+              onQuickNote: () => this.quickCreateNote(),
+              onSearchHistory: () => this.openSearchDialog(),
+              onOpenPreferences: () => this.openPreferences(),
+              closedTabsManager: this.closedTabsManager,
+              historyService: this.historyService,
+            });
+            await this.toolbarButton.create();
+            Zotero.log("[UIManager] Toolbar button V1 created", "info");
+          }
         }
       }
 
