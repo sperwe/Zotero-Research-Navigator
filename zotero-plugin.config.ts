@@ -15,7 +15,10 @@ export default defineConfig({
     makeManifest: {
       enable: false  // 禁用自动修改 manifest.json
     },
-    assets: ["addon/**/*.*"],
+    assets: [
+      "addon/**/*.*",
+      "!addon/bootstrap-archive/**/*"  // 排除 bootstrap-archive 目录
+    ],
     define: {
       // 不使用任何占位符，避免替换问题
       __env__: `"${process.env.NODE_ENV || "development"}"`,
