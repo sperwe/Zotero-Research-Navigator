@@ -368,14 +368,15 @@ export class HistoryTreeTab {
       li.style.background = "";
     });
     
-    // 时间戳
+    // 时间戳（相对时间）
     const time = doc.createElement("div");
     time.style.cssText = `
       font-size: 0.9em;
       color: var(--fill-secondary);
       margin-bottom: 5px;
     `;
-    time.textContent = new Date(group.closedAt).toLocaleString();
+    time.textContent = this.getRelativeTime(new Date(group.closedAt));
+    time.title = new Date(group.closedAt).toLocaleString(); // 鼠标悬停显示完整时间
     li.appendChild(time);
     
     // 标签页列表
@@ -921,5 +922,29 @@ export class HistoryTreeTab {
     this.container = null;
     this.treeContainer = null;
     this.searchInput = null;
+  }
+  
+  /**
+   * 获取相对时间字符串
+   */
+  private getRelativeTime(date: Date): string {
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (seconds < 60) {
+      return "Just now";
+    } else if (minutes < 60) {
+      return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    } else if (hours < 24) {
+      return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    } else if (days < 7) {
+      return `${days} day${days > 1 ? 's' : ''} ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
   }
 }

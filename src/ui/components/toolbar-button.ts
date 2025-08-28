@@ -56,7 +56,9 @@ export class ToolbarButton {
         toolbar = toolbars[0];
         Zotero.log("[ToolbarButton] Using first available toolbar", "info");
       } else {
-        throw new Error("No toolbar found in window");
+        // 这个窗口可能不支持工具栏（如对话框窗口）
+        Zotero.log("[ToolbarButton] No toolbar in this window type, skipping", "info");
+        return;
       }
     }
 

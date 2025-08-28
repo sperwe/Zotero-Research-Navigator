@@ -217,8 +217,17 @@ export class ClosedTabsManager {
         
         if (tabData && tabData.itemID) {
           // 检查是否已经在我们的历史中
-          // 注意：相同的 itemID 可能被多次关闭，所以我们需要更精确的检查
-          const exists = false; // 暂时禁用重复检查，以便看到所有历史
+          // 使用 itemID 和时间戳来避免重复
+          const exists = this.closedTabs.some(
+            (ct) => {
+              // 如果是相同的项目且关闭时间相近（1秒内），认为是重复的
+              if (ct.node.itemId === tabData.itemID) {
+                const timeDiff = Math.abs(ct.closedAt.getTime() - Date.now());
+                return timeDiff < 1000; // 1秒内的认为是重复
+              }
+              return false;
+            }
+          );
 
           if (!exists) {
             // 创建或获取幽灵节点
@@ -303,6 +312,27 @@ export class ClosedTabsManager {
         const item = await Zotero.Items.getAsync(itemId);
         if (!item) {
           // 创建一个幽灵节点（项目可能已删除）
+          let title = `Deleted Item #${itemId}`;
+          let itemType = "attachment";
+          
+          // 尝试从 session 状态获取标题
+          try {
+            const sessionTabs = Zotero.Session?.state?.windows?.[0]?.tabs || [];
+            const sessionTab = sessionTabs.find((t: any) => t.data?.itemID === itemId);
+            if (sessionTab && sessionTab.title) {
+              title = sessionTab.title;
+            }
+          } catch (e) {
+            // 忽略错误
+          }
+          
+          // 从图标推断类型
+          if (tabData.icon) {
+            if (tabData.icon.includes('PDF')) itemType = 'attachment';
+            else if (tabData.icon.includes('EPUB')) itemType = 'attachment';
+            else if (tabData.icon.includes('Snapshot')) itemType = 'webpage';
+          }
+          
           const ghostNode: HistoryNode = {
             id: `ghost_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             itemId: itemId,
@@ -312,20 +342,24 @@ export class ClosedTabsManager {
             timestamp: new Date(tabData.closedAt || Date.now()),
             lastVisit: new Date(tabData.closedAt || Date.now()),
             visitCount: 1,
-            title: tabData.title || `Deleted Item #${itemId}`,
-            itemType: "attachment",
+            title: title,
+            itemType: itemType,
             status: "closed",
             closedAt: new Date(tabData.closedAt || Date.now()),
             closedContext: {
               tabData: tabData,
               windowId: 0,
               index: 0,
-              isGhost: true
+              isGhost: true,
+              originalTitle: title
             },
             hasNotes: false,
             depth: 0,
             path: [],
-            data: { isGhost: true }
+            data: { 
+              isGhost: true,
+              icon: tabData.icon 
+            }
           };
           
           // 不保存到数据库，只在内存中
@@ -378,6 +412,21 @@ export class ClosedTabsManager {
     if (!closedTab) return false;
 
     try {
+      // 检查项目是否仍然存在
+      const item = await Zotero.Items.getAsync(closedTab.node.itemId);
+      if (!item) {
+        // 项目已被删除
+        this.showNotification(
+          `Cannot restore tab: Item "${closedTab.node.title}" has been deleted from library`,
+          "error"
+        );
+        
+        // 从已关闭列表中移除
+        this.closedTabs = this.closedTabs.filter((ct) => ct.node.id !== nodeId);
+        this.notifyClosedTabsChanged();
+        return false;
+      }
+
       // 使用 Zotero 的恢复功能
       const Zotero_Tabs = this.getZoteroTabs();
       if (Zotero_Tabs && Zotero_Tabs.undoClose) {
@@ -408,10 +457,20 @@ export class ClosedTabsManager {
 
       // 触发事件
       this.notifyClosedTabsChanged();
+      
+      // 显示成功提示
+      this.showNotification(
+        `Restored tab: ${closedTab.node.title}`,
+        "success"
+      );
 
       return true;
     } catch (error) {
       Zotero.logError(error);
+      this.showNotification(
+        `Failed to restore tab: ${error}`,
+        "error"
+      );
       return false;
     }
   }
@@ -505,15 +564,16 @@ export class ClosedTabsManager {
    * 通知已关闭标签页列表变化
    */
   private notifyClosedTabsChanged(): void {
-    // 触发自定义事件，UI 可以监听这个事件来更新显示
-    const event = new CustomEvent("research-navigator-closed-tabs-changed", {
-      detail: {
-        count: this.closedTabs.length,
-      },
-    });
-
+    // 使用 Zotero 的通知系统而不是 CustomEvent
     const win = Zotero.getMainWindow();
-    if (win) {
+    if (win && win.document) {
+      // 创建一个简单的事件
+      const event = win.document.createEvent("Event");
+      event.initEvent("research-navigator-closed-tabs-changed", true, true);
+      
+      // 将数据附加到 window 对象上
+      (win as any).researchNavigatorClosedTabsCount = this.closedTabs.length;
+      
       win.dispatchEvent(event);
     }
   }
@@ -534,5 +594,29 @@ export class ClosedTabsManager {
 
   async destroy(): Promise<void> {
     this.closedTabs = [];
+  }
+  
+  /**
+   * 显示通知
+   */
+  private showNotification(message: string, type: "success" | "error" | "info" = "info"): void {
+    const win = Zotero.getMainWindow();
+    if (!win) return;
+    
+    // 使用 Zotero 的通知系统
+    const progressWindow = new Zotero.ProgressWindow();
+    progressWindow.changeHeadline("Research Navigator");
+    
+    const icon = type === "success" ? "chrome://zotero/skin/tick.png" : 
+                 type === "error" ? "chrome://zotero/skin/cross.png" : 
+                 "chrome://zotero/skin/information.png";
+    
+    progressWindow.addLines([message], [icon]);
+    progressWindow.show();
+    
+    // 3秒后自动关闭
+    win.setTimeout(() => {
+      progressWindow.close();
+    }, 3000);
   }
 }

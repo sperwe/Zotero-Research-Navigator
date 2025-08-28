@@ -378,9 +378,14 @@ export class ZoteroTabsIntegration {
    * 销毁
    */
   destroy(): void {
-    // 恢复原始方法
-    if (this.originalUndoClose && Zotero_Tabs) {
-      this.Zotero_Tabs.undoClose = this.originalUndoClose;
+    try {
+      // 恢复原始方法
+      const Zotero_Tabs = this.getZoteroTabs();
+      if (this.originalUndoClose && Zotero_Tabs) {
+        Zotero_Tabs.undoClose = this.originalUndoClose;
+      }
+    } catch (error) {
+      // 忽略错误，可能窗口已经关闭
     }
     
     this.historyChangeListeners.clear();
