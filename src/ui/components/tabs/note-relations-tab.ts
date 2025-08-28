@@ -845,6 +845,9 @@ export class NoteRelationsTab {
     this.container = null;
     this.contentContainer = null;
     this.selectedNode = null;
-    this.noteAssociationSystem.clearCache();
+    // 清除缓存（如果方法存在）
+    if (typeof this.noteAssociationSystem.clearCache === 'function') {
+      this.noteAssociationSystem.clearCache();
+    }
   }
 }

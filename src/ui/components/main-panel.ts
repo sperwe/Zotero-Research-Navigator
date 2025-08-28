@@ -78,37 +78,33 @@ export class MainPanel {
     // 创建调整大小的手柄
     this.createResizers(doc);
 
-    // 添加到文档
-    if (doc.body) {
-      doc.body.appendChild(this.container);
-      // 在添加到 DOM 后注入样式
-      this.injectStyles(doc);
-      
-      // 初始化标签页
-      await this.initializeTabs();
-      
-      // 加载保存的状态
-      this.loadState();
-    } else {
-      // 如果 body 还不存在，等待 DOM 准备好
-      Zotero.log("[MainPanel] Waiting for document.body", "info");
-      const checkBody = async () => {
-        if (doc.body) {
-          doc.body.appendChild(this.container);
-          this.injectStyles(doc);
-          
-          // 初始化标签页
-          await this.initializeTabs();
-          
-          // 加载保存的状态
-          this.loadState();
-        } else {
-          this.window.setTimeout(checkBody, 50);
-        }
-      };
-      checkBody();
-    }
-
+    // 等待添加到文档
+    const attachToDOM = async () => {
+      return new Promise<void>((resolve) => {
+        const tryAttach = async () => {
+          if (doc.body) {
+            doc.body.appendChild(this.container);
+            // 在添加到 DOM 后注入样式
+            this.injectStyles(doc);
+            
+            // 初始化标签页
+            await this.initializeTabs();
+            
+            // 加载保存的状态
+            this.loadState();
+            
+            Zotero.log("[MainPanel] Successfully attached to DOM", "info");
+            resolve();
+          } else {
+            Zotero.log("[MainPanel] Waiting for document.body...", "info");
+            this.window.setTimeout(tryAttach, 50);
+          }
+        };
+        tryAttach();
+      });
+    };
+    
+    await attachToDOM();
     Zotero.log("[MainPanel] Created successfully", "info");
   }
 
