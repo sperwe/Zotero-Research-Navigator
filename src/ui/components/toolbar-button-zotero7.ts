@@ -23,6 +23,13 @@ export class ToolbarButtonZotero7 {
     
     Zotero.log("[ToolbarButtonZotero7] Starting creation...", "info");
     
+    // 首先检查是否已存在按钮，避免重复
+    const existingButton = doc.getElementById("research-navigator-button");
+    if (existingButton) {
+      Zotero.log("[ToolbarButtonZotero7] Button already exists, removing old one", "info");
+      existingButton.remove();
+    }
+    
     // 基于 Zotero 7 源代码，主要工具栏是 zotero-items-toolbar
     // 它在 <hbox id="zotero-items-toolbar"> 内
     let toolbar = doc.getElementById("zotero-items-toolbar");

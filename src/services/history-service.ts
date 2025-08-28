@@ -21,11 +21,14 @@ export class HistoryService {
   }
 
   async initialize(): Promise<void> {
+    Zotero.log("[HistoryService] Starting initialization...", "info");
     // 加载现有节点到缓存
     await this.loadNodesIntoCache();
+    Zotero.log(`[HistoryService] Loaded ${this.nodeCache.size} nodes into cache`, "info");
 
     // 检查是否需要恢复会话
     await this.checkSessionContinuity();
+    Zotero.log(`[HistoryService] Current session ID: ${this.currentSessionId}`, "info");
 
     Zotero.log("[HistoryService] Initialized", "info");
   }

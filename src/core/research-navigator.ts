@@ -177,6 +177,22 @@ export class ResearchNavigator {
     
     // 创建或更新历史节点
     const node = await this.historyService.createOrUpdateNode(itemId);
+    Zotero.log(`[Research Navigator] History node created: ${JSON.stringify({
+      id: node.id,
+      title: node.title,
+      sessionId: node.sessionId
+    })}`, "info");
+    
+    // 调试：检查当前会话
+    const sessions = this.historyService.getAllSessions();
+    Zotero.log(`[Research Navigator] Total sessions: ${sessions.length}`, "info");
+    if (sessions.length > 0) {
+      Zotero.log(`[Research Navigator] Latest session: ${JSON.stringify({
+        id: sessions[0].id,
+        name: sessions[0].name,
+        nodeCount: sessions[0].nodes.length
+      })}`, "info");
+    }
     
     // 显示通知
     if (this.uiManager) {
