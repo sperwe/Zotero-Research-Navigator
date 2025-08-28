@@ -77,8 +77,17 @@ export class ToolbarButton {
       }
     });
 
-    // 插入到工具栏
-    toolbar.parentNode?.insertBefore(this.button, toolbar.nextSibling);
+    // 插入到工具栏内部
+    // 尝试找到一个合适的插入位置
+    const searchButton = toolbar.querySelector("#zotero-tb-search") || 
+                        toolbar.querySelector("#zotero-tb-advanced-search");
+    if (searchButton) {
+      // 插入到搜索按钮之后
+      toolbar.insertBefore(this.button, searchButton.nextSibling);
+    } else {
+      // 插入到工具栏末尾
+      toolbar.appendChild(this.button);
+    }
 
     // 更新菜单内容
     this.updateMenu();
