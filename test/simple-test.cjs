@@ -3,7 +3,10 @@
  * 用于 GitHub Actions
  */
 
-console.log('=== Running Simple Plugin Tests ===\n');
+console.log('=== Running Simple Plugin Tests ===');
+console.log('Node version:', process.version);
+console.log('Environment:', process.env.NODE_ENV || 'development');
+console.log('');
 
 const fs = require('fs');
 const path = require('path');

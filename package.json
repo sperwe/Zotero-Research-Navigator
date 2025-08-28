@@ -30,6 +30,7 @@
     "lint:fix": "prettier --write . && eslint . --fix",
     "release": "zotero-plugin release",
     "test": "node test/simple-test.cjs",
+    "test:debug": "node test/debug-test.cjs",
     "test:full": "node test/run-tests.cjs",
     "test:xpi": "node test/zotero-test-environment.cjs",
     "update-deps": "npm update --save"

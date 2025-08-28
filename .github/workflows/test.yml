@@ -40,7 +40,12 @@ jobs:
       run: npm run build-prod
     
     - name: Run tests
-      run: npm test
+      run: |
+        echo "Current directory: $(pwd)"
+        echo "Build directory contents:"
+        ls -la build/ || echo "Build directory not found"
+        echo "Running tests..."
+        npm test
     
     - name: Upload test results
       if: always()
