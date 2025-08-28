@@ -613,18 +613,28 @@ export class MainPanel {
    * 显示面板
    */
   show(): void {
-    if (!this.container) return;
+    if (!this.container) {
+      Zotero.logError("[MainPanel] Cannot show: container is null");
+      return;
+    }
 
-    this.container.style.display = "flex";
-    this.container.classList.add("animate-in");
-    this.isVisible = true;
+    try {
+      this.container.style.display = "flex";
+      this.container.classList.add("animate-in");
+      this.isVisible = true;
 
-    // 移除动画类
-    setTimeout(() => {
-      this.container?.classList.remove("animate-in");
-    }, 300);
+      // 移除动画类
+      this.window.setTimeout(() => {
+        if (this.container) {
+          this.container.classList.remove("animate-in");
+        }
+      }, 300);
 
-    this.saveState();
+      this.saveState();
+      Zotero.log("[MainPanel] Panel shown successfully", "info");
+    } catch (error) {
+      Zotero.logError(`[MainPanel] Error showing panel: ${error}`);
+    }
   }
 
   /**

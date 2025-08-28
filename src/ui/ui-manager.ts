@@ -339,8 +339,27 @@ export class UIManager {
    * 切换主面板显示/隐藏
    */
   toggleMainPanel(): void {
+    Zotero.log("[UIManager] toggleMainPanel called", "info");
     if (this.mainPanel) {
+      Zotero.log("[UIManager] Main panel exists, toggling...", "info");
       this.mainPanel.toggle();
+    } else {
+      Zotero.log("[UIManager] Main panel is null!", "error");
+      // 尝试创建面板
+      const win = Zotero.getMainWindow();
+      if (win && !this.mainPanel) {
+        this.mainPanel = new MainPanel(win, {
+          closedTabsManager: this.closedTabsManager,
+          noteAssociationSystem: this.noteAssociationSystem,
+          historyService: this.historyService,
+        });
+        this.mainPanel.create().then(() => {
+          Zotero.log("[UIManager] Main panel created on demand", "info");
+          this.mainPanel.show();
+        }).catch(err => {
+          Zotero.logError(`[UIManager] Failed to create panel on demand: ${err}`);
+        });
+      }
     }
   }
   
