@@ -28,13 +28,17 @@ export default defineConfig({
     },
     esbuildOptions: [
       {
-        entryPoints: ["src/index.ts"],
+        entryPoints: ["src/bootstrap.ts"],
         define: {
           __env__: `"${process.env.NODE_ENV || "development"}"`,
         },
         bundle: true,
         target: "firefox115",
-        outfile: `build/addon/content/scripts/${pkg.config.addonRef}.js`,
+        outfile: `build/addon/bootstrap.js`,
+        format: "iife",
+        banner: {
+          js: `// Research Navigator Bootstrap\n// Auto-generated from TypeScript source\n`,
+        },
       },
     ],
   },
