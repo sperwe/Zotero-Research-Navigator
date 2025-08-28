@@ -30,9 +30,10 @@ export class ToolbarButton {
 
     // 尝试多个工具栏位置
     const toolbarIds = [
-      "zotero-tb-advanced-search",
-      "zotero-items-toolbar",
-      "zotero-toolbar",
+      "zotero-tb-search", // 主搜索框所在的工具栏
+      "zotero-toolbar",   // 主工具栏
+      "zotero-tb-advanced-search", // 高级搜索按钮
+      "zotero-items-toolbar", // 条目列表工具栏（最后的选择）
     ];
 
     let toolbar = null;
