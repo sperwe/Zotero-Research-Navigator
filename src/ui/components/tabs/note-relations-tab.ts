@@ -604,6 +604,12 @@ export class NoteRelationsTab {
     
     const doc = this.window.document;
     
+    // 确保有 body 元素
+    if (!doc.body) {
+      Zotero.logError("[NoteRelationsTab] Document body not available");
+      return;
+    }
+    
     // 创建模态对话框
     const dialog = doc.createElement("div");
     dialog.style.cssText = `
@@ -795,7 +801,7 @@ export class NoteRelationsTab {
     if (this.selectedNode.itemId) {
       const item = await Zotero.Items.getAsync(this.selectedNode.itemId);
       if (item && item.isRegularItem()) {
-        note.parentItem = item.id;
+        note.parentItemID = item.id;
       }
     }
     

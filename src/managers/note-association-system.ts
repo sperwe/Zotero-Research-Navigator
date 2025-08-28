@@ -447,14 +447,15 @@ ${initialContent || "<p>Your notes here...</p>"}
     
     try {
       // 获取同一文献的其他笔记
-      const itemNotes = await this.databaseService.query(`
-        SELECT DISTINCT itemID as noteId, title, dateModified
-        FROM items
-        WHERE parentItemID = ? AND itemType = 'note'
-        AND itemID NOT IN (
-          SELECT noteId FROM note_relations WHERE nodeId = ?
+      const itemNotes = await Zotero.DB.queryAsync(`
+        SELECT DISTINCT i.itemID as noteId, i.title, i.dateModified
+        FROM items i
+        JOIN itemTypes it ON i.itemTypeID = it.itemTypeID
+        WHERE i.parentItemID = ? AND it.typeName = 'note'
+        AND i.itemID NOT IN (
+          SELECT noteId FROM research_navigator_note_relations WHERE nodeId = ?
         )
-        ORDER BY dateModified DESC
+        ORDER BY i.dateModified DESC
         LIMIT 5
       `, [node.itemId, nodeId]);
       
