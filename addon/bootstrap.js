@@ -308,7 +308,9 @@ class SearchEngine {
   }
   
   search(query, nodes) {
-    const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+    const normalized = (query || '').toLowerCase().trim();
+    if (!normalized) return nodes;
+    const queryWords = normalized.split(/\s+/).filter(w => w.length > 1);
     const results = new Map();
     
     queryWords.forEach(word => {
@@ -484,6 +486,12 @@ var ResearchNavigator = {
   // 调试日志
   debug(msg) {
     Zotero.debug(`[Research Navigator] ${msg}`);
+  },
+
+  // 判断当前会话是否已存在指定 item 的节点
+  hasNodeForItemInCurrentSession(itemId) {
+    const nodes = this.itemNodeMap.get(itemId) || [];
+    return nodes.some(n => n.sessionId === this.currentSessionId);
   },
   
   // 初始化
@@ -1062,11 +1070,16 @@ var ResearchNavigator = {
           if (tab.type === 'reader' && tab.data && tab.data.itemID) {
             const item = await Zotero.Items.getAsync(tab.data.itemID);
             if (item) {
-              this.debug(`Loading existing tab: ${item.getField('title')}`);
-              const node = await this.addToTreeHistory(item, RelationType.TAB);
-              if (node && tab.id) {
-                node.tabId = tab.id;
-                this.tabNodeMap.set(tab.id, node);
+              // 避免重复索引：当前会话已有该 item 的节点则跳过
+              if (this.hasNodeForItemInCurrentSession(item.id)) {
+                this.debug(`Skip duplicate indexing for item ${item.id}`);
+              } else {
+                this.debug(`Loading existing tab: ${item.getField('title')}`);
+                const node = await this.addToTreeHistory(item, RelationType.TAB);
+                if (node && tab.id) {
+                  node.tabId = tab.id;
+                  this.tabNodeMap.set(tab.id, node);
+                }
               }
             }
           }
@@ -1255,6 +1268,37 @@ var ResearchNavigator = {
     while (treeContainer.firstChild) {
       treeContainer.removeChild(treeContainer.firstChild);
     }
+    
+    // 顶部操作行：删除当前会话
+    const sessionToolbar = doc.createXULElement('hbox');
+    sessionToolbar.style.cssText = 'padding: 4px 6px; border-bottom: 1px solid #eee; align-items: center; gap: 6px;';
+    const delSessionBtn = doc.createXULElement('button');
+    delSessionBtn.setAttribute('label', 'Delete This Session');
+    delSessionBtn.addEventListener('command', () => {
+      if (this.currentSessionId) {
+        // 删除当前会话的根及其子孙
+        this.treeRoots = this.treeRoots.filter(r => r.sessionId !== this.currentSessionId);
+        const remainNodes = new Map();
+        this.nodeMap.forEach((n, id) => {
+          if (n.sessionId !== this.currentSessionId) remainNodes.set(id, n);
+        });
+        this.nodeMap = remainNodes;
+        // 重建 itemNodeMap
+        this.itemNodeMap.clear();
+        this.treeRoots.forEach(root => {
+          const stack = [root];
+          while (stack.length) {
+            const n = stack.pop();
+            if (!this.itemNodeMap.has(n.itemId)) this.itemNodeMap.set(n.itemId, []);
+            this.itemNodeMap.get(n.itemId).push(n);
+            if (n.children) n.children.forEach(c => stack.push(c));
+          }
+        });
+        this.updateTreeDisplay();
+      }
+    });
+    sessionToolbar.appendChild(delSessionBtn);
+    treeContainer.appendChild(sessionToolbar);
     
     // 获取树形数据
     const sessions = this.getTreeData();
@@ -1663,6 +1707,33 @@ var ResearchNavigator = {
       e.preventDefault();
       this.showNodeContextMenu(doc, node, e);
     });
+
+    // 删除节点按钮（行末小按钮）
+    const delBtn = doc.createXULElement('button');
+    delBtn.setAttribute('label', '🗑');
+    delBtn.setAttribute('tooltiptext', 'Delete this node');
+    delBtn.style.cssText = 'margin-left: 6px; min-width: 20px;';
+    delBtn.addEventListener('command', () => {
+      // 从父子关系中移除
+      if (node.parentId && this.nodeMap.has(node.parentId)) {
+        const p = this.nodeMap.get(node.parentId);
+        p.children = (p.children || []).filter(c => c.id !== node.id);
+      } else {
+        this.treeRoots = this.treeRoots.filter(r => r.id !== node.id);
+      }
+      // 自身及子孙从映射移除
+      const stack = [node];
+      while (stack.length) {
+        const n = stack.pop();
+        this.nodeMap.delete(n.id);
+        if (this.itemNodeMap.has(n.itemId)) {
+          this.itemNodeMap.set(n.itemId, this.itemNodeMap.get(n.itemId).filter(en => en.id !== n.id));
+        }
+        if (n.children) n.children.forEach(c => stack.push(c));
+      }
+      this.updateTreeDisplay();
+    });
+    contentEl.appendChild(delBtn);
     
     nodeEl.appendChild(contentEl);
     
@@ -1986,6 +2057,8 @@ var ResearchNavigator = {
   async addNodeNote(node, note) {
     node.notes = note;
     await this.db.saveNode(node);
+    // 更新检索索引以反映新笔记内容
+    this.searchEngine.indexNode(node);
     this.updateTreeDisplay();
   },
   
