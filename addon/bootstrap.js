@@ -990,7 +990,7 @@ var ResearchNavigator = {
     this.debug('Tab listener registered');
   },
   
-  // 初始化：获取当前打开的标签页
+  // 初始化：映射当前打开的标签页到已有的历史节点
   async initializeTabs() {
     try {
       var win = Services.wm.getMostRecentWindow("navigator:browser");
@@ -1000,14 +1000,27 @@ var ResearchNavigator = {
         
         for (let tab of tabs) {
           if (tab.type === 'reader' && tab.data && tab.data.itemID) {
-            const item = await Zotero.Items.getAsync(tab.data.itemID);
-            if (item) {
-              this.debug(`Loading existing tab: ${item.getField('title')}`);
-              const node = await this.addToTreeHistory(item, RelationType.TAB);
-              if (node && tab.id) {
-                node.tabId = tab.id;
-                this.tabNodeMap.set(tab.id, node);
+            const itemID = tab.data.itemID;
+            
+            // 查找是否已有该项目的历史节点
+            const existingNodes = this.itemNodeMap.get(itemID) || [];
+            
+            if (existingNodes.length > 0) {
+              // 如果有已存在的节点，映射到最近访问的那个
+              let mostRecentNode = existingNodes[0];
+              for (let node of existingNodes) {
+                if (node.lastVisit > mostRecentNode.lastVisit) {
+                  mostRecentNode = node;
+                }
               }
+              
+              this.debug(`Mapping tab ${tab.id} to existing node for item ${itemID}`);
+              mostRecentNode.tabId = tab.id;
+              this.tabNodeMap.set(tab.id, mostRecentNode);
+            } else {
+              // 只有在没有历史记录的情况下，才考虑是否要添加
+              // 但这里我们选择不添加，因为这只是初始化
+              this.debug(`Tab ${tab.id} has no history node, skipping`);
             }
           }
         }
@@ -1899,19 +1912,34 @@ var ResearchNavigator = {
   
   // 清除所有历史
   async clearAllHistory() {
-    if (confirm('Are you sure you want to clear all history? This cannot be undone.')) {
-      await this.db.clearAll();
-      this.treeRoots = [];
-      this.nodeMap.clear();
-      this.itemNodeMap.clear();
-      this.tabNodeMap.clear();
-      this.navigationHistory = [];
-      this.navigationIndex = -1;
-      this.currentNode = null;
-      this.searchEngine.clear();
-      this.updateTreeDisplay();
-      this.updateNavigationButtons();
-      this.showNotification('History cleared');
+    try {
+      // 使用 Zotero 的确认对话框
+      const ps = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
+        .getService(Components.interfaces.nsIPromptService);
+      
+      const confirmed = ps.confirm(
+        null,
+        "Clear History",
+        "Are you sure you want to clear all history? This cannot be undone."
+      );
+      
+      if (confirmed) {
+        await this.db.clearAll();
+        this.treeRoots = [];
+        this.nodeMap.clear();
+        this.itemNodeMap.clear();
+        this.tabNodeMap.clear();
+        this.navigationHistory = [];
+        this.navigationIndex = -1;
+        this.currentNode = null;
+        this.searchEngine.clear();
+        this.updateTreeDisplay();
+        this.updateNavigationButtons();
+        this.showNotification('History cleared');
+      }
+    } catch (e) {
+      this.debug(`Error clearing history: ${e}`);
+      this.showNotification('Failed to clear history', 'error');
     }
   },
   
