@@ -8,12 +8,7 @@ import { NoteAssociationSystem } from "../../managers/note-association-system";
 import { HistoryService } from "../../services/history-service";
 import { HistoryTreeTab } from "./tabs/history-tree-tab";
 import { NoteRelationsTab } from "./tabs/note-relations-tab";
-import { AdvancedSearchTab } from "./tabs/advanced-search-tab";
-import { VisualizationTab } from "./tabs/visualization-tab";
-import { NoteBranchingTab } from "./tabs/note-branching-tab";
-import { KeyboardShortcutManager } from "../../managers/keyboard-shortcuts";
-import { ExportImportManager } from "../../managers/export-import";
-import { BatchOperationManager } from "../../managers/batch-operations";
+import { NoteBranchingSystem } from "../../managers/note-branching";
 
 export interface MainPanelOptions {
   closedTabsManager: ClosedTabsManager;
@@ -29,11 +24,6 @@ export class MainPanel {
 
   // 标签页
   private tabs: Map<string, any> = new Map();
-  
-  // 管理器
-  private keyboardManager: KeyboardShortcutManager | null = null;
-  private exportImportManager: ExportImportManager | null = null;
-  private batchOperationManager: BatchOperationManager | null = null;
 
   // 面板尺寸
   private width = 400;
@@ -227,9 +217,6 @@ export class MainPanel {
     const tabs = [
       { id: "history", label: "History Tree", icon: "🌳" },
       { id: "notes", label: "Note Relations", icon: "📝" },
-      { id: "search", label: "Search", icon: "🔍" },
-      { id: "viz", label: "Visualize", icon: "📊" },
-      { id: "branches", label: "Branches", icon: "🌿" },
     ];
 
     for (const tab of tabs) {
@@ -325,47 +312,7 @@ export class MainPanel {
       this.tabs.set("notes", notesTab);
       Zotero.log(`[MainPanel] NoteRelationsTab created successfully. Total tabs: ${this.tabs.size}`, "info");
       
-      // 高级搜索标签页
-      const searchTab = new AdvancedSearchTab(
-        this.window,
-        this.options.historyService,
-        this.options.noteAssociationSystem
-      );
-      this.tabs.set("search", searchTab);
-      Zotero.log(`[MainPanel] AdvancedSearchTab created successfully`, "info");
-      
-      // 可视化标签页
-      const vizTab = new VisualizationTab(
-        this.window,
-        this.options.historyService,
-        this.options.noteAssociationSystem
-      );
-      this.tabs.set("viz", vizTab);
-      Zotero.log(`[MainPanel] VisualizationTab created successfully`, "info");
-      
-      // 笔记分支管理标签页
-      const branchingTab = new NoteBranchingTab(
-        this.window,
-        this.options.noteAssociationSystem
-      );
-      this.tabs.set("branches", branchingTab);
-      Zotero.log(`[MainPanel] NoteBranchingTab created successfully`, "info");
-      
-      // 初始化管理器
-      this.keyboardManager = new KeyboardShortcutManager(this.window);
-      this.exportImportManager = new ExportImportManager(
-        this.window,
-        this.options.historyService,
-        this.options.noteAssociationSystem
-      );
-      this.batchOperationManager = new BatchOperationManager(
-        this.window,
-        this.options.historyService,
-        this.options.noteAssociationSystem
-      );
-      
-      // 注册事件监听
-      this.registerEventListeners();
+      // 不再创建这些未完成的功能标签页
 
           // 显示初始标签页
     Zotero.log(`[MainPanel] Showing initial tab: ${this.activeTab}`, "info");
@@ -375,106 +322,7 @@ export class MainPanel {
     }
   }
 
-  /**
-   * 注册事件监听器
-   */
-  private registerEventListeners(): void {
-    // 键盘快捷键事件
-    this.window.addEventListener('research-navigator-toggle-panel', () => {
-      this.toggle();
-    });
-    
-    this.window.addEventListener('research-navigator-switch-tab', (e: any) => {
-      this.switchTab(e.detail.tabId);
-    });
-    
-    this.window.addEventListener('research-navigator-create-note', () => {
-      const notesTab = this.tabs.get('notes') as NoteRelationsTab;
-      if (notesTab) {
-        this.switchTab('notes');
-        notesTab.createNewNote();
-      }
-    });
-    
-    this.window.addEventListener('research-navigator-export', () => {
-      this.showExportDialog();
-    });
-    
-    this.window.addEventListener('research-navigator-refresh', () => {
-      const currentTab = this.tabs.get(this.activeTab);
-      if (currentTab && typeof currentTab.refresh === 'function') {
-        currentTab.refresh();
-      }
-    });
-  }
-  
-  /**
-   * 显示导出对话框
-   */
-  private async showExportDialog(): Promise<void> {
-    if (!this.exportImportManager) return;
-    
-    const doc = this.window.document;
-    
-    // 创建对话框
-    const dialog = doc.createElement('div');
-    dialog.style.cssText = `
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      border: 1px solid var(--material-border);
-      border-radius: 8px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-      padding: 20px;
-      z-index: 10001;
-    `;
-    
-    dialog.innerHTML = `
-      <h3 style="margin: 0 0 15px 0;">Export Research Navigator Data</h3>
-      <div style="margin-bottom: 15px;">
-        <label style="display: block; margin-bottom: 5px;">Format:</label>
-        <select id="export-format" style="width: 100%; padding: 5px;">
-          <option value="json">JSON</option>
-          <option value="html">HTML</option>
-          <option value="csv">CSV</option>
-          <option value="markdown">Markdown</option>
-          <option value="opml">OPML</option>
-        </select>
-      </div>
-      <div style="margin-bottom: 15px;">
-        <label><input type="checkbox" id="export-notes" checked> Include note associations</label>
-      </div>
-      <div style="display: flex; gap: 10px; justify-content: flex-end;">
-        <button id="export-cancel" style="padding: 6px 16px; border: 1px solid #ccc; background: white; border-radius: 4px; cursor: pointer;">Cancel</button>
-        <button id="export-confirm" style="padding: 6px 16px; background: var(--accent-blue); color: white; border: none; border-radius: 4px; cursor: pointer;">Export</button>
-      </div>
-    `;
-    
-    // 事件处理
-    const cancelBtn = dialog.querySelector('#export-cancel');
-    const confirmBtn = dialog.querySelector('#export-confirm');
-    const formatSelect = dialog.querySelector('#export-format') as HTMLSelectElement;
-    const includeNotes = dialog.querySelector('#export-notes') as HTMLInputElement;
-    
-    cancelBtn?.addEventListener('click', () => dialog.remove());
-    
-    confirmBtn?.addEventListener('click', async () => {
-      const format = formatSelect.value as any;
-      const content = await this.exportImportManager!.export(format, {
-        includeNotes: includeNotes.checked
-      });
-      
-      const filename = this.exportImportManager!.generateFilename(format);
-      const mimeType = this.exportImportManager!.getMimeType(format);
-      
-      this.exportImportManager!.downloadFile(content, filename, mimeType);
-      dialog.remove();
-    });
-    
-    doc.body.appendChild(dialog);
-  }
+
 
   /**
    * 切换标签页

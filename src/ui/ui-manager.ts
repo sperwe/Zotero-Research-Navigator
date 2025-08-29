@@ -11,6 +11,7 @@ import { ToolbarButton } from "./components/toolbar-button";
 import { ToolbarButtonV2 } from "./components/toolbar-button-v2";
 import { ToolbarButtonZotero7 } from "./components/toolbar-button-zotero7";
 import { SidebarManager } from "./sidebar-manager";
+import { QuickNoteWindow } from "./components/quick-note-window";
 import { config } from "../../package.json";
 
 export interface UIManagerOptions {
@@ -24,6 +25,7 @@ export class UIManager {
   private mainPanel: MainPanel | null = null;
   private sidebarManager: SidebarManager | null = null;
   private toolbarButton: ToolbarButton | null = null;
+  private quickNoteWindow: QuickNoteWindow | null = null;
   private windows = new Set<Window>();
   private displayMode: "floating" | "sidebar" = "floating";
 
@@ -131,7 +133,7 @@ export class UIManager {
             // 回退到原版本
             this.toolbarButton = new ToolbarButton(win, {
               onTogglePanel: () => this.toggleMainPanel(),
-              onQuickNote: () => this.quickCreateNote(),
+              onQuickNote: () => this.showQuickNoteWindow(),
               onSearchHistory: () => this.openSearchDialog(),
               onOpenPreferences: () => this.openPreferences(),
               closedTabsManager: this.closedTabsManager,
@@ -410,33 +412,53 @@ export class UIManager {
   }
 
   /**
-   * 快速创建笔记
+   * 显示快速笔记窗口
+   */
+  async showQuickNoteWindow(): Promise<void> {
+    try {
+      const win = Zotero.getMainWindow();
+      if (!win) return;
+      
+      // 如果还没有创建快速笔记窗口，创建它
+      if (!this.quickNoteWindow) {
+        this.quickNoteWindow = new QuickNoteWindow(
+          win,
+          this.noteAssociationSystem,
+          this.historyService
+        );
+      }
+      
+      // 获取当前选中的项目（如果有）
+      const selectedItems = Zotero.getActiveZoteroPane()?.getSelectedItems();
+      let nodeId: string | undefined;
+      
+      if (selectedItems && selectedItems.length === 1) {
+        const item = selectedItems[0];
+        if (!item.isNote()) {
+          // 为选中的项目创建历史节点
+          const node = await this.historyService.createOrUpdateNode(item.id, {
+            title: item.getField('title'),
+            url: item.getField('url')
+          });
+          nodeId = node.id;
+        }
+      }
+      
+      // 显示快速笔记窗口
+      await this.quickNoteWindow.show(nodeId);
+      
+    } catch (error) {
+      Zotero.logError(`[UIManager] Failed to show quick note window: ${error}`);
+      this.showNotification("Failed to open quick note window", "error");
+    }
+  }
+
+  /**
+   * 快速创建笔记（已废弃）
    */
   async quickCreateNote(): Promise<void> {
-    const currentNode = this.historyService.getCurrentNode();
-    if (!currentNode) {
-      this.showNotification("No active research context", "warning");
-      return;
-    }
-
-    try {
-      const note = await this.noteAssociationSystem.createContextualNote(
-        currentNode.id,
-        "<p>Quick note created from toolbar</p>",
-      );
-
-      // 打开笔记编辑器
-      const ZoteroPane = Zotero.getActiveZoteroPane();
-      if (ZoteroPane) {
-        await ZoteroPane.selectItem(note.id);
-        ZoteroPane.openNoteWindow(note.id);
-      }
-
-      this.showNotification("Note created successfully", "success");
-    } catch (error) {
-      Zotero.logError(error);
-      this.showNotification("Failed to create note", "error");
-    }
+    // 重定向到新的快速笔记窗口
+    await this.showQuickNoteWindow();
   }
 
   /**

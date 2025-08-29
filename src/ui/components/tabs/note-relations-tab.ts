@@ -7,6 +7,7 @@ import { NoteAssociationSystem } from "../../../managers/note-association-system
 import { HistoryService } from "../../../services/history-service";
 import { HistoryNode } from "../../../services/database-service";
 import { NoteEditorIntegration, EditorMode } from "./note-editor-integration";
+import { NoteBranchingSystem } from "../../../managers/note-branching";
 
 export interface AssociatedNote {
   id: number;
@@ -25,12 +26,16 @@ export class NoteRelationsTab {
   private editorMode: EditorMode = 'column';
   private editorContainer: HTMLElement | null = null;
   private selectedNoteId: number | null = null;
+  private noteBranchingSystem: NoteBranchingSystem;
+  private branchingPanel: HTMLElement | null = null;
   
   constructor(
     private window: Window,
     private historyService: HistoryService,
     private noteAssociationSystem: NoteAssociationSystem
-  ) {}
+  ) {
+    this.noteBranchingSystem = new NoteBranchingSystem(window, noteAssociationSystem);
+  }
   
   create(container: HTMLElement): void {
     try {
@@ -842,6 +847,25 @@ export class NoteRelationsTab {
     titleContainer.appendChild(relationType);
     
     header.appendChild(titleContainer);
+    
+    // 分支管理按钮
+    const branchBtn = doc.createElement("button");
+    branchBtn.style.cssText = `
+      padding: 4px 8px;
+      font-size: 12px;
+      background: white;
+      border: 1px solid var(--material-border-quarternary);
+      border-radius: 3px;
+      cursor: pointer;
+      color: var(--fill-secondary);
+    `;
+    branchBtn.innerHTML = '🌿 Branches';
+    branchBtn.title = 'Manage note branches';
+    branchBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.showBranchingPanel(note.noteId);
+    });
+    header.appendChild(branchBtn);
     
     // 操作按钮
     const actions = doc.createElement("div");
@@ -2093,6 +2117,234 @@ export class NoteRelationsTab {
   }
   
   /**
+   * 显示分支管理面板
+   */
+  private async showBranchingPanel(noteId: number): Promise<void> {
+    if (!this.container) return;
+    
+    const doc = this.window.document;
+    
+    // 如果已经有分支面板，先移除
+    if (this.branchingPanel) {
+      this.branchingPanel.remove();
+      this.branchingPanel = null;
+    }
+    
+    // 创建浮动面板
+    this.branchingPanel = doc.createElement('div');
+    this.branchingPanel.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 600px;
+      max-height: 80vh;
+      background: white;
+      border: 1px solid var(--material-border);
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    `;
+    
+    // 标题栏
+    const header = doc.createElement('div');
+    header.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--material-border);
+      background: #f5f5f5;
+    `;
+    
+    const title = doc.createElement('h3');
+    title.style.cssText = `
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+    `;
+    title.textContent = '🌿 Note Branches';
+    header.appendChild(title);
+    
+    const closeBtn = doc.createElement('button');
+    closeBtn.style.cssText = `
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: #666;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+    `;
+    closeBtn.innerHTML = '×';
+    closeBtn.addEventListener('click', () => {
+      this.branchingPanel?.remove();
+      this.branchingPanel = null;
+    });
+    header.appendChild(closeBtn);
+    
+    this.branchingPanel.appendChild(header);
+    
+    // 内容区域
+    const content = doc.createElement('div');
+    content.style.cssText = `
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    `;
+    
+    try {
+      // 获取分支信息
+      const branches = await this.noteBranchingSystem.getAllBranches(noteId);
+      
+      if (branches.length === 0) {
+        // 创建初始版本
+        content.innerHTML = `
+          <div style="text-align: center; padding: 40px;">
+            <p style="color: #666; margin-bottom: 20px;">This note has no version history yet.</p>
+            <button id="init-branching" style="
+              padding: 8px 16px;
+              background: var(--accent-blue);
+              color: white;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+            ">Initialize Version Control</button>
+          </div>
+        `;
+        
+        const initBtn = content.querySelector('#init-branching');
+        initBtn?.addEventListener('click', async () => {
+          try {
+            await this.noteBranchingSystem.createInitialVersion(noteId);
+            // 重新加载面板
+            this.showBranchingPanel(noteId);
+          } catch (error) {
+            Zotero.logError(`[NoteRelationsTab] Failed to initialize branching: ${error}`);
+          }
+        });
+      } else {
+        // 显示分支列表
+        const branchList = doc.createElement('div');
+        branchList.style.cssText = `
+          margin-bottom: 20px;
+        `;
+        
+        const listTitle = doc.createElement('h4');
+        listTitle.style.cssText = `
+          margin: 0 0 10px 0;
+          font-size: 14px;
+          color: #666;
+        `;
+        listTitle.textContent = 'Branches:';
+        branchList.appendChild(listTitle);
+        
+        for (const branch of branches) {
+          const branchItem = doc.createElement('div');
+          branchItem.style.cssText = `
+            padding: 10px;
+            margin-bottom: 8px;
+            border: 1px solid var(--material-border-quarternary);
+            border-radius: 4px;
+            background: ${branch.name === 'main' ? '#e3f2fd' : 'white'};
+            cursor: pointer;
+          `;
+          
+          branchItem.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <strong>${branch.name}</strong>
+                ${branch.name === 'main' ? '<span style="margin-left: 8px; font-size: 11px; color: #1976d2;">DEFAULT</span>' : ''}
+              </div>
+              <div style="font-size: 12px; color: #666;">
+                Updated: ${new Date(branch.updatedAt).toLocaleDateString()}
+              </div>
+            </div>
+          `;
+          
+          branchList.appendChild(branchItem);
+        }
+        
+        content.appendChild(branchList);
+        
+        // 操作按钮
+        const actions = doc.createElement('div');
+        actions.style.cssText = `
+          display: flex;
+          gap: 10px;
+          margin-top: 20px;
+          padding-top: 20px;
+          border-top: 1px solid var(--material-border-quarternary);
+        `;
+        
+        const newBranchBtn = doc.createElement('button');
+        newBranchBtn.style.cssText = `
+          padding: 8px 16px;
+          background: white;
+          border: 1px solid var(--material-border);
+          border-radius: 4px;
+          cursor: pointer;
+        `;
+        newBranchBtn.textContent = '+ New Branch';
+        newBranchBtn.addEventListener('click', async () => {
+          const branchName = this.window.prompt('Enter branch name:');
+          if (branchName) {
+            try {
+              await this.noteBranchingSystem.createBranch(noteId, branchName);
+              this.showBranchingPanel(noteId);
+            } catch (error) {
+              Zotero.logError(`[NoteRelationsTab] Failed to create branch: ${error}`);
+            }
+          }
+        });
+        actions.appendChild(newBranchBtn);
+        
+        const commitBtn = doc.createElement('button');
+        commitBtn.style.cssText = `
+          padding: 8px 16px;
+          background: var(--accent-blue);
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+        `;
+        commitBtn.textContent = 'Commit Changes';
+        commitBtn.addEventListener('click', async () => {
+          const message = this.window.prompt('Commit message:');
+          if (message) {
+            try {
+              await this.noteBranchingSystem.commit(noteId, message);
+              this.showBranchingPanel(noteId);
+            } catch (error) {
+              Zotero.logError(`[NoteRelationsTab] Failed to commit: ${error}`);
+            }
+          }
+        });
+        actions.appendChild(commitBtn);
+        
+        content.appendChild(actions);
+      }
+      
+    } catch (error) {
+      Zotero.logError(`[NoteRelationsTab] Error loading branches: ${error}`);
+      content.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: var(--fill-error);">
+          <p>Failed to load branch information</p>
+        </div>
+      `;
+    }
+    
+    this.branchingPanel.appendChild(content);
+    
+    // 添加到文档
+    doc.body.appendChild(this.branchingPanel);
+  }
+
+  /**
    * 销毁
    */
   destroy(): void {
@@ -2102,6 +2354,11 @@ export class NoteRelationsTab {
     // 清除缓存（如果方法存在）
     if (typeof this.noteAssociationSystem.clearCache === 'function') {
       this.noteAssociationSystem.clearCache();
+    }
+    // 清理分支面板
+    if (this.branchingPanel) {
+      this.branchingPanel.remove();
+      this.branchingPanel = null;
     }
   }
 }
