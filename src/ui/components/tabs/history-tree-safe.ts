@@ -30,7 +30,7 @@ export class HistoryTreeSafe {
             .hts-toolbar { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #e0e0e0; background: #f7f7f7; }
             .hts-btn { margin-right: 10px; padding: 5px 10px; font-size: 12px; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 3px; transition: all 0.2s; }
             .hts-btn:hover { background: #e8e8e8; border-color: #999; }
-            .hts-tree { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 10px; min-height: 0; }
+            .hts-tree { flex: 1; overflow-y: auto; overflow-x: auto; padding: 10px; min-height: 0; }
             .hts-node { margin: 2px 0; user-select: none; }
             .hts-node-content { display: flex; align-items: center; padding: 3px 5px; cursor: pointer; border-radius: 3px; transition: background 0.2s; }
             .hts-node-content:hover { background: #f0f0f0; }
@@ -38,8 +38,15 @@ export class HistoryTreeSafe {
             .hts-node-icon { margin: 0 5px; }
             .hts-node-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
             .hts-node-count { color: #666; font-size: 11px; margin-left: 5px; }
-            .hts-children { margin-left: 20px; display: none; }
+            .hts-node-actions { display: flex; gap: 5px; margin-left: 10px; opacity: 0; transition: opacity 0.2s; }
+            .hts-node-content:hover .hts-node-actions { opacity: 1; }
+            .hts-delete-btn { padding: 2px 6px; font-size: 11px; color: #d32f2f; border: 1px solid #d32f2f; background: #fff; cursor: pointer; border-radius: 3px; }
+            .hts-delete-btn:hover { background: #ffebee; }
+            .hts-children { margin-left: 24px; display: none; }
             .hts-expanded > .hts-children { display: block; }
+            .hts-level-1 { margin-left: 24px; }
+            .hts-level-2 { margin-left: 48px; }
+            .hts-level-3 { margin-left: 72px; }
             .hts-date-group { font-weight: 600; color: #1a73e8; }
             .hts-session-group { color: #5f6368; }
             .hts-history-item { color: #202124; }
@@ -123,6 +130,7 @@ export class HistoryTreeSafe {
           icon: '📚',
           text: `Session ${session.id.slice(-6)}`,
           count: historyNodes.length,
+          data: session, // 添加 session 数据以支持删除
           children: historyNodes.map(node => ({
             id: `node_${node.id}`,
             type: 'history',
@@ -210,6 +218,37 @@ export class HistoryTreeSafe {
       content.appendChild(count);
     }
     
+    // 添加操作按钮
+    const actions = doc.createElement('div');
+    actions.className = 'hts-node-actions';
+    
+    // 为历史项和会话添加删除按钮
+    if ((node.type === 'history' || node.type === 'session') && node.data) {
+      const deleteBtn = doc.createElement('button');
+      deleteBtn.className = 'hts-delete-btn';
+      deleteBtn.textContent = '×';
+      deleteBtn.title = node.type === 'session' ? 'Delete session' : 'Delete item';
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.handleDelete(node);
+      });
+      actions.appendChild(deleteBtn);
+    }
+    
+    // 为关闭的标签添加删除按钮
+    if (node.type === 'closedItem' && node.data) {
+      const deleteBtn = doc.createElement('button');
+      deleteBtn.className = 'hts-delete-btn';
+      deleteBtn.textContent = '×';
+      deleteBtn.title = 'Remove from closed tabs';
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.handleClosedTabDelete(node);
+      });
+      actions.appendChild(deleteBtn);
+    }
+    
+    content.appendChild(actions);
     content.addEventListener('click', () => this.handleNodeClick(node));
     
     nodeEl.appendChild(content);
@@ -252,12 +291,77 @@ export class HistoryTreeSafe {
   
   private handleNodeClick(node: any): void {
     if (node.type === 'history' && node.data?.itemId) {
-      const ZoteroPane = Zotero.getActiveZoteroPane();
-      if (ZoteroPane) {
-        ZoteroPane.selectItem(node.data.itemId);
+      // 在标签页中打开，而不是在库中选择
+      try {
+        const item = Zotero.Items.get(node.data.itemId);
+        if (item) {
+          // 检查是否是附件
+          if (item.isAttachment()) {
+            Zotero.OpenPDF.openToPage(item, null);
+          } else if (item.isNote()) {
+            // 打开笔记
+            const win = Zotero.getMainWindow();
+            if (win.ZoteroPane) {
+              win.ZoteroPane.openNoteWindow(item.id);
+            }
+          } else {
+            // 尝试在阅读器中打开
+            const libraryID = item.libraryID;
+            const itemID = item.id;
+            Zotero.Reader.open(itemID, null, { openInWindow: false });
+          }
+        }
+      } catch (error) {
+        Zotero.logError(`[HistoryTreeSafe] Failed to open item: ${error}`);
+        // 回退到在库中选择
+        const ZoteroPane = Zotero.getActiveZoteroPane();
+        if (ZoteroPane) {
+          ZoteroPane.selectItem(node.data.itemId);
+        }
       }
     } else if (node.type === 'closedItem' && node.data) {
       this.closedTabsManager.restoreTab(node.data);
+    }
+  }
+  
+  private async handleDelete(node: any): Promise<void> {
+    if (node.type === 'history' && node.data) {
+      if (this.window.confirm(`Delete history item "${node.text}"?`)) {
+        try {
+          await this.historyService.deleteNode(node.data.id);
+          await this.refresh();
+        } catch (error) {
+          Zotero.logError(`[HistoryTreeSafe] Failed to delete history node: ${error}`);
+        }
+      }
+    } else if (node.type === 'session' && node.data) {
+      if (this.window.confirm(`Delete entire session "${node.text}"? This will delete all items in this session.`)) {
+        try {
+          // 删除会话中的所有节点
+          for (const child of node.children || []) {
+            if (child.data) {
+              await this.historyService.deleteNode(child.data.id);
+            }
+          }
+          await this.refresh();
+        } catch (error) {
+          Zotero.logError(`[HistoryTreeSafe] Failed to delete session: ${error}`);
+        }
+      }
+    }
+  }
+  
+  private async handleClosedTabDelete(node: any): Promise<void> {
+    if (node.data) {
+      if (this.window.confirm(`Remove "${node.text}" from closed tabs?`)) {
+        try {
+          // 从关闭标签列表中移除
+          this.closedTabsManager.removeClosedTab(node.data.id || node.data.tabId);
+          await this.refresh();
+        } catch (error) {
+          Zotero.logError(`[HistoryTreeSafe] Failed to remove closed tab: ${error}`);
+        }
+      }
     }
   }
   
