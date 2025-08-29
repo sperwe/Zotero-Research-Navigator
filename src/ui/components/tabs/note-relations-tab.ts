@@ -483,13 +483,25 @@ export class NoteRelationsTab {
     // 添加笔记按钮
     const addBtn = doc.createElement("button");
     addBtn.textContent = "Add Note";
-    addBtn.addEventListener("click", () => this.showAddNoteDialog());
+    addBtn.addEventListener("click", () => {
+      try {
+        this.showAddNoteDialog();
+      } catch (error) {
+        Zotero.logError(`[NoteRelationsTab] Error showing add note dialog: ${error}`);
+      }
+    });
     toolbar.appendChild(addBtn);
     
     // 创建新笔记按钮
     const createBtn = doc.createElement("button");
     createBtn.textContent = "Create New Note";
-    createBtn.addEventListener("click", () => this.createNewNote());
+    createBtn.addEventListener("click", () => {
+      try {
+        this.createNewNote();
+      } catch (error) {
+        Zotero.logError(`[NoteRelationsTab] Error creating new note: ${error}`);
+      }
+    });
     toolbar.appendChild(createBtn);
     
     // 搜索框
@@ -503,10 +515,20 @@ export class NoteRelationsTab {
       border-radius: 3px;
     `;
     searchBox.addEventListener("input", async (e) => {
-      const query = (e.target as HTMLInputElement).value;
-      if (query && this.selectedNode) {
-        const results = await this.noteAssociationSystem.searchRelatedNotes(query, this.selectedNode.id);
-        this.showSearchResults(results);
+      try {
+        const query = (e.target as HTMLInputElement).value;
+        if (query && this.selectedNode) {
+          const results = await this.noteAssociationSystem.searchRelatedNotes(query, this.selectedNode.id);
+          this.showSearchResults(results);
+        } else if (query && !this.selectedNode) {
+          // 如果有搜索内容但没有选中节点，清空搜索结果
+          const content = this.container?.querySelector(".notes-list");
+          if (content) {
+            this.showEmptyState();
+          }
+        }
+      } catch (error) {
+        Zotero.logError(`[NoteRelationsTab] Error in search: ${error}`);
       }
     });
     toolbar.appendChild(searchBox);
