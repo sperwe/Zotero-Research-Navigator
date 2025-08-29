@@ -1422,6 +1422,22 @@ export class NoteRelationsTab {
     const doc = this.window.document;
     
     try {
+      // 首先确保自定义元素已注册
+      if (!customElements.get('note-editor')) {
+        Zotero.log(`[NoteRelationsTab] note-editor element not registered, loading scripts`, "info");
+        
+        // 加载必要的脚本
+        const win = this.window as any;
+        if (win.Services && win.Services.scriptloader) {
+          try {
+            win.Services.scriptloader.loadSubScript("chrome://zotero/content/customElements.js", win);
+            Zotero.log(`[NoteRelationsTab] Custom elements script loaded`, "info");
+          } catch (e) {
+            Zotero.logError(`[NoteRelationsTab] Failed to load custom elements: ${e}`);
+          }
+        }
+      }
+      
       // 创建编辑器容器
       const editorContainer = doc.createElement('div');
       editorContainer.style.cssText = `
@@ -1429,16 +1445,19 @@ export class NoteRelationsTab {
         flex-direction: column;
         height: 100%;
         width: 100%;
-        min-height: 300px;
+        min-height: 400px;
         background: var(--material-background);
         border: 1px solid var(--material-border-quarternary);
         border-radius: 5px;
-        padding: 10px;
+        overflow: hidden;
       `;
       
       // 创建 note-editor 元素
       const noteEditor = doc.createElement('note-editor') as any;
+      noteEditor.setAttribute('flex', '1');
+      noteEditor.setAttribute('notitle', '1');
       noteEditor.style.cssText = `
+        display: flex;
         flex: 1;
         width: 100%;
         height: 100%;
@@ -1448,31 +1467,38 @@ export class NoteRelationsTab {
       noteEditor.mode = 'edit';
       noteEditor.viewMode = 'library';
       
+      // 立即添加到容器，让编辑器初始化
+      editorContainer.appendChild(noteEditor);
+      
       // 异步加载笔记
       setTimeout(async () => {
         try {
           const item = await Zotero.Items.getAsync(noteId);
           if (item && item.isNote()) {
             Zotero.log(`[NoteRelationsTab] Loading note item into editor`, "info");
-            noteEditor.item = item;
             
-            // 如果有父项，也设置
-            if (item.parentID) {
-              const parentItem = await Zotero.Items.getAsync(item.parentID);
-              if (parentItem) {
-                noteEditor.parentItem = parentItem;
+            // 确保编辑器已连接到 DOM
+            if (noteEditor.isConnected) {
+              noteEditor.parent = null;
+              noteEditor.item = item;
+              
+              // 隐藏 links 容器（标签和相关）
+              const linksContainer = noteEditor.querySelector('#links-container');
+              if (linksContainer) {
+                (linksContainer as HTMLElement).hidden = true;
               }
+              
+              this.selectedNoteId = noteId;
+              Zotero.log(`[NoteRelationsTab] Note loaded successfully`, "info");
+            } else {
+              Zotero.log(`[NoteRelationsTab] Editor not connected to DOM`, "warning");
             }
-            
-            this.selectedNoteId = noteId;
-            Zotero.log(`[NoteRelationsTab] Note loaded successfully`, "info");
           }
         } catch (error) {
           Zotero.logError(`[NoteRelationsTab] Failed to load note ${noteId}: ${error}`);
         }
-      }, 100);
+      }, 200);
       
-      editorContainer.appendChild(noteEditor);
       return editorContainer;
       
     } catch (error) {
