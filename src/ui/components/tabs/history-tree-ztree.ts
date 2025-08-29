@@ -83,12 +83,19 @@ export class HistoryTreeZTree {
     <div id="tree-container" class="ztree"></div>
     
     <script>
-        // 直接初始化，不等待消息
-        window.addEventListener('DOMContentLoaded', function() {
-            initializeTree();
-        });
+        // 立即执行初始化
+        (function() {
+            // 确保 DOM 已加载
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initializeTree);
+            } else {
+                // DOM 已经加载完成
+                setTimeout(initializeTree, 0);
+            }
+        })();
         
         function initializeTree() {
+            console.log('Initializing tree in iframe...');
             // 全局变量
             window.treeObj = null;
             

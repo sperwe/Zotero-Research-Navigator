@@ -9,6 +9,7 @@ import { ZoteroTabsIntegration, ZoteroTabData } from "../../../managers/zotero-t
 import { HistoryNode } from "../../../services/database-service";
 import { HistoryTreeZTree } from "./history-tree-ztree";
 import { HistoryTreeSimple } from "./history-tree-simple";
+import { HistoryTreeStandalone } from "./history-tree-standalone";
 
 export class HistoryTreeTab {
   private container: HTMLElement | null = null;
@@ -44,13 +45,13 @@ export class HistoryTreeTab {
     
     // 如果使用 zTree，直接初始化 zTree 组件
     if (this.useZTree) {
-      // 使用简化版的 zTree 实现
-      this.zTreeComponent = new HistoryTreeSimple(
+      // 使用完全独立的实现，不依赖 zTree
+      const standaloneTree = new HistoryTreeStandalone(
         this.window,
         this.historyService,
         this.closedTabsManager
       );
-      this.zTreeComponent.init(container);
+      standaloneTree.init(container);
       return;
     }
     
