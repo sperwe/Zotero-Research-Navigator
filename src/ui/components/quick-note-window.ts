@@ -18,9 +18,11 @@ export class QuickNoteWindow {
    * 显示快速笔记窗口
    */
   async show(nodeId?: string): Promise<void> {
-    // 如果已经有窗口，聚焦它
-    if (this.window && !this.window.closed) {
-      this.window.focus();
+    Zotero.log('[QuickNoteWindow] show() called', 'info');
+    
+    // 如果已经有容器，显示它
+    if (this.container) {
+      this.container.style.display = 'flex';
       return;
     }
     

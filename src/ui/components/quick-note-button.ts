@@ -32,15 +32,81 @@ export class QuickNoteButton {
         this.historyService
       );
       
-      // 监听标签页变化
-      this.observeTabChanges();
-      
-      // 初始创建按钮
-      this.updateButton();
+      // 直接在主窗口创建按钮
+      this.createFloatingButton();
       
       Zotero.log('[QuickNoteButton] Initialized successfully', 'info');
     } catch (error) {
       Zotero.logError(`[QuickNoteButton] Initialization error: ${error}`);
+    }
+  }
+  
+  /**
+   * 创建浮动按钮
+   */
+  private createFloatingButton(): void {
+    try {
+      Zotero.log('[QuickNoteButton] Creating floating button...', 'info');
+      
+      // 检查是否已存在
+      if (this.button && this.window.document.getElementById('quick-note-floating-button')) {
+        Zotero.log('[QuickNoteButton] Button already exists', 'info');
+        return;
+      }
+      
+      const doc = this.window.document;
+      
+      // 创建按钮
+      this.button = doc.createElement('div');
+      this.button.id = 'quick-note-floating-button';
+      this.button.style.cssText = `
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        width: 56px;
+        height: 56px;
+        background: #2196F3;
+        border-radius: 50%;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        transition: all 0.3s ease;
+        user-select: none;
+      `;
+      
+      // 添加图标
+      this.button.innerHTML = `<span style="font-size: 24px; color: white;">📝</span>`;
+      
+      // 添加悬停效果
+      this.button.addEventListener('mouseenter', () => {
+        if (this.button) {
+          this.button.style.transform = 'scale(1.1)';
+          this.button.style.boxShadow = '0 4px 20px rgba(0,0,0,0.3)';
+        }
+      });
+      
+      this.button.addEventListener('mouseleave', () => {
+        if (this.button) {
+          this.button.style.transform = 'scale(1)';
+          this.button.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+        }
+      });
+      
+      // 添加点击事件
+      this.button.addEventListener('click', () => this.handleClick());
+      
+      // 添加提示
+      this.button.title = 'Quick Note (Click to open)';
+      
+      // 添加到文档
+      doc.body.appendChild(this.button);
+      
+      Zotero.log('[QuickNoteButton] Button created and added to body', 'info');
+    } catch (error) {
+      Zotero.logError(`[QuickNoteButton] Create button error: ${error}`);
     }
   }
   
@@ -81,15 +147,22 @@ export class QuickNoteButton {
    */
   private updateButton(): void {
     try {
+      Zotero.log('[QuickNoteButton] updateButton called', 'info');
+      
       // 获取当前活动的标签页
       const activeTab = this.getActiveTab();
+      Zotero.log(`[QuickNoteButton] Active tab: ${activeTab ? activeTab.id : 'none'}`, 'info');
+      
       if (!activeTab) {
         this.hideButton();
         return;
       }
       
       // 检查是否应该显示按钮
-      if (this.shouldShowButton(activeTab)) {
+      const shouldShow = this.shouldShowButton(activeTab);
+      Zotero.log(`[QuickNoteButton] Should show button: ${shouldShow}`, 'info');
+      
+      if (shouldShow) {
         this.showButton(activeTab);
       } else {
         this.hideButton();
@@ -290,7 +363,10 @@ export class QuickNoteButton {
     }
     
     // 移除按钮
-    this.hideButton();
+    if (this.button) {
+      this.button.remove();
+      this.button = null;
+    }
     
     // 清理快速笔记窗口
     if (this.quickNoteWindow) {
