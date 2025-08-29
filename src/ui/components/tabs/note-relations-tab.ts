@@ -1411,17 +1411,54 @@ export class NoteRelationsTab {
     this.editorContainer.innerHTML = "";
     Zotero.log(`[NoteRelationsTab] Cleared editor container`, "info");
     
-    // 创建新编辑器
-    const editor = this.createNoteEditor(noteId);
-    if (editor) {
-      this.editorContainer.appendChild(editor);
-      Zotero.log(`[NoteRelationsTab] Editor created and appended`, "info");
+    // 首先添加一个加载指示器来确认容器可见
+    const doc = this.window.document;
+    const loadingDiv = doc.createElement('div');
+    loadingDiv.style.cssText = `
+      padding: 20px;
+      text-align: center;
+      background: #f0f0f0;
+      border: 2px solid #ccc;
+      border-radius: 5px;
+      margin: 10px;
+    `;
+    loadingDiv.textContent = `Loading note ${noteId}...`;
+    this.editorContainer.appendChild(loadingDiv);
+    
+    // 延迟创建编辑器，让用户看到加载状态
+    setTimeout(() => {
+      this.editorContainer.innerHTML = "";
       
-      // 给编辑器一个唯一的 ID 以便调试
-      editor.setAttribute('data-note-id', noteId.toString());
-    } else {
-      Zotero.log(`[NoteRelationsTab] Failed to create editor`, "error");
-    }
+      // 创建新编辑器
+      const editor = this.createNoteEditor(noteId);
+      if (editor) {
+        this.editorContainer.appendChild(editor);
+        Zotero.log(`[NoteRelationsTab] Editor created and appended`, "info");
+        
+        // 给编辑器一个唯一的 ID 以便调试
+        editor.setAttribute('data-note-id', noteId.toString());
+        
+        // 检查容器的实际大小
+        const containerRect = this.editorContainer.getBoundingClientRect();
+        Zotero.log(`[NoteRelationsTab] Container dimensions: ${containerRect.width}x${containerRect.height}`, "info");
+      } else {
+        Zotero.log(`[NoteRelationsTab] Failed to create editor`, "error");
+        
+        // 显示错误信息
+        const errorDiv = doc.createElement('div');
+        errorDiv.style.cssText = `
+          padding: 20px;
+          text-align: center;
+          color: red;
+          background: #ffe0e0;
+          border: 1px solid #ff0000;
+          border-radius: 5px;
+          margin: 10px;
+        `;
+        errorDiv.textContent = `Failed to load editor for note ${noteId}`;
+        this.editorContainer.appendChild(errorDiv);
+      }
+    }, 500);
   }
   
   /**
@@ -1467,35 +1504,42 @@ export class NoteRelationsTab {
         overflow: hidden;
       `;
       
-      // 如果自定义元素不可用，尝试使用 iframe
+      // 首先尝试简单的文本显示来验证容器工作正常
       if (!win.customElements || !win.customElements.get('note-editor')) {
-        Zotero.log(`[NoteRelationsTab] Using iframe fallback for editor`, "info");
+        Zotero.log(`[NoteRelationsTab] note-editor not available, using simple display`, "info");
         
-        // 创建 iframe 加载编辑器
-        const iframe = doc.createElement('iframe') as HTMLIFrameElement;
-        iframe.style.cssText = `
-          border: none;
-          width: 100%;
+        // 创建简单的笔记显示
+        const noteDisplay = doc.createElement('div');
+        noteDisplay.style.cssText = `
+          padding: 20px;
+          background: white;
+          border: 1px solid #ddd;
+          border-radius: 5px;
           height: 100%;
-          flex: 1;
+          overflow-y: auto;
         `;
-        iframe.src = 'resource://zotero/note-editor/editor.html';
         
-        editorContainer.appendChild(iframe);
-        
-        // 等待 iframe 加载后设置笔记
-        iframe.addEventListener('load', async () => {
+        // 异步加载笔记内容
+        setTimeout(async () => {
           try {
             const item = await Zotero.Items.getAsync(noteId);
             if (item && item.isNote()) {
-              // TODO: 通过 iframe 的 contentWindow 与编辑器通信
-              Zotero.log(`[NoteRelationsTab] iframe loaded, but note setting not implemented`, "warning");
+              const noteContent = item.getNote();
+              noteDisplay.innerHTML = `
+                <h3>Note ID: ${noteId}</h3>
+                <div style="margin-top: 10px;">
+                  ${noteContent}
+                </div>
+              `;
+              Zotero.log(`[NoteRelationsTab] Simple note display loaded`, "info");
             }
           } catch (error) {
-            Zotero.logError(`[NoteRelationsTab] Failed in iframe load: ${error}`);
+            Zotero.logError(`[NoteRelationsTab] Failed to load note content: ${error}`);
+            noteDisplay.innerHTML = `<p style="color: red;">Failed to load note: ${error}</p>`;
           }
-        });
+        }, 100);
         
+        editorContainer.appendChild(noteDisplay);
         return editorContainer;
       }
       
