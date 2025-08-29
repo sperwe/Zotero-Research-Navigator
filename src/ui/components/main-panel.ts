@@ -81,11 +81,11 @@ export class MainPanel {
       root.appendChild(this.container);
     }
 
-    // 初始化标签页
-    await this.initializeTabs();
-
-    // 加载保存的状态
+    // 先加载保存的状态（这会设置正确的 activeTab）
     this.loadState();
+    
+    // 然后初始化标签页（这会显示正确的 activeTab）
+    await this.initializeTabs();
 
     Zotero.log("[MainPanel] Created successfully", "info");
   }
@@ -523,17 +523,11 @@ export class MainPanel {
       const state = JSON.parse(stateStr);
 
       this.isDocked = state.isDocked || false;
-      const previousTab = this.activeTab;
       this.activeTab = state.activeTab || "history";
       this.width = state.width || 400;
       this.height = state.height || 500;
       
-      // 如果加载的 activeTab 与当前不同，需要切换到正确的 tab
-      if (previousTab !== this.activeTab && this.tabs.has(this.activeTab)) {
-        Zotero.log(`[MainPanel] Loaded state shows activeTab: ${this.activeTab}, switching from ${previousTab}`, "info");
-        this.hideTab(previousTab);
-        this.showTab(this.activeTab);
-      }
+      Zotero.log(`[MainPanel] Loaded state: activeTab=${this.activeTab}, isDocked=${this.isDocked}`, "info");
 
       if (this.container) {
         this.container.style.width = `${this.width}px`;
