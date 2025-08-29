@@ -47,14 +47,21 @@ export class HistoryTreeZTree {
   async init(container: HTMLElement): Promise<void> {
     this.container = container;
     
-    // 总是使用 Zotero 主窗口，这是最可靠的
-    const mainWindow = Zotero.getMainWindow();
-    if (mainWindow && mainWindow.document && mainWindow.document.body) {
-      this.window = mainWindow;
-      Zotero.log('[HistoryTreeZTree] Using Zotero main window', 'info');
+    // 使用容器的文档，这是最可靠的
+    const containerDoc = container.ownerDocument;
+    if (containerDoc && containerDoc.defaultView) {
+      this.window = containerDoc.defaultView;
+      Zotero.log('[HistoryTreeZTree] Using container\'s window', 'info');
+    } else {
+      // 回退到主窗口
+      const mainWindow = Zotero.getMainWindow();
+      if (mainWindow) {
+        this.window = mainWindow;
+        Zotero.log('[HistoryTreeZTree] Using Zotero main window as fallback', 'info');
+      }
     }
     
-    const doc = this.window.document;
+    const doc = containerDoc || this.window.document;
     
     // 确保容器存在且已附加到 DOM
     if (!container || !container.parentNode) {
@@ -80,32 +87,29 @@ export class HistoryTreeZTree {
     `;
     this.container.appendChild(this.treeContainer);
     
-    // 确保 DOM 完全准备好后再初始化
-    const initializeWhenReady = () => {
-      // 检查主窗口的 document.body 是否存在
-      if (!this.window.document.body) {
-        Zotero.log('[HistoryTreeZTree] Waiting for document.body...', 'info');
-        setTimeout(initializeWhenReady, 100);
-        return;
-      }
-      
-      // 现在可以安全地初始化了
+    // 延迟初始化，让 DOM 有时间稳定
+    setTimeout(() => {
+      Zotero.log('[HistoryTreeZTree] Starting initialization after delay', 'info');
       this.performInitialization().catch(error => {
         Zotero.logError(`[HistoryTreeZTree] Initialization failed: ${error}`);
-        if (this.treeContainer) {
-          this.treeContainer.innerHTML = `
-            <div style="padding: 20px; text-align: center; color: #666;">
-              <p>Failed to load tree view components.</p>
-              <p style="font-size: 12px; margin-top: 10px;">Error: ${error}</p>
-              <p style="font-size: 12px; margin-top: 10px;">Please disable zTree in preferences or contact support if the issue persists.</p>
-            </div>
-          `;
-        }
+        this.showError(error.toString());
       });
-    };
-    
-    // 开始检查和初始化
-    initializeWhenReady();
+    }, 100);
+  }
+  
+  /**
+   * 显示错误信息
+   */
+  private showError(error: string): void {
+    if (this.treeContainer) {
+      this.treeContainer.innerHTML = `
+        <div style="padding: 20px; text-align: center; color: #666;">
+          <p>Failed to load tree view components.</p>
+          <p style="font-size: 12px; margin-top: 10px;">Error: ${error}</p>
+          <p style="font-size: 12px; margin-top: 10px;">Please disable zTree in preferences or contact support if the issue persists.</p>
+        </div>
+      `;
+    }
   }
   
   /**
