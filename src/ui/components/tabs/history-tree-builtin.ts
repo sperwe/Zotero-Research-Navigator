@@ -59,6 +59,7 @@ export class HistoryTreeBuiltin {
         flex-direction: column;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         font-size: 13px;
+        overflow: hidden; /* 防止整个容器滚动 */
       }
       
       .htb-toolbar {
@@ -87,8 +88,10 @@ export class HistoryTreeBuiltin {
       
       .htb-tree {
         flex: 1;
-        overflow: auto;
+        overflow-y: auto; /* 垂直滚动 */
+        overflow-x: hidden; /* 隐藏水平滚动条 */
         padding: 10px;
+        min-height: 0; /* 重要：让 flex 容器能够正确计算高度 */
       }
       
       .htb-node {

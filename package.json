@@ -1,7 +1,7 @@
 {
   "name": "zotero-research-navigator",
   "type": "module",
-  "version": "2.4.22",
+  "version": "2.4.23",
   "description": "Track research history and enhance note navigation in Zotero",
   "config": {
     "addonName": "Zotero Research Navigator",

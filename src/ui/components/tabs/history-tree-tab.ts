@@ -48,13 +48,13 @@ export class HistoryTreeTab {
     
     // 如果使用 zTree，直接初始化 zTree 组件
     if (this.useZTree) {
-      // 使用调试版本来诊断问题
-      const debugTree = new HistoryTreeDebug(
+      // 使用内置的树实现，已修复滚动条问题
+      const builtinTree = new HistoryTreeBuiltin(
         this.window,
         this.historyService,
         this.closedTabsManager
       );
-      debugTree.init(container);
+      builtinTree.init(container);
       return;
     }
     
