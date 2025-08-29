@@ -105,6 +105,81 @@ export class MainPanel {
       background: linear-gradient(to bottom, rgba(255,255,255,0.05), transparent);
     `;
 
+    // macOS 风格按钮组
+    const buttonGroup = doc.createElement("div");
+    buttonGroup.style.cssText = `
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-right: 12px;
+    `;
+
+    // 关闭按钮（红色）
+    const closeButton = doc.createElement("button");
+    closeButton.className = "panel-close-button";
+    closeButton.title = "Close";
+    closeButton.style.cssText = `
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ff5f57;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s;
+    `;
+    
+    // 停靠按钮（黄色）
+    const dockButton = doc.createElement("button");
+    dockButton.className = "panel-dock-button";
+    dockButton.title = this.isDocked ? "Undock" : "Dock to sidebar";
+    dockButton.style.cssText = `
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ffbd2e;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s;
+    `;
+    
+    // 添加悬停效果的内联样式
+    const style = doc.createElement("style");
+    style.textContent = `
+      .panel-close-button:hover { background: #ff3b30 !important; }
+      .panel-dock-button:hover { background: #ffa500 !important; }
+      .panel-header:hover .panel-close-button::after {
+        content: "×";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: rgba(0,0,0,0.5);
+        font-size: 8px;
+        font-weight: bold;
+      }
+      .panel-header:hover .panel-dock-button::after {
+        content: "${this.isDocked ? '◱' : '▪'}";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: rgba(0,0,0,0.5);
+        font-size: 6px;
+      }
+    `;
+    header.appendChild(style);
+    
+    closeButton.addEventListener("click", () => this.hide());
+    dockButton.addEventListener("click", () => this.toggleDock());
+    
+    buttonGroup.appendChild(closeButton);
+    buttonGroup.appendChild(dockButton);
+    header.appendChild(buttonGroup);
+
     // 标题
     const title = doc.createElement("h3");
     title.textContent = "Research Navigator";
@@ -115,38 +190,9 @@ export class MainPanel {
       font-weight: 600;
       color: var(--text-color);
       letter-spacing: -0.3px;
+      text-align: center;
     `;
     header.appendChild(title);
-
-    // 停靠按钮
-    const dockButton = doc.createElement("button");
-    dockButton.className = "panel-dock-button";
-    dockButton.innerHTML = this.isDocked ? "⬜" : "📌";
-    dockButton.title = this.isDocked ? "Undock" : "Dock to sidebar";
-    dockButton.style.cssText = `
-      background: none;
-      border: none;
-      padding: 4px;
-      cursor: pointer;
-      opacity: 0.7;
-    `;
-    dockButton.addEventListener("click", () => this.toggleDock());
-    header.appendChild(dockButton);
-
-    // 关闭按钮
-    const closeButton = doc.createElement("button");
-    closeButton.className = "panel-close-button";
-    closeButton.innerHTML = "✕";
-    closeButton.title = "Close";
-    closeButton.style.cssText = `
-      background: none;
-      border: none;
-      padding: 4px;
-      cursor: pointer;
-      opacity: 0.7;
-    `;
-    closeButton.addEventListener("click", () => this.hide());
-    header.appendChild(closeButton);
 
     // 拖动功能
     this.makeDraggable(header);
