@@ -12,6 +12,8 @@ declare namespace _ZoteroTypes {
       "maxHistoryItems": number;
       "autoSaveHistory": boolean;
       "treeViewType": string;
+      "historyLoadDays": number;
+      "maxHistoryGroups": number;
     };
   }
 }

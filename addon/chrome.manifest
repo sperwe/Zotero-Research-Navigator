@@ -1,3 +1,4 @@
 content researchnavigator content/
+content researchnavigator lib/
 locale researchnavigator en-US locale/en-US/
 locale researchnavigator zh-CN locale/zh-CN/

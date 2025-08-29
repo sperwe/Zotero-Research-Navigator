@@ -19,9 +19,20 @@ export class ClosedTabsManager {
   private closedTabs: ClosedTab[] = [];
   private maxClosedTabs = 100; // 最多保留100个已关闭标签页
   private tabsIntegration: ZoteroTabsIntegration;
+  
+  // 历史加载设置
+  private historyLoadDays: number = 7; // 默认加载7天
+  private maxHistoryGroups: number = 50; // 最多加载50个历史组
 
   constructor(private historyService: HistoryService) {
     this.tabsIntegration = new ZoteroTabsIntegration();
+    this.loadSettings();
+  }
+  
+  private loadSettings(): void {
+    // 从 Zotero 偏好设置加载
+    this.historyLoadDays = Zotero.Prefs.get('researchnavigator.historyLoadDays', true) || 7;
+    this.maxHistoryGroups = Zotero.Prefs.get('researchnavigator.maxHistoryGroups', true) || 50;
   }
 
   get databaseService() {
@@ -198,22 +209,32 @@ export class ClosedTabsManager {
 
     Zotero.log(`[ClosedTabsManager] Syncing with Zotero history: ${Zotero_Tabs._history.length} groups`, "info");
     
-    // 打印更多调试信息
-    if (Zotero_Tabs._history.length > 0) {
-      Zotero.log(`[ClosedTabsManager] First history group has ${Zotero_Tabs._history[0].length} items`, "info");
-    }
+    // 应用加载限制
+    const cutoffTime = Date.now() - (this.historyLoadDays * 24 * 60 * 60 * 1000);
+    const historyToLoad = Zotero_Tabs._history.slice(0, this.maxHistoryGroups);
+    
+    Zotero.log(`[ClosedTabsManager] Loading last ${this.historyLoadDays} days, max ${this.maxHistoryGroups} groups`, "info");
+    Zotero.log(`[ClosedTabsManager] Actually loading ${historyToLoad.length} groups`, "info");
 
     // Zotero_Tabs._history 是一个数组的数组
     // 每个元素代表一次关闭操作，可能包含多个标签页
     let groupIndex = 0;
-    for (const closedGroup of Zotero_Tabs._history) {
+    for (const closedGroup of historyToLoad) {
       Zotero.log(`[ClosedTabsManager] Processing history group ${groupIndex}: ${closedGroup.length} items`, "info");
-      groupIndex++;
+      
+      // 估算这个组的时间（基于索引）
+      const estimatedTime = Date.now() - (groupIndex * 5 * 60 * 1000); // 假设每组间隔5分钟
+      
+      // 如果估算时间早于截止时间，跳过
+      if (estimatedTime < cutoffTime) {
+        Zotero.log(`[ClosedTabsManager] Skipping group ${groupIndex} - too old`, "info");
+        groupIndex++;
+        continue;
+      }
       
       for (const historyItem of closedGroup) {
         // historyItem 包含 { index, data }
         const tabData = historyItem.data;
-        Zotero.log(`[ClosedTabsManager] History item: ${JSON.stringify(historyItem)}`, "info");
         
         if (tabData && tabData.itemID) {
           // 跳过测试数据
@@ -223,32 +244,19 @@ export class ClosedTabsManager {
           }
           
           // 检查是否已经在我们的历史中
-          // 使用 itemID 和组索引来识别唯一性
           const exists = this.closedTabs.some(
             (ct) => {
-              // 如果是相同的项目ID和相同的tabData（引用相等），认为是重复的
               return ct.node.itemId === tabData.itemID && ct.tabData === tabData;
             }
           );
 
           if (!exists) {
-            // 创建或获取幽灵节点
-            const ghostNode = await this.createGhostNode(tabData);
+            // 创建或获取幽灵节点，使用日期作为 sessionId
+            const dateStr = new Date(estimatedTime).toISOString().split('T')[0]; // YYYY-MM-DD
+            const ghostNode = await this.createGhostNode(tabData, `history_${dateStr}`);
             
             if (ghostNode) {
-              // 尝试从不同来源获取关闭时间
-              let closedAt = new Date();
-              
-              // 如果节点已经有关闭时间，使用它
-              if (ghostNode.closedAt) {
-                closedAt = new Date(ghostNode.closedAt);
-              }
-              // 否则，基于历史组的位置估算时间
-              else {
-                // 假设每个历史组之间间隔约5分钟（这是一个估算）
-                const minutesAgo = groupIndex * 5;
-                closedAt = new Date(Date.now() - minutesAgo * 60 * 1000);
-              }
+              const closedAt = new Date(estimatedTime);
               
               this.closedTabs.unshift({
                 node: ghostNode,
@@ -261,6 +269,8 @@ export class ClosedTabsManager {
           }
         }
       }
+      
+      groupIndex++;
     }
 
     // 限制数量
@@ -314,7 +324,7 @@ export class ClosedTabsManager {
   /**
    * 创建幽灵节点（用于 Zotero 历史中的已关闭标签页）
    */
-  private async createGhostNode(tabData: any): Promise<HistoryNode | null> {
+  private async createGhostNode(tabData: any, sessionId?: string): Promise<HistoryNode | null> {
     try {
       const itemId = tabData.itemID;
       if (!itemId) return null;
@@ -359,7 +369,7 @@ export class ClosedTabsManager {
             itemId: itemId,
             libraryId: tabData.libraryID || Zotero.Libraries.userLibraryID,
             parentId: null,
-            sessionId: "ghost_session",
+            sessionId: sessionId || "ghost_session",
             timestamp: new Date(tabData.closedAt || Date.now()),
             lastVisit: new Date(tabData.closedAt || Date.now()),
             visitCount: 1,
