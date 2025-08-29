@@ -1547,17 +1547,28 @@ export class NoteRelationsTab {
           win.Zotero.UIProperties.registerRoot(noteEditorContainer);
         }
         
-        // 等待 iframe 加载后初始化编辑器
-        iframe.addEventListener('load', async () => {
+        // 标记 iframe 初始化状态
+        let iframeInitialized = false;
+        
+        // 等待 iframe 内容加载
+        const initializeEditor = async () => {
+          if (iframeInitialized) return;
+          iframeInitialized = true;
+          
           try {
-            Zotero.log(`[NoteRelationsTab] iframe loaded, contentWindow available: ${!!iframe.contentWindow}`, "info");
+            Zotero.log(`[NoteRelationsTab] iframe ready, contentWindow available: ${!!iframe.contentWindow}`, "info");
+            
+            // 等待一下确保 iframe 完全准备好
+            await new Promise(resolve => setTimeout(resolve, 200));
             
             const item = await Zotero.Items.getAsync(noteId);
             if (item && item.isNote()) {
               Zotero.log(`[NoteRelationsTab] Initializing native editor for note ${noteId}`, "info");
               
-              // 等待一下确保 iframe 完全加载
-              await new Promise(resolve => setTimeout(resolve, 100));
+              // 检查 contentWindow 是否真的可用
+              if (!iframe.contentWindow) {
+                throw new Error("iframe contentWindow is not available");
+              }
               
               // 创建 EditorInstance
               const editorInstance = new win.Zotero.EditorInstance();
@@ -1574,6 +1585,7 @@ export class NoteRelationsTab {
               
               // 保存引用以便清理
               (noteEditorContainer as any)._editorInstance = editorInstance;
+              (iframe as any)._editorInstance = editorInstance;
               this.selectedNoteId = noteId;
               
               Zotero.log(`[NoteRelationsTab] Native editor initialized successfully`, "info");
@@ -1584,9 +1596,13 @@ export class NoteRelationsTab {
                 if (iframeDoc) {
                   const hasContent = iframeDoc.body && iframeDoc.body.innerHTML.length > 0;
                   Zotero.log(`[NoteRelationsTab] iframe has content: ${hasContent}`, "info");
-                  Zotero.log(`[NoteRelationsTab] iframe body height: ${iframeDoc.body?.offsetHeight}px`, "info");
+                  Zotero.log(`[NoteRelationsTab] iframe body class: ${iframeDoc.body?.className}`, "info");
+                  
+                  // 尝试找到编辑器元素
+                  const editorEl = iframeDoc.querySelector('.editor-core');
+                  Zotero.log(`[NoteRelationsTab] Editor element found: ${!!editorEl}`, "info");
                 }
-              }, 500);
+              }, 1000);
             }
           } catch (error) {
             Zotero.logError(`[NoteRelationsTab] Failed to initialize native editor: ${error}`);
@@ -1599,7 +1615,24 @@ export class NoteRelationsTab {
               this.editorContainer.appendChild(customEditor);
             }
           }
+        };
+        
+        // 监听 DOMContentLoaded 事件
+        iframe.addEventListener('DOMContentLoaded', initializeEditor);
+        
+        // 备用：监听 load 事件
+        iframe.addEventListener('load', () => {
+          Zotero.log(`[NoteRelationsTab] iframe load event fired`, "info");
+          initializeEditor();
         });
+        
+        // 再备用：设置超时初始化
+        setTimeout(() => {
+          if (!iframeInitialized && iframe.contentWindow) {
+            Zotero.log(`[NoteRelationsTab] Timeout initialization`, "warning");
+            initializeEditor();
+          }
+        }, 2000);
         
         return editorContainer;
       } else if (!useNativeEditor || !win.customElements || !win.customElements.get('note-editor')) {
