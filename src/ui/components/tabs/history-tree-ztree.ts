@@ -63,14 +63,6 @@ export class HistoryTreeZTree {
     
     const doc = containerDoc || this.window.document;
     
-    // 方案 A：为 XUL 文档创建假 body
-    if (!doc.body && doc.documentElement) {
-      Zotero.log('[HistoryTreeZTree] No body found, creating fake body for XUL document', 'info');
-      const fakeBody = doc.createElementNS("http://www.w3.org/1999/xhtml", "body");
-      doc.documentElement.appendChild(fakeBody);
-      Zotero.log('[HistoryTreeZTree] Fake body created', 'info');
-    }
-    
     // 确保容器存在且已附加到 DOM
     if (!container || !container.parentNode) {
       Zotero.logError('[HistoryTreeZTree] Container not attached to DOM');
@@ -95,12 +87,14 @@ export class HistoryTreeZTree {
     `;
     this.container.appendChild(this.treeContainer);
     
-    // 现在可以直接初始化，因为 body 总是存在
-    Zotero.log('[HistoryTreeZTree] Starting initialization immediately', 'info');
-    this.performInitialization().catch(error => {
-      Zotero.logError(`[HistoryTreeZTree] Initialization failed: ${error}`);
-      this.showError(error.toString());
-    });
+    // 延迟初始化，让 DOM 有时间稳定
+    setTimeout(() => {
+      Zotero.log('[HistoryTreeZTree] Starting initialization after delay', 'info');
+      this.performInitialization().catch(error => {
+        Zotero.logError(`[HistoryTreeZTree] Initialization failed: ${error}`);
+        this.showError(error.toString());
+      });
+    }, 100);
   }
   
   /**
