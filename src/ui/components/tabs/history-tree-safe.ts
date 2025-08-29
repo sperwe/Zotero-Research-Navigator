@@ -28,8 +28,9 @@ export class HistoryTreeSafe {
         <div class="hts-container" style="height: 100%; display: flex; flex-direction: column; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px;">
           <style>
             .hts-toolbar { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #e0e0e0; background: #f7f7f7; }
-            .hts-btn { margin-right: 10px; padding: 5px 10px; font-size: 12px; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 3px; transition: all 0.2s; }
+            .hts-btn { display: inline-block; margin-right: 10px; padding: 5px 10px; font-size: 12px; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 3px; transition: all 0.2s; user-select: none; }
             .hts-btn:hover { background: #e8e8e8; border-color: #999; }
+            .hts-btn:active { background: #d8d8d8; }
             .hts-tree { flex: 1; overflow-y: auto; overflow-x: auto; padding: 10px; min-height: 0; }
             .hts-node { margin: 2px 0; user-select: none; }
             .hts-node-content { display: flex; align-items: center; padding: 3px 5px; cursor: pointer; border-radius: 3px; transition: background 0.2s; }
@@ -40,7 +41,7 @@ export class HistoryTreeSafe {
             .hts-node-count { color: #666; font-size: 11px; margin-left: 5px; }
             .hts-node-actions { display: flex; gap: 5px; margin-left: 10px; opacity: 0; transition: opacity 0.2s; }
             .hts-node-content:hover .hts-node-actions { opacity: 1; }
-            .hts-delete-btn { padding: 2px 6px; font-size: 11px; color: #d32f2f; border: 1px solid #d32f2f; background: #fff; cursor: pointer; border-radius: 3px; }
+            .hts-delete-btn { display: inline-block; padding: 2px 6px; font-size: 11px; color: #d32f2f; border: 1px solid #d32f2f; background: #fff; cursor: pointer; border-radius: 3px; user-select: none; }
             .hts-delete-btn:hover { background: #ffebee; }
             .hts-children { margin-left: 24px; display: none; }
             .hts-expanded > .hts-children { display: block; }
@@ -54,10 +55,10 @@ export class HistoryTreeSafe {
             .hts-closed-item { color: #757575; font-style: italic; }
           </style>
           <div class="hts-toolbar">
-            <button class="hts-btn" id="hts-refresh">🔄 Refresh</button>
-            <button class="hts-btn" id="hts-expand-all">📂 Expand All</button>
-            <button class="hts-btn" id="hts-collapse-all">📁 Collapse All</button>
-            <button class="hts-btn" id="hts-clear-all">🗑️ Clear All</button>
+            <span class="hts-btn" id="hts-refresh" role="button" tabindex="0">🔄 Refresh</span>
+            <span class="hts-btn" id="hts-expand-all" role="button" tabindex="0">📂 Expand All</span>
+            <span class="hts-btn" id="hts-collapse-all" role="button" tabindex="0">📁 Collapse All</span>
+            <span class="hts-btn" id="hts-clear-all" role="button" tabindex="0">🗑️ Clear All</span>
           </div>
           <div class="hts-tree" id="hts-tree-container"></div>
         </div>
@@ -224,10 +225,11 @@ export class HistoryTreeSafe {
     
     // 为历史项和会话添加删除按钮
     if ((node.type === 'history' || node.type === 'session') && node.data) {
-      const deleteBtn = doc.createElement('button');
+      const deleteBtn = doc.createElement('span');
       deleteBtn.className = 'hts-delete-btn';
       deleteBtn.textContent = '×';
       deleteBtn.title = node.type === 'session' ? 'Delete session' : 'Delete item';
+      deleteBtn.style.cssText = 'cursor: pointer;';
       deleteBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.handleDelete(node);
@@ -237,10 +239,11 @@ export class HistoryTreeSafe {
     
     // 为关闭的标签添加删除按钮
     if (node.type === 'closedItem' && node.data) {
-      const deleteBtn = doc.createElement('button');
+      const deleteBtn = doc.createElement('span');
       deleteBtn.className = 'hts-delete-btn';
       deleteBtn.textContent = '×';
       deleteBtn.title = 'Remove from closed tabs';
+      deleteBtn.style.cssText = 'cursor: pointer;';
       deleteBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.handleClosedTabDelete(node);
