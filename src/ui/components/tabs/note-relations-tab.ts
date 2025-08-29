@@ -1504,9 +1504,11 @@ export class NoteRelationsTab {
         overflow: hidden;
       `;
       
-      // 首先尝试简单的文本显示来验证容器工作正常
-      if (!win.customElements || !win.customElements.get('note-editor')) {
-        Zotero.log(`[NoteRelationsTab] note-editor not available, using simple display`, "info");
+      // 强制使用简单显示来调试
+      const forceSimpleDisplay = true; // 临时强制使用简单显示
+      
+      if (forceSimpleDisplay || !win.customElements || !win.customElements.get('note-editor')) {
+        Zotero.log(`[NoteRelationsTab] Using simple display (forced=${forceSimpleDisplay})`, "info");
         
         // 创建简单的笔记显示
         const noteDisplay = doc.createElement('div');
@@ -1591,6 +1593,27 @@ export class NoteRelationsTab {
                 // 确保编辑器可见
                 noteEditor.style.visibility = 'visible';
                 noteEditor.style.opacity = '1';
+                
+                // 添加一个测试边框来确认编辑器位置
+                noteEditor.style.border = '2px solid red';
+                
+                // 检查编辑器内部的 iframe
+                setTimeout(() => {
+                  const iframe = noteEditor.querySelector('iframe');
+                  if (iframe) {
+                    Zotero.log(`[NoteRelationsTab] Found iframe inside editor`, "info");
+                    iframe.style.border = '2px solid blue';
+                  } else {
+                    Zotero.log(`[NoteRelationsTab] No iframe found inside editor`, "warning");
+                  }
+                  
+                  // 列出编辑器的所有子元素
+                  const children = noteEditor.children;
+                  Zotero.log(`[NoteRelationsTab] Editor has ${children.length} children`, "info");
+                  for (let i = 0; i < children.length; i++) {
+                    Zotero.log(`[NoteRelationsTab] Child ${i}: ${children[i].tagName}`, "info");
+                  }
+                }, 500);
                 
               } else {
                 Zotero.log(`[NoteRelationsTab] Editor not connected to DOM`, "warning");
