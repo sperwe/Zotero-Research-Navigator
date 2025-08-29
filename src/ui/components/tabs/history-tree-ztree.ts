@@ -83,11 +83,9 @@ export class HistoryTreeZTree {
     <div id="tree-container" class="ztree"></div>
     
     <script>
-        // 等待父窗口注入 jQuery 和 zTree
-        window.addEventListener('message', function(event) {
-            if (event.data.type === 'init') {
-                initializeTree();
-            }
+        // 直接初始化，不等待消息
+        window.addEventListener('DOMContentLoaded', function() {
+            initializeTree();
         });
         
         function initializeTree() {
@@ -269,8 +267,13 @@ export class HistoryTreeZTree {
             });
             
             // 通知父窗口准备就绪
-            if (window.parent && window.parent.onHistoryTreeReady) {
-                window.parent.onHistoryTreeReady();
+            try {
+                if (window.parent && window.parent !== window) {
+                    // 使用 postMessage 通知父窗口
+                    window.parent.postMessage({ type: 'treeReady' }, '*');
+                }
+            } catch (e) {
+                console.error('Failed to notify parent:', e);
             }
         }
     </script>
@@ -294,6 +297,13 @@ export class HistoryTreeZTree {
     (this.window as any).handleHistoryNodeClick = (treeNode: any) => this.handleNodeClick(treeNode);
     (this.window as any).handleHistoryNodeRightClick = (event: Event, treeNode: any) => this.handleNodeRightClick(event, treeNode);
     (this.window as any).onHistoryTreeReady = () => this.onIframeReady();
+    
+    // 监听来自 iframe 的消息
+    this.window.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'treeReady') {
+        Zotero.log('[HistoryTreeZTree] Received treeReady message from iframe', 'info');
+      }
+    });
   }
   
   /**
@@ -332,6 +342,11 @@ export class HistoryTreeZTree {
     this.iframe.addEventListener('load', () => {
       this.iframeWindow = this.iframe!.contentWindow;
       Zotero.log('[HistoryTreeZTree] iframe loaded successfully', 'info');
+      
+      // 立即调用初始化
+      this.onIframeReady().catch(error => {
+        Zotero.logError(`[HistoryTreeZTree] Failed to initialize iframe: ${error}`);
+      });
     });
     
     // 添加到容器
@@ -367,13 +382,18 @@ export class HistoryTreeZTree {
       // 注入 zTree CSS
       const ztreeCSS = iframeDoc.createElement('style');
       ztreeCSS.textContent = await this.loadFileContent('chrome://researchnavigator/content/lib/ztree/zTreeStyle.css');
+      // 修复 CSS 中的图片路径
+      ztreeCSS.textContent = ztreeCSS.textContent.replace(/url\(["']?([^"')]+)["']?\)/g, (match, url) => {
+        if (url && !url.startsWith('data:') && !url.startsWith('http')) {
+          // 将相对路径转换为 data URL 或 chrome URL
+          return `url("chrome://researchnavigator/content/lib/ztree/${url}")`;
+        }
+        return match;
+      });
       iframeDoc.head.appendChild(ztreeCSS);
       
-      // 初始化树
-      this.iframeWindow.postMessage({ type: 'init' }, '*');
-      
-      // 等待初始化完成
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // 等待 iframe 内部初始化完成
+      await new Promise(resolve => setTimeout(resolve, 200));
       
       // 获取数据
       const sessions = await this.historyService.getAllSessions();
@@ -400,23 +420,40 @@ export class HistoryTreeZTree {
    */
   private async loadFileContent(url: string): Promise<string> {
     try {
+      // 首先尝试获取插件的实际路径
+      let actualUrl = url;
+      if (url.startsWith('chrome://researchnavigator/')) {
+        try {
+          const rootURI = Zotero.Plugins?.getRootURI ? 
+            await Zotero.Plugins.getRootURI('research-navigator@zotero.org') : 
+            null;
+          
+          if (rootURI) {
+            actualUrl = url.replace('chrome://researchnavigator/', rootURI);
+            Zotero.log(`[HistoryTreeZTree] Converted URL: ${url} -> ${actualUrl}`, 'info');
+          }
+        } catch (e) {
+          Zotero.log(`[HistoryTreeZTree] Failed to get plugin root URI: ${e}`, 'warn');
+        }
+      }
+      
       // 尝试使用 Zotero 的文件读取方法
       if (Zotero.File && Zotero.File.getContentsFromURL) {
-        return await Zotero.File.getContentsFromURL(url);
+        return await Zotero.File.getContentsFromURL(actualUrl);
       }
       
       // 备用方法：使用 XMLHttpRequest
       return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open('GET', url, true);
+        xhr.open('GET', actualUrl, true);
         xhr.onload = () => {
           if (xhr.status === 200) {
             resolve(xhr.responseText);
           } else {
-            reject(new Error(`Failed to load ${url}: ${xhr.status}`));
+            reject(new Error(`Failed to load ${actualUrl}: ${xhr.status}`));
           }
         };
-        xhr.onerror = () => reject(new Error(`Failed to load ${url}`));
+        xhr.onerror = () => reject(new Error(`Failed to load ${actualUrl}`));
         xhr.send();
       });
     } catch (error) {
