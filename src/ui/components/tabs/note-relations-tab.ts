@@ -913,6 +913,61 @@ export class NoteRelationsTab {
     });
     actions.appendChild(openBtn);
     
+    // 删除按钮
+    const deleteBtn = doc.createElement("button");
+    deleteBtn.textContent = "Delete";
+    deleteBtn.style.cssText = `
+      padding: 3px 8px;
+      font-size: 0.9em;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+    `;
+    deleteBtn.addEventListener("mouseover", () => {
+      deleteBtn.style.background = "#c82333";
+    });
+    deleteBtn.addEventListener("mouseout", () => {
+      deleteBtn.style.background = "#dc3545";
+    });
+    deleteBtn.addEventListener("click", async (e) => {
+      e.stopPropagation(); // 防止触发卡片点击事件
+      
+      // 确认删除
+      const confirmDelete = this.window.confirm(
+        `Are you sure you want to delete this note?\n\nTitle: ${note.title}\n\nThis action cannot be undone.`
+      );
+      
+      if (confirmDelete) {
+        try {
+          Zotero.log(`[NoteRelationsTab] Deleting note ${note.noteId}`, "info");
+          
+          // 如果正在编辑这个笔记，先清空编辑器
+          if (this.selectedNoteId === note.noteId && this.editorContainer) {
+            this.editorContainer.innerHTML = "";
+            this.selectedNoteId = null;
+          }
+          
+          // 删除笔记
+          const noteItem = Zotero.Items.get(note.noteId);
+          if (noteItem) {
+            await noteItem.eraseTx();
+            Zotero.log(`[NoteRelationsTab] Note ${note.noteId} deleted successfully`, "info");
+            
+            // 刷新列表
+            await this.loadNodeAssociations();
+          } else {
+            Zotero.logError(`[NoteRelationsTab] Note ${note.noteId} not found`);
+          }
+        } catch (error) {
+          Zotero.logError(`[NoteRelationsTab] Failed to delete note: ${error}`);
+          this.window.alert(`Failed to delete note: ${error}`);
+        }
+      }
+    });
+    actions.appendChild(deleteBtn);
+    
     header.appendChild(actions);
     card.appendChild(header);
     
