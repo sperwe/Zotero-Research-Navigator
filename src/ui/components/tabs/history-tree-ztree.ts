@@ -19,7 +19,13 @@ export class HistoryTreeZTree {
     private window: Window,
     private historyService: HistoryService,
     private closedTabsManager: ClosedTabsManager
-  ) {}
+  ) {
+    // 验证 window 对象
+    Zotero.log(`[HistoryTreeZTree] Constructor called with window: ${window}`, 'info');
+    Zotero.log(`[HistoryTreeZTree] Window location: ${window.location?.href || 'unknown'}`, 'info');
+    Zotero.log(`[HistoryTreeZTree] Document ready state: ${window.document?.readyState || 'unknown'}`, 'info');
+    Zotero.log(`[HistoryTreeZTree] Has document.body: ${!!window.document?.body}`, 'info');
+  }
   
   /**
    * 初始化组件
@@ -137,10 +143,63 @@ export class HistoryTreeZTree {
    */
   private async loadDependencies(): Promise<void> {
     try {
-      const doc = this.window.document;
-      const win = this.window as any;
+      // 尝试使用 Zotero 主窗口，如果传入的 window 有问题
+      let doc = this.window.document;
+      let win = this.window as any;
+      
+      // 如果没有 body，尝试获取 Zotero 主窗口
+      if (!doc || !doc.body) {
+        Zotero.log('[HistoryTreeZTree] Current window document not ready, trying Zotero main window', 'warn');
+        const mainWindow = Zotero.getMainWindow();
+        if (mainWindow && mainWindow.document && mainWindow.document.body) {
+          Zotero.log('[HistoryTreeZTree] Using Zotero main window instead', 'info');
+          this.window = mainWindow;
+          doc = mainWindow.document;
+          win = mainWindow;
+        }
+      }
       
       Zotero.log('[HistoryTreeZTree] Starting dependency loading...', 'info');
+      Zotero.log(`[HistoryTreeZTree] Document state: readyState=${doc?.readyState}, hasBody=${!!doc?.body}`, 'info');
+      
+      // 确保文档基本结构存在
+      if (!doc || !doc.body) {
+        Zotero.log('[HistoryTreeZTree] document.body not available, waiting...', 'warn');
+        
+        // 等待 body 可用
+        await new Promise<void>((resolve) => {
+          if (doc.body) {
+            resolve();
+            return;
+          }
+          
+          const checkBody = () => {
+            if (doc.body) {
+              resolve();
+            } else if (doc.readyState === 'complete') {
+              // 如果文档已完成加载但仍然没有 body，说明有问题
+              throw new Error('Document loaded but body is still null');
+            } else {
+              setTimeout(checkBody, 50);
+            }
+          };
+          
+          // 如果文档还在加载，等待 DOMContentLoaded
+          if (doc.readyState === 'loading') {
+            doc.addEventListener('DOMContentLoaded', () => {
+              if (doc.body) {
+                resolve();
+              } else {
+                checkBody();
+              }
+            }, { once: true });
+          } else {
+            checkBody();
+          }
+        });
+        
+        Zotero.log('[HistoryTreeZTree] document.body now available', 'info');
+      }
       
       // 检查 jQuery 是否已加载
       if (typeof win.$ === 'undefined' && typeof win.jQuery === 'undefined') {
@@ -289,9 +348,23 @@ export class HistoryTreeZTree {
         Zotero.log(`[HistoryTreeZTree] Loading script via DOM: ${src}`, 'info');
         
         // 确保文档已经准备好
-        if (!doc || (!doc.head && !doc.body && !doc.documentElement)) {
-          Zotero.logError(`[HistoryTreeZTree] Document not ready for script loading`);
-          reject(new Error('Document not ready'));
+        if (!doc) {
+          Zotero.logError(`[HistoryTreeZTree] No document available`);
+          reject(new Error('No document available'));
+          return;
+        }
+        
+        // 对于 DOM 方法，我们需要至少有 head 或 body
+        if (!doc.head && !doc.body && !doc.documentElement) {
+          Zotero.logError(`[HistoryTreeZTree] Document structure not ready for DOM script loading`);
+          // 等待一下再试
+          setTimeout(() => {
+            if (doc.head || doc.body || doc.documentElement) {
+              this.loadScript(src).then(resolve).catch(reject);
+            } else {
+              reject(new Error('Document structure not ready after waiting'));
+            }
+          }, 100);
           return;
         }
         
