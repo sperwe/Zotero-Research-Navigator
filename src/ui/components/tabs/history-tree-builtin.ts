@@ -173,7 +173,24 @@ export class HistoryTreeBuiltin {
         font-style: italic;
       }
     `;
-    doc.head.appendChild(style);
+    
+    // 安全地添加样式
+    if (doc.head) {
+      doc.head.appendChild(style);
+    } else if (doc.documentElement) {
+      doc.documentElement.appendChild(style);
+    } else if (doc.body) {
+      doc.body.appendChild(style);
+    } else {
+      // 如果都不存在，尝试稍后添加
+      Zotero.log('[HistoryTreeBuiltin] No suitable element to append styles, trying inline styles', 'warn');
+      // 作为备用方案，我们可以将样式内联到容器中
+      if (this.container) {
+        const styleContainer = doc.createElement('div');
+        styleContainer.innerHTML = `<style>${style.textContent}</style>`;
+        this.container.insertBefore(styleContainer.firstChild!, this.container.firstChild);
+      }
+    }
   }
   
   private async refresh(): Promise<void> {
