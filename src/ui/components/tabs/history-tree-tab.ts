@@ -8,6 +8,7 @@ import { ClosedTabsManager } from "../../../managers/closed-tabs-manager";
 import { ZoteroTabsIntegration, ZoteroTabData } from "../../../managers/zotero-tabs-integration";
 import { HistoryNode } from "../../../services/database-service";
 import { HistoryTreeZTree } from "./history-tree-ztree";
+import { HistoryTreeSimple } from "./history-tree-simple";
 
 export class HistoryTreeTab {
   private container: HTMLElement | null = null;
@@ -15,7 +16,7 @@ export class HistoryTreeTab {
   private searchInput: HTMLInputElement | null = null;
   private tabsIntegration: ZoteroTabsIntegration;
   private useZTree: boolean = true; // 使用 zTree 实现
-  private zTreeComponent: HistoryTreeZTree | null = null;
+  private zTreeComponent: HistoryTreeZTree | HistoryTreeSimple | null = null;
   
   constructor(
     private window: Window,
@@ -43,7 +44,8 @@ export class HistoryTreeTab {
     
     // 如果使用 zTree，直接初始化 zTree 组件
     if (this.useZTree) {
-      this.zTreeComponent = new HistoryTreeZTree(
+      // 使用简化版的 zTree 实现
+      this.zTreeComponent = new HistoryTreeSimple(
         this.window,
         this.historyService,
         this.closedTabsManager
