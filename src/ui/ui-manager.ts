@@ -146,18 +146,13 @@ export class UIManager {
       // 创建主面板
       if (!this.mainPanel) {
         Zotero.log("[UIManager] Creating main panel...", "info");
-        // 确保文档已准备好
-        if (win.document.readyState === "complete" && win.document.body) {
-          this.mainPanel = new MainPanel(win, {
-            closedTabsManager: this.closedTabsManager,
-            noteAssociationSystem: this.noteAssociationSystem,
-            historyService: this.historyService,
-          });
-          await this.mainPanel.create();
-          Zotero.log("[UIManager] Main panel created", "info");
-        } else {
-          Zotero.log("[UIManager] Document not ready for main panel, skipping...", "info");
-        }
+        this.mainPanel = new MainPanel(win, {
+          closedTabsManager: this.closedTabsManager,
+          noteAssociationSystem: this.noteAssociationSystem,
+          historyService: this.historyService,
+        });
+        await this.mainPanel.create();
+        Zotero.log("[UIManager] Main panel created", "info");
       }
       
       // 初始化侧边栏
@@ -352,27 +347,18 @@ export class UIManager {
       Zotero.log("[UIManager] Main panel is null!", "error");
       // 尝试创建面板
       const win = Zotero.getMainWindow();
-      if (win && win.document && !this.mainPanel) {
-        // 确保文档已准备好
-        if (win.document.readyState === "complete" && win.document.body) {
-          this.mainPanel = new MainPanel(win, {
-            closedTabsManager: this.closedTabsManager,
-            noteAssociationSystem: this.noteAssociationSystem,
-            historyService: this.historyService,
-          });
-          this.mainPanel.create().then(() => {
-            Zotero.log("[UIManager] Main panel created on demand", "info");
-            this.mainPanel.show();
-          }).catch(err => {
-            Zotero.logError(`[UIManager] Failed to create panel on demand: ${err}`);
-          });
-        } else {
-          Zotero.log("[UIManager] Document not ready, waiting...", "info");
-          // 等待文档准备好
-          win.addEventListener("load", () => {
-            this.toggleMainPanel();
-          }, { once: true });
-        }
+      if (win && !this.mainPanel) {
+        this.mainPanel = new MainPanel(win, {
+          closedTabsManager: this.closedTabsManager,
+          noteAssociationSystem: this.noteAssociationSystem,
+          historyService: this.historyService,
+        });
+        this.mainPanel.create().then(() => {
+          Zotero.log("[UIManager] Main panel created on demand", "info");
+          this.mainPanel.show();
+        }).catch(err => {
+          Zotero.logError(`[UIManager] Failed to create panel on demand: ${err}`);
+        });
       }
     }
   }
