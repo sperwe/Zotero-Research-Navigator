@@ -3283,20 +3283,56 @@ function createZTreeView(doc) {
         html, body { height:100%; margin:0; }
         #ztree { height:100%; overflow:auto; font-family: sans-serif; }
         .placeholder { padding: 12px; color: #666; }
+        ul.ztree { margin-top: 10px; border: none; }
       </style>
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ztree@3.5.46/css/zTreeStyle/zTreeStyle.min.css" />
+      <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/ztree@3.5.46/js/jquery.ztree.core.min.js"></script>
     </head>
     <body>
-      <div id="ztree"><div class="placeholder">zTree placeholder - integrating library…</div></div>
-      <script>window.addEventListener('message', (e) => {
-        const { type, payload } = e.data || {};
-        if (type === 'RN_RENDER_ZTREE') {
-          const tree = document.getElementById('ztree');
-          tree.innerHTML = '';
-          const pre = document.createElement('pre');
-          pre.textContent = JSON.stringify(payload, null, 2);
-          tree.appendChild(pre);
-        }
-      });</script>
+      <div id="ztree"><div class="placeholder">Loading zTree…</div></div>
+      <script>
+        (function(){
+          function isReady(){ return window.jQuery && jQuery.fn && jQuery.fn.zTree; }
+          function toZTreeNodes(nodes){
+            return (nodes || []).map(n => ({
+              id: n.id,
+              name: n.name || 'Untitled',
+              open: true,
+              children: toZTreeNodes(n.children)
+            }));
+          }
+          function render(payload){
+            var el = document.getElementById('ztree');
+            el.innerHTML = '<ul id="rz-ztree" class="ztree"></ul>';
+            var setting = {
+              view: { showIcon: false, selectedMulti: false },
+              callback: {
+                onClick: function(event, treeId, treeNode){
+                  window.parent.postMessage({ type: 'RN_ZTREE_CLICK', payload: { id: treeNode.id } }, '*');
+                },
+                onRightClick: function(event, treeId, treeNode){
+                  window.parent.postMessage({ type: 'RN_ZTREE_CONTEXT', payload: { id: treeNode.id, clientX: event.clientX, clientY: event.clientY } }, '*');
+                }
+              }
+            };
+            var nodes = toZTreeNodes(payload || []);
+            jQuery.fn.zTree.init(jQuery('#rz-ztree'), setting, nodes);
+          }
+          window.addEventListener('message', (e) => {
+            var data = e.data || {};
+            if (data.type === 'RN_RENDER_ZTREE') {
+              if (isReady()) { render(data.payload); }
+              else {
+                var timer = setInterval(function(){ if (isReady()) { clearInterval(timer); render(data.payload); } }, 50);
+                setTimeout(function(){ clearInterval(timer); }, 5000);
+              }
+            }
+          });
+          // Notify parent we're ready to receive data
+          window.parent && window.parent.postMessage({ type: 'RN_ZTREE_READY' }, '*');
+        })();
+      </script>
     </body>
   </html>`;
   iframe.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
@@ -3309,6 +3345,40 @@ function createZTreeView(doc) {
       iframe.contentWindow.postMessage({ type: 'RN_RENDER_ZTREE', payload: data }, '*');
     } catch (e) {}
   };
+  
+  // 监听来自 iframe 的事件，桥接到现有逻辑
+  window.addEventListener('message', (e) => {
+    const { type, payload } = e.data || {};
+    if (!type) return;
+    if (type === 'RN_ZTREE_READY') {
+      // iframe 准备就绪后立即渲染一次
+      try {
+        const sessions = ResearchNavigator.getTreeData();
+        const toSimple = (node) => ({ id: node.id, name: node.title, children: (node.children || []).map(toSimple) });
+        const data = sessions.map(s => ({ id: s.id, name: s.title, children: s.roots.map(toSimple) }));
+        iframe.contentWindow.postMessage({ type: 'RN_RENDER_ZTREE', payload: data }, '*');
+      } catch (err) {}
+    } else if (type === 'RN_ZTREE_CLICK' && payload && payload.id) {
+      // 点击节点：打开条目并同步当前节点
+      try {
+        const node = ResearchNavigator.nodeMap.get(payload.id);
+        if (node) {
+          ResearchNavigator.currentNode = node;
+          ResearchNavigator.openItemFromNode(node);
+          ResearchNavigator.addToNavigationHistory(node);
+          ResearchNavigator.updateNavigationButtons();
+        }
+      } catch (err) {}
+    } else if (type === 'RN_ZTREE_CONTEXT' && payload && payload.id) {
+      try {
+        const node = ResearchNavigator.nodeMap.get(payload.id);
+        if (node) {
+          const ev = { screenX: e.screenX || 0, screenY: e.screenY || 0 };
+          ResearchNavigator.showNodeContextMenu(doc, node, ev);
+        }
+      } catch (err) {}
+    }
+  });
   
   return view;
 }
