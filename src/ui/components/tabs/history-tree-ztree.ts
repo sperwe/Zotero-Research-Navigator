@@ -204,36 +204,72 @@ export class HistoryTreeZTree {
   private loadScript(src: string): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
-        // 尝试使用 Zotero 的 Services.scriptloader
+        // 检查是否有 Services.scriptloader 可用
         if (typeof Services !== 'undefined' && Services.scriptloader) {
-          Zotero.log(`[HistoryTreeZTree] Loading script via Services.scriptloader: ${src}`, 'info');
-          Services.scriptloader.loadSubScript(src, this.window);
-          resolve();
-        } else {
-          // 回退到动态创建 script 标签
-          Zotero.log(`[HistoryTreeZTree] Loading script via DOM: ${src}`, 'info');
-          const script = this.window.document.createElement('script');
-          script.src = src;
-          script.onload = () => {
-            Zotero.log(`[HistoryTreeZTree] Script loaded successfully: ${src}`, 'info');
-            resolve();
-          };
-          script.onerror = (error) => {
-            Zotero.logError(`[HistoryTreeZTree] Failed to load script: ${src}`);
-            reject(new Error(`Failed to load script: ${src}`));
-          };
+          Zotero.log(`[HistoryTreeZTree] Attempting to load script via Services.scriptloader: ${src}`, 'info');
           
-          // 确保有地方附加脚本
-          if (this.window.document.head) {
-            this.window.document.head.appendChild(script);
-          } else if (this.window.document.documentElement) {
-            this.window.document.documentElement.appendChild(script);
-          } else {
-            reject(new Error('No suitable element to append script'));
+          try {
+            // 尝试加载脚本到 window 作用域
+            Services.scriptloader.loadSubScript(src, this.window, 'UTF-8');
+            Zotero.log(`[HistoryTreeZTree] Script loaded successfully via Services.scriptloader: ${src}`, 'info');
+            resolve();
+            return;
+          } catch (e) {
+            Zotero.log(`[HistoryTreeZTree] Services.scriptloader failed, falling back to DOM method: ${e}`, 'warn');
           }
         }
+        
+        // 回退到 DOM 方法
+        const doc = this.window.document;
+        Zotero.log(`[HistoryTreeZTree] Loading script via DOM: ${src}`, 'info');
+        
+        const script = doc.createElement('script');
+        script.type = 'text/javascript';
+        script.src = src;
+        
+        let loaded = false;
+        const onLoad = () => {
+          if (!loaded) {
+            loaded = true;
+            Zotero.log(`[HistoryTreeZTree] Script loaded successfully via DOM: ${src}`, 'info');
+            resolve();
+          }
+        };
+        
+        const onError = (error: any) => {
+          if (!loaded) {
+            loaded = true;
+            Zotero.logError(`[HistoryTreeZTree] Failed to load script via DOM: ${src}`);
+            reject(new Error(`Failed to load script: ${src}`));
+          }
+        };
+        
+        script.addEventListener('load', onLoad);
+        script.addEventListener('error', onError);
+        
+        // 尝试附加到不同的位置
+        const appendScript = () => {
+          if (doc.head) {
+            doc.head.appendChild(script);
+          } else if (doc.body) {
+            doc.body.appendChild(script);
+          } else if (doc.documentElement) {
+            doc.documentElement.appendChild(script);
+          } else {
+            // 如果 DOM 还没准备好，等待一下再试
+            setTimeout(() => {
+              if (doc.head || doc.body) {
+                appendScript();
+              } else {
+                onError(new Error('No suitable element to append script'));
+              }
+            }, 100);
+          }
+        };
+        
+        appendScript();
       } catch (error) {
-        Zotero.logError(`[HistoryTreeZTree] Error loading script ${src}: ${error}`);
+        Zotero.logError(`[HistoryTreeZTree] Unexpected error loading script ${src}: ${error}`);
         reject(error);
       }
     });
