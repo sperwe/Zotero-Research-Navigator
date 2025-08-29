@@ -189,8 +189,12 @@ export class MainPanel {
       `;
       tabButton.innerHTML = `${tab.icon} ${tab.label}`;
 
-      tabButton.addEventListener("click", () => this.switchTab(tab.id));
+      tabButton.addEventListener("click", () => {
+        Zotero.log(`[MainPanel] Tab button clicked: ${tab.id}`, "info");
+        this.switchTab(tab.id);
+      });
       tabBar.appendChild(tabButton);
+      Zotero.log(`[MainPanel] Created tab button: ${tab.id}`, "info");
     }
 
     return tabBar;
@@ -237,37 +241,47 @@ export class MainPanel {
    * 初始化标签页
    */
   private async initializeTabs(): Promise<void> {
-    // 历史树标签页
-    const historyTab = new HistoryTreeTab(
-      this.window,
-      this.options.historyService,
-      this.options.closedTabsManager
-    );
-    this.tabs.set("history", historyTab);
+    try {
+      // 历史树标签页
+      Zotero.log("[MainPanel] Creating HistoryTreeTab...", "info");
+      const historyTab = new HistoryTreeTab(
+        this.window,
+        this.options.historyService,
+        this.options.closedTabsManager
+      );
+      this.tabs.set("history", historyTab);
+      Zotero.log("[MainPanel] HistoryTreeTab created successfully", "info");
 
-    // 已关闭标签页
-    // 已关闭标签页功能整合到历史树中，不需要单独标签
+      // 已关闭标签页
+      // 已关闭标签页功能整合到历史树中，不需要单独标签
 
-    // 笔记关联标签页
-    const notesTab = new NoteRelationsTab(
-      this.window,
-      this.options.historyService,
-      this.options.noteAssociationSystem
-    );
-    this.tabs.set("notes", notesTab);
+      // 笔记关联标签页
+      Zotero.log("[MainPanel] Creating NoteRelationsTab...", "info");
+      const notesTab = new NoteRelationsTab(
+        this.window,
+        this.options.historyService,
+        this.options.noteAssociationSystem
+      );
+      this.tabs.set("notes", notesTab);
+      Zotero.log(`[MainPanel] NoteRelationsTab created successfully. Total tabs: ${this.tabs.size}`, "info");
 
-    // 显示初始标签页
-    this.showTab(this.activeTab);
+      // 显示初始标签页
+      this.showTab(this.activeTab);
+    } catch (error) {
+      Zotero.logError(`[MainPanel] Error initializing tabs: ${error}`);
+    }
   }
 
   /**
    * 切换标签页
    */
   private switchTab(tabId: string): void {
+    Zotero.log(`[MainPanel] switchTab called with tabId: ${tabId}, current: ${this.activeTab}`, "info");
     if (tabId === this.activeTab) return;
 
     // 更新标签栏样式
     const tabButtons = this.container?.querySelectorAll(".panel-tab");
+    Zotero.log(`[MainPanel] Found ${tabButtons?.length || 0} tab buttons`, "info");
     tabButtons?.forEach((button) => {
       const isActive = button.getAttribute("data-tab") === tabId;
       button.classList.toggle("active", isActive);
@@ -292,8 +306,12 @@ export class MainPanel {
    * 显示标签页
    */
   private showTab(tabId: string): void {
+    Zotero.log(`[MainPanel] showTab called with tabId: ${tabId}`, "info");
     const tab = this.tabs.get(tabId);
-    if (!tab) return;
+    if (!tab) {
+      Zotero.logError(`[MainPanel] Tab not found: ${tabId}`);
+      return;
+    }
 
     const content = this.container?.querySelector(".panel-content");
     if (!content) return;

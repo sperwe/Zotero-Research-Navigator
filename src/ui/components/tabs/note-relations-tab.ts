@@ -29,8 +29,10 @@ export class NoteRelationsTab {
   ) {}
   
   create(container: HTMLElement): void {
-    this.container = container;
-    const doc = this.window.document;
+    try {
+      Zotero.log("[NoteRelationsTab] create method called", "info");
+      this.container = container;
+      const doc = this.window.document;
     
     // 创建主布局
     container.style.cssText = `
@@ -57,6 +59,13 @@ export class NoteRelationsTab {
     this.showEmptyState();
     
     container.appendChild(this.contentContainer);
+    
+    Zotero.log("[NoteRelationsTab] create method completed successfully", "info");
+    } catch (error) {
+      Zotero.logError(`[NoteRelationsTab] Error in create method: ${error}`);
+      // 显示错误信息
+      container.innerHTML = `<div style="padding: 20px; color: red;">Error loading Note Relations tab: ${error}</div>`;
+    }
   }
   
   /**
