@@ -1058,24 +1058,35 @@ export class NoteRelationsTab {
       );
       
       // 打开笔记编辑器
-      // 需要稍微延迟以确保笔记已经完全保存
-      setTimeout(() => {
+      // 使用更长的延迟并直接调用 openDialog
+      setTimeout(async () => {
         try {
+          // 首先尝试使用 Zotero 的标准方法
           const zoteroPane = Zotero.getActiveZoteroPane();
           if (zoteroPane && typeof zoteroPane.openNoteWindow === 'function') {
             Zotero.log(`[NoteRelationsTab] Opening note window for note ID: ${note.id}`, "info");
-            zoteroPane.openNoteWindow(note.id);
+            zoteroPane.openNoteWindow(note.id, null, null);
           } else {
-            Zotero.logError("[NoteRelationsTab] openNoteWindow not available on ZoteroPane");
-            // 备用方案：在右侧面板打开
-            if (zoteroPane && typeof zoteroPane.selectItem === 'function') {
-              zoteroPane.selectItem(note.id);
+            // 如果标准方法不可用，直接使用 openDialog
+            Zotero.log(`[NoteRelationsTab] Using direct openDialog for note ID: ${note.id}`, "info");
+            const win = Zotero.getMainWindow();
+            if (win) {
+              const io = { itemID: note.id, collectionID: null, parentItemKey: null };
+              win.openDialog('chrome://zotero/content/note.xhtml', 
+                'zotero-note-' + note.id, 
+                'chrome,resizable,centerscreen,dialog=false', 
+                io);
+            } else {
+              // 最后的备用方案：在右侧面板打开
+              if (zoteroPane && typeof zoteroPane.selectItem === 'function') {
+                await zoteroPane.selectItem(note.id);
+              }
             }
           }
         } catch (error) {
           Zotero.logError(`[NoteRelationsTab] Error opening note window: ${error}`);
         }
-      }, 100);
+      }, 500); // 增加延迟到500ms
       
       // 刷新显示
       await this.loadNodeAssociations();

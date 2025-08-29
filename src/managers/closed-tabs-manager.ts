@@ -663,4 +663,45 @@ export class ClosedTabsManager {
       progressWindow.close();
     }, 3000);
   }
+
+  /**
+   * 从已关闭标签页列表中移除指定标签
+   */
+  async removeClosedTab(tabId: string): Promise<void> {
+    try {
+      const Zotero_Tabs = this.getZoteroTabs();
+      if (!Zotero_Tabs || !Zotero_Tabs._history) {
+        Zotero.logError("[ClosedTabsManager] Cannot remove tab: Zotero_Tabs not available");
+        return;
+      }
+
+      // 遍历历史组，查找并移除指定的标签
+      for (let groupIndex = 0; groupIndex < Zotero_Tabs._history.length; groupIndex++) {
+        const group = Zotero_Tabs._history[groupIndex];
+        const itemIndex = group.findIndex((item: any) => {
+          return item.data && item.data.id === tabId;
+        });
+
+        if (itemIndex !== -1) {
+          // 找到了要删除的标签
+          group.splice(itemIndex, 1);
+          
+          // 如果这个组现在为空，删除整个组
+          if (group.length === 0) {
+            Zotero_Tabs._history.splice(groupIndex, 1);
+          }
+
+          Zotero.log(`[ClosedTabsManager] Removed closed tab: ${tabId}`, "info");
+          
+          // 触发更新事件
+          this.notifyClosedTabsChanged();
+          return;
+        }
+      }
+
+      Zotero.log(`[ClosedTabsManager] Tab not found in closed tabs: ${tabId}`, "warning");
+    } catch (error) {
+      Zotero.logError(`[ClosedTabsManager] Error removing closed tab: ${error}`);
+    }
+  }
 }

@@ -459,9 +459,42 @@ export class HistoryTreeTab {
     title.textContent = tab.title;
     li.appendChild(title);
     
-    // 点击恢复
-    li.addEventListener("click", async () => {
-      await this.tabsIntegration.restoreTab(tab);
+    // 删除按钮
+    const removeBtn = doc.createElement("button");
+    removeBtn.textContent = "×";
+    removeBtn.title = "Remove from closed tabs";
+    removeBtn.style.cssText = `
+      background: #666;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      padding: 0px 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-left: 5px;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    `;
+    removeBtn.addEventListener("mouseenter", () => {
+      removeBtn.style.opacity = "1";
+      removeBtn.style.background = "#ff4444";
+    });
+    removeBtn.addEventListener("mouseleave", () => {
+      removeBtn.style.opacity = "0.7";
+      removeBtn.style.background = "#666";
+    });
+    removeBtn.addEventListener("click", async (e) => {
+      e.stopPropagation(); // 防止触发恢复标签
+      await this.closedTabsManager.removeClosedTab(tab.id);
+      li.remove(); // 立即从界面移除
+    });
+    li.appendChild(removeBtn);
+    
+    // 点击恢复（仅在点击非按钮区域时）
+    li.addEventListener("click", async (e) => {
+      if (e.target !== removeBtn) {
+        await this.tabsIntegration.restoreTab(tab);
+      }
     });
     
     // 悬停效果
@@ -613,6 +646,51 @@ export class HistoryTreeTab {
     `;
     time.textContent = new Date(node.timestamp).toLocaleTimeString();
     content.appendChild(time);
+    
+    // 删除按钮（仅对非幽灵节点显示）
+    if (!isGhost) {
+      const deleteBtn = doc.createElement("button");
+      deleteBtn.textContent = "×";
+      deleteBtn.title = "Delete history node";
+      deleteBtn.style.cssText = `
+        background: #666;
+        color: white;
+        border: none;
+        border-radius: 3px;
+        padding: 0px 6px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-left: 5px;
+        opacity: 0;
+        transition: opacity 0.2s, background 0.2s;
+      `;
+      
+      // 鼠标悬停在整个节点上时显示删除按钮
+      content.addEventListener("mouseenter", () => {
+        deleteBtn.style.opacity = "0.7";
+      });
+      content.addEventListener("mouseleave", () => {
+        deleteBtn.style.opacity = "0";
+      });
+      
+      deleteBtn.addEventListener("mouseenter", () => {
+        deleteBtn.style.opacity = "1";
+        deleteBtn.style.background = "#ff4444";
+      });
+      deleteBtn.addEventListener("mouseleave", () => {
+        deleteBtn.style.opacity = "0.7";
+        deleteBtn.style.background = "#666";
+      });
+      
+      deleteBtn.addEventListener("click", async (e) => {
+        e.stopPropagation(); // 防止触发打开项目
+        if (this.window.confirm(`Delete history node "${node.title}"?`)) {
+          await this.deleteNode(node);
+        }
+      });
+      
+      content.appendChild(deleteBtn);
+    }
     
     li.appendChild(content);
     
