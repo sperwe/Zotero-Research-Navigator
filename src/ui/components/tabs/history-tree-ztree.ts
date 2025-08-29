@@ -25,6 +25,20 @@ export class HistoryTreeZTree {
     Zotero.log(`[HistoryTreeZTree] Window location: ${window.location?.href || 'unknown'}`, 'info');
     Zotero.log(`[HistoryTreeZTree] Document ready state: ${window.document?.readyState || 'unknown'}`, 'info');
     Zotero.log(`[HistoryTreeZTree] Has document.body: ${!!window.document?.body}`, 'info');
+    Zotero.log(`[HistoryTreeZTree] Document type: ${window.document?.constructor?.name || 'unknown'}`, 'info');
+    Zotero.log(`[HistoryTreeZTree] Document URL: ${window.document?.URL || 'unknown'}`, 'info');
+    Zotero.log(`[HistoryTreeZTree] Document doctype: ${window.document?.doctype || 'null'}`, 'info');
+    
+    // 检查是否是 iframe
+    try {
+      const isIframe = window !== window.top;
+      Zotero.log(`[HistoryTreeZTree] Is iframe: ${isIframe}`, 'info');
+      if (isIframe) {
+        Zotero.log(`[HistoryTreeZTree] Parent window location: ${window.parent?.location?.href || 'unknown'}`, 'info');
+      }
+    } catch (e) {
+      Zotero.log(`[HistoryTreeZTree] Cannot check iframe status: ${e}`, 'warn');
+    }
   }
   
   /**
@@ -32,6 +46,27 @@ export class HistoryTreeZTree {
    */
   async init(container: HTMLElement): Promise<void> {
     this.container = container;
+    
+    // 使用容器的 ownerDocument 而不是传入的 window
+    const containerDoc = container.ownerDocument;
+    const containerWin = containerDoc?.defaultView || this.window;
+    
+    Zotero.log(`[HistoryTreeZTree] Using container's document: ${containerDoc}`, 'info');
+    Zotero.log(`[HistoryTreeZTree] Container doc readyState: ${containerDoc?.readyState}`, 'info');
+    Zotero.log(`[HistoryTreeZTree] Container doc has body: ${!!containerDoc?.body}`, 'info');
+    
+    // 如果容器的文档也没有 body，使用 Zotero 主窗口
+    if (!containerDoc?.body) {
+      const mainWindow = Zotero.getMainWindow();
+      if (mainWindow && mainWindow.document && mainWindow.document.body) {
+        Zotero.log('[HistoryTreeZTree] Using Zotero main window for document operations', 'info');
+        this.window = mainWindow;
+      }
+    } else {
+      // 使用容器的窗口
+      this.window = containerWin;
+    }
+    
     const doc = this.window.document;
     
     // 确保容器存在且已附加到 DOM
@@ -565,34 +600,26 @@ export class HistoryTreeZTree {
     // 使用 jQuery 初始化 zTree - 确保 DOM 已经准备好
     const $ = this.window.$;
     
-    // 定义初始化函数
-    const initializeZTree = () => {
-      try {
-        // 再次检查容器是否存在
-        if (!this.treeContainer || !this.treeContainer.parentNode) {
-          Zotero.logError('[HistoryTreeZTree] Tree container not found or not attached to DOM');
-          return;
-        }
-        
-        // 执行初始化
-        this.treeObj = $.fn.zTree.init($(this.treeContainer), setting, zNodes);
-        Zotero.log('[HistoryTreeZTree] zTree initialized successfully', 'info');
-      } catch (e) {
-        Zotero.logError(`[HistoryTreeZTree] Failed to initialize zTree: ${e}`);
-        throw e;
+    // 直接初始化 zTree，不再检查文档状态
+    try {
+      // 再次检查容器是否存在
+      if (!this.treeContainer || !this.treeContainer.parentNode) {
+        Zotero.logError('[HistoryTreeZTree] Tree container not found or not attached to DOM');
+        return;
       }
-    };
-    
-    // 检查文档就绪状态
-    const doc = this.window.document;
-    if (doc.readyState === 'loading') {
-      // 文档仍在加载，等待 DOMContentLoaded
-      Zotero.log('[HistoryTreeZTree] Document still loading, waiting for DOMContentLoaded', 'info');
-      doc.addEventListener('DOMContentLoaded', initializeZTree, { once: true });
-    } else {
-      // 文档已加载完成，直接初始化
-      Zotero.log('[HistoryTreeZTree] Document ready, initializing zTree immediately', 'info');
-      initializeZTree();
+      
+      // 确保 jQuery 存在
+      const $ = (this.window as any).$ || (this.window as any).jQuery || (window as any).$;
+      if (!$ || !$.fn || !$.fn.zTree) {
+        throw new Error('jQuery or zTree not loaded');
+      }
+      
+      // 执行初始化
+      this.treeObj = $.fn.zTree.init($(this.treeContainer), setting, zNodes);
+      Zotero.log('[HistoryTreeZTree] zTree initialized successfully', 'info');
+    } catch (e) {
+      Zotero.logError(`[HistoryTreeZTree] Failed to initialize zTree: ${e}`);
+      throw e;
     }
   }
   
