@@ -265,8 +265,9 @@ export class MainPanel {
       this.tabs.set("notes", notesTab);
       Zotero.log(`[MainPanel] NoteRelationsTab created successfully. Total tabs: ${this.tabs.size}`, "info");
 
-      // 显示初始标签页
-      this.showTab(this.activeTab);
+          // 显示初始标签页
+    Zotero.log(`[MainPanel] Showing initial tab: ${this.activeTab}`, "info");
+    this.showTab(this.activeTab);
     } catch (error) {
       Zotero.logError(`[MainPanel] Error initializing tabs: ${error}`);
     }
@@ -277,7 +278,16 @@ export class MainPanel {
    */
   private switchTab(tabId: string): void {
     Zotero.log(`[MainPanel] switchTab called with tabId: ${tabId}, current: ${this.activeTab}`, "info");
-    if (tabId === this.activeTab) return;
+    
+    // 如果是同一个 tab，检查内容是否为空，如果为空则强制刷新
+    if (tabId === this.activeTab) {
+      const content = this.container?.querySelector(".panel-content");
+      if (content && (!content.firstChild || content.innerHTML.trim() === "")) {
+        Zotero.log(`[MainPanel] Current tab ${tabId} has no content, forcing refresh`, "info");
+        this.showTab(tabId);
+      }
+      return;
+    }
 
     // 更新标签栏样式
     const tabButtons = this.container?.querySelectorAll(".panel-tab");
@@ -513,9 +523,17 @@ export class MainPanel {
       const state = JSON.parse(stateStr);
 
       this.isDocked = state.isDocked || false;
+      const previousTab = this.activeTab;
       this.activeTab = state.activeTab || "history";
       this.width = state.width || 400;
       this.height = state.height || 500;
+      
+      // 如果加载的 activeTab 与当前不同，需要切换到正确的 tab
+      if (previousTab !== this.activeTab && this.tabs.has(this.activeTab)) {
+        Zotero.log(`[MainPanel] Loaded state shows activeTab: ${this.activeTab}, switching from ${previousTab}`, "info");
+        this.hideTab(previousTab);
+        this.showTab(this.activeTab);
+      }
 
       if (this.container) {
         this.container.style.width = `${this.width}px`;
