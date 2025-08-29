@@ -9,6 +9,7 @@ export class HistoryTreeSafe {
   private container: HTMLElement;
   private treeContainer: HTMLElement | null = null;
   private expandedNodes = new Set<string>();
+  private searchInput: HTMLInputElement | null = null;
   
   constructor(
     private window: Window,
@@ -27,6 +28,9 @@ export class HistoryTreeSafe {
       container.innerHTML = `
         <div class="hts-container" style="height: 100%; display: flex; flex-direction: column; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px;">
           <style>
+            .hts-search-bar { padding: 10px; border-bottom: 1px solid #e0e0e0; background: #fafafa; }
+            .hts-search-input { width: 100%; padding: 5px 10px; border: 1px solid #ccc; border-radius: 3px; outline: none; font-size: 13px; }
+            .hts-search-input:focus { border-color: #4a90e2; box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2); }
             .hts-toolbar { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #e0e0e0; background: #f7f7f7; gap: 10px; }
             .hts-btn { display: inline-block; margin-right: 10px; padding: 5px 10px; font-size: 12px; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 3px; transition: all 0.2s; user-select: none; }
             .hts-btn:hover { background: #e8e8e8; border-color: #999; }
@@ -53,29 +57,24 @@ export class HistoryTreeSafe {
             .hts-history-item { color: #202124; }
             .hts-closed-group { font-weight: 600; color: #9e9e9e; }
             .hts-closed-item { color: #757575; font-style: italic; }
-            .hts-search-container { flex: 1; display: flex; align-items: center; max-width: 300px; }
-            .hts-search-input { flex: 1; padding: 4px 8px; font-size: 12px; border: 1px solid #ccc; border-radius: 3px; outline: none; }
-            .hts-search-input:focus { border-color: #4a90e2; }
-            .hts-search-clear { margin-left: -24px; padding: 2px 4px; font-size: 12px; color: #999; cursor: pointer; background: none; border: none; display: inline-block; }
-            .hts-search-clear:hover { color: #666; }
             .hts-node-hidden { display: none !important; }
             .hts-node-highlight { background: #fff3cd; }
           </style>
+          <div class="hts-search-bar">
+            <input type="text" class="hts-search-input" id="hts-search" placeholder="Search history..." />
+          </div>
           <div class="hts-toolbar">
             <span class="hts-btn" id="hts-refresh" role="button" tabindex="0">🔄 Refresh</span>
             <span class="hts-btn" id="hts-expand-all" role="button" tabindex="0">📂 Expand All</span>
             <span class="hts-btn" id="hts-collapse-all" role="button" tabindex="0">📁 Collapse All</span>
             <span class="hts-btn" id="hts-clear-all" role="button" tabindex="0">🗑️ Clear All</span>
-            <div class="hts-search-container">
-              <input type="text" class="hts-search-input" id="hts-search" placeholder="Search history..." />
-              <span class="hts-search-clear" id="hts-search-clear" style="display: none;">✕</span>
-            </div>
           </div>
           <div class="hts-tree" id="hts-tree-container"></div>
         </div>
       `;
       
       this.treeContainer = doc.getElementById('hts-tree-container');
+      this.searchInput = doc.getElementById('hts-search') as HTMLInputElement;
       
       // 绑定事件
       doc.getElementById('hts-refresh')?.addEventListener('click', () => this.refresh());
@@ -84,28 +83,7 @@ export class HistoryTreeSafe {
       doc.getElementById('hts-clear-all')?.addEventListener('click', () => this.clearAll());
       
       // 搜索功能
-      const searchInput = doc.getElementById('hts-search') as HTMLInputElement;
-      const searchClear = doc.getElementById('hts-search-clear');
-      
-      // 调试日志
-      Zotero.log(`[HistoryTreeSafe] Search input element found: ${!!searchInput}`, "info");
-      Zotero.log(`[HistoryTreeSafe] Search clear element found: ${!!searchClear}`, "info");
-      
-      searchInput?.addEventListener('input', (e) => {
-        const query = (e.target as HTMLInputElement).value.toLowerCase();
-        this.performSearch(query);
-        if (searchClear) {
-          searchClear.style.display = query ? 'inline' : 'none';
-        }
-      });
-      
-      searchClear?.addEventListener('click', () => {
-        if (searchInput) {
-          searchInput.value = '';
-          this.performSearch('');
-          searchClear.style.display = 'none';
-        }
-      });
+      this.searchInput?.addEventListener('input', () => this.onSearch());
       
       // 初始化数据
       await this.refresh();
@@ -486,22 +464,18 @@ export class HistoryTreeSafe {
     }
   }
   
-  private performSearch(query: string): void {
-    if (!this.treeContainer) return;
-    
-    const allNodes = this.treeContainer.querySelectorAll('.hts-node');
-    
+  private onSearch(): void {
+    const query = this.searchInput?.value.toLowerCase() || "";
     if (!query) {
-      // 清除搜索，显示所有节点
-      allNodes.forEach(node => {
-        node.classList.remove('hts-node-hidden');
-        const content = node.querySelector('.hts-node-content');
-        if (content) {
-          content.classList.remove('hts-node-highlight');
-        }
-      });
+      this.refresh();
       return;
     }
+    
+    if (!this.treeContainer) return;
+    
+    // 获取所有节点
+    const allNodes = this.treeContainer.querySelectorAll('.hts-node');
+    let matchedNodeCount = 0;
     
     // 执行搜索
     allNodes.forEach(node => {
@@ -515,6 +489,7 @@ export class HistoryTreeSafe {
         if (content) {
           content.classList.add('hts-node-highlight');
         }
+        matchedNodeCount++;
         
         // 确保父节点也可见并展开
         let parent = node.parentElement;
@@ -537,5 +512,12 @@ export class HistoryTreeSafe {
         }
       }
     });
+    
+    // 显示搜索结果统计
+    if (this.searchInput) {
+      this.searchInput.title = `Found ${matchedNodeCount} items`;
+    }
+    
+    Zotero.log(`[HistoryTreeSafe] Search: "${query}" - found ${matchedNodeCount} items`, "info");
   }
 }
