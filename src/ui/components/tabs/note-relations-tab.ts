@@ -320,30 +320,7 @@ export class NoteRelationsTab {
       const doc = this.window.document;
       this.contentContainer.innerHTML = "";
       
-      // 标题栏
-      const header = doc.createElement("div");
-      header.style.cssText = `
-        padding: 15px;
-        border-bottom: 1px solid var(--material-border-quarternary);
-        background: var(--material-background);
-      `;
-      
-      const title = doc.createElement("h3");
-      title.style.margin = "0 0 5px 0";
-      title.textContent = this.selectedNode.title || `Item ${this.selectedNode.itemId}`;
-      header.appendChild(title);
-      
-      const subtitle = doc.createElement("div");
-      subtitle.style.cssText = `
-        color: var(--fill-secondary);
-        font-size: 0.9em;
-      `;
-      subtitle.textContent = `${new Date(this.selectedNode.timestamp).toLocaleString()} - ${this.selectedNode.status}`;
-      header.appendChild(subtitle);
-      
-      this.contentContainer.appendChild(header);
-      
-      // 工具栏
+      // 工具栏（包含节点信息）
       const toolbar = this.createToolbar(doc);
       this.contentContainer.appendChild(toolbar);
       
@@ -515,13 +492,65 @@ export class NoteRelationsTab {
   private createToolbar(doc: Document): HTMLElement {
     const toolbar = doc.createElement("div");
     toolbar.style.cssText = `
-      padding: 10px 15px;
+      padding: 8px 15px;
       display: flex;
       gap: 10px;
       border-bottom: 1px solid var(--material-border-quarternary);
       background: var(--material-sidepane);
       align-items: center;
+      min-height: 36px;
     `;
+    
+    // 节点信息（subtle样式）
+    if (this.selectedNode) {
+      const nodeInfo = doc.createElement("div");
+      nodeInfo.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--fill-secondary);
+        font-size: 12px;
+        opacity: 0.8;
+        margin-right: auto;
+        overflow: hidden;
+        max-width: 300px;
+      `;
+      
+      // 图标
+      const icon = doc.createElement("span");
+      icon.textContent = this.selectedNode.status === "active" ? "📖" : "📕";
+      icon.style.fontSize = "14px";
+      nodeInfo.appendChild(icon);
+      
+      // 标题和时间
+      const textInfo = doc.createElement("span");
+      textInfo.style.cssText = `
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      `;
+      const dateStr = new Date(this.selectedNode.timestamp).toLocaleDateString(undefined, { 
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      textInfo.textContent = `${this.selectedNode.title || `Item ${this.selectedNode.itemId}`} · ${dateStr}`;
+      
+      // 添加悬停效果
+      nodeInfo.addEventListener("mouseenter", () => {
+        nodeInfo.style.opacity = "1";
+      });
+      nodeInfo.addEventListener("mouseleave", () => {
+        nodeInfo.style.opacity = "0.8";
+      });
+      
+      // 添加 tooltip
+      nodeInfo.title = `${this.selectedNode.title || `Item ${this.selectedNode.itemId}`}\n${new Date(this.selectedNode.timestamp).toLocaleString()}\nStatus: ${this.selectedNode.status}`;
+      
+      nodeInfo.appendChild(textInfo);
+      toolbar.appendChild(nodeInfo);
+    }
     
     // 添加笔记按钮
     const addBtn = doc.createElement("button");
