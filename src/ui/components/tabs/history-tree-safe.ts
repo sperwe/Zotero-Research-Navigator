@@ -27,7 +27,7 @@ export class HistoryTreeSafe {
       container.innerHTML = `
         <div class="hts-container" style="height: 100%; display: flex; flex-direction: column; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px;">
           <style>
-            .hts-toolbar { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #e0e0e0; background: #f7f7f7; }
+            .hts-toolbar { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #e0e0e0; background: #f7f7f7; gap: 10px; }
             .hts-btn { display: inline-block; margin-right: 10px; padding: 5px 10px; font-size: 12px; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 3px; transition: all 0.2s; user-select: none; }
             .hts-btn:hover { background: #e8e8e8; border-color: #999; }
             .hts-btn:active { background: #d8d8d8; }
@@ -86,6 +86,10 @@ export class HistoryTreeSafe {
       // 搜索功能
       const searchInput = doc.getElementById('hts-search') as HTMLInputElement;
       const searchClear = doc.getElementById('hts-search-clear');
+      
+      // 调试日志
+      Zotero.log(`[HistoryTreeSafe] Search input element found: ${!!searchInput}`, "info");
+      Zotero.log(`[HistoryTreeSafe] Search clear element found: ${!!searchClear}`, "info");
       
       searchInput?.addEventListener('input', (e) => {
         const query = (e.target as HTMLInputElement).value.toLowerCase();
