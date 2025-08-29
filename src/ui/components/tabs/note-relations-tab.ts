@@ -1057,36 +1057,46 @@ export class NoteRelationsTab {
         "manual"
       );
       
-      // 打开笔记编辑器
-      // 使用更长的延迟并直接调用 openDialog
-      setTimeout(async () => {
-        try {
-          // 首先尝试使用 Zotero 的标准方法
-          const zoteroPane = Zotero.getActiveZoteroPane();
-          if (zoteroPane && typeof zoteroPane.openNoteWindow === 'function') {
-            Zotero.log(`[NoteRelationsTab] Opening note window for note ID: ${note.id}`, "info");
-            zoteroPane.openNoteWindow(note.id, null, null);
-          } else {
-            // 如果标准方法不可用，直接使用 openDialog
-            Zotero.log(`[NoteRelationsTab] Using direct openDialog for note ID: ${note.id}`, "info");
-            const win = Zotero.getMainWindow();
-            if (win) {
-              const io = { itemID: note.id, collectionID: null, parentItemKey: null };
-              win.openDialog('chrome://zotero/content/note.xhtml', 
-                'zotero-note-' + note.id, 
-                'chrome,resizable,centerscreen,dialog=false', 
-                io);
+      // 选择新创建的笔记并尝试打开编辑器
+      try {
+        const zoteroPane = Zotero.getActiveZoteroPane();
+        
+        // 首先选择这个笔记
+        if (zoteroPane && typeof zoteroPane.selectItem === 'function') {
+          await zoteroPane.selectItem(note.id);
+          Zotero.log(`[NoteRelationsTab] Selected note: ${note.id}`, "info");
+        }
+        
+        // 然后尝试打开笔记窗口
+        // 使用 setTimeout 确保 UI 已经更新
+        setTimeout(() => {
+          try {
+            const zp = Zotero.getActiveZoteroPane();
+            if (zp && typeof zp.openNoteWindow === 'function') {
+              Zotero.log(`[NoteRelationsTab] Opening note window for note ID: ${note.id}`, "info");
+              // 检查笔记是否真的存在
+              const noteItem = Zotero.Items.get(note.id);
+              if (noteItem) {
+                zp.openNoteWindow(note.id);
+              } else {
+                Zotero.logError(`[NoteRelationsTab] Note item not found in database: ${note.id}`);
+              }
             } else {
-              // 最后的备用方案：在右侧面板打开
-              if (zoteroPane && typeof zoteroPane.selectItem === 'function') {
-                await zoteroPane.selectItem(note.id);
+              // 如果不能打开独立窗口，至少聚焦到笔记编辑器
+              const noteEditor = zp?.document.getElementById('zotero-note-editor');
+              if (noteEditor) {
+                noteEditor.focus();
+                Zotero.log("[NoteRelationsTab] Focused on note editor", "info");
               }
             }
+          } catch (error) {
+            Zotero.logError(`[NoteRelationsTab] Error in setTimeout: ${error}`);
           }
-        } catch (error) {
-          Zotero.logError(`[NoteRelationsTab] Error opening note window: ${error}`);
-        }
-      }, 500); // 增加延迟到500ms
+        }, 100);
+        
+      } catch (error) {
+        Zotero.logError(`[NoteRelationsTab] Error selecting/opening note: ${error}`);
+      }
       
       // 刷新显示
       await this.loadNodeAssociations();
@@ -1101,8 +1111,64 @@ export class NoteRelationsTab {
    * 显示搜索结果
    */
   private showSearchResults(results: AssociatedNote[]): void {
-    // TODO: 实现搜索结果显示
-    Zotero.log(`[NoteRelationsTab] Found ${results.length} search results`, "info");
+    const doc = this.window.document;
+    const content = this.container?.querySelector(".notes-list");
+    if (!content) return;
+    
+    // 清空当前内容
+    content.innerHTML = "";
+    
+    // 显示搜索结果标题
+    const header = doc.createElement("h4");
+    header.style.cssText = `
+      margin: 15px 15px 10px 15px;
+      color: var(--fill-primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    `;
+    header.innerHTML = `🔍 Search Results (${results.length})`;
+    
+    // 添加清除搜索按钮
+    const clearBtn = doc.createElement("button");
+    clearBtn.textContent = "Clear";
+    clearBtn.style.cssText = `
+      padding: 2px 8px;
+      font-size: 12px;
+      cursor: pointer;
+    `;
+    clearBtn.addEventListener("click", () => {
+      // 清空搜索框
+      const searchBox = this.container?.querySelector('input[type="text"]') as HTMLInputElement;
+      if (searchBox) {
+        searchBox.value = "";
+      }
+      // 重新加载原始内容
+      if (this.selectedNode) {
+        this.loadNodeAssociations();
+      }
+    });
+    header.appendChild(clearBtn);
+    
+    content.appendChild(header);
+    
+    if (results.length === 0) {
+      const emptyMsg = doc.createElement("div");
+      emptyMsg.style.cssText = `
+        padding: 30px;
+        text-align: center;
+        color: var(--fill-secondary);
+      `;
+      emptyMsg.textContent = "No notes found matching your search.";
+      content.appendChild(emptyMsg);
+      return;
+    }
+    
+    // 显示搜索结果
+    const section = this.createSection(doc, "", results, false);
+    content.appendChild(section);
+    
+    Zotero.log(`[NoteRelationsTab] Displayed ${results.length} search results`, "info");
   }
   
   /**

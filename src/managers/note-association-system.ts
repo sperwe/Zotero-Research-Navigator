@@ -558,5 +558,72 @@ ${initialContent || "<p>Your notes here...</p>"}
     }
   }
   
+  /**
+   * 搜索相关笔记
+   */
+  async searchRelatedNotes(query: string, nodeId?: string): Promise<AssociatedNote[]> {
+    try {
+      const results: AssociatedNote[] = [];
+      query = query.toLowerCase().trim();
+      
+      if (!query) {
+        return results;
+      }
+      
+      // 构建搜索条件
+      const search = new Zotero.Search();
+      search.addCondition('note', 'contains', query);
+      search.addCondition('itemType', 'is', 'note');
+      
+      // 如果提供了 nodeId，限制在相关项目的笔记中搜索
+      if (nodeId) {
+        const node = await this.historyService.getNode(nodeId);
+        if (node && node.itemId) {
+          const item = await Zotero.Items.getAsync(node.itemId);
+          if (item) {
+            // 如果是附件，搜索其父项的笔记
+            if (item.isAttachment() && item.parentID) {
+              search.addCondition('parent', 'is', item.parentID);
+            } 
+            // 如果是普通项目，搜索其子笔记
+            else if (!item.isNote()) {
+              search.addCondition('parent', 'is', item.id);
+            }
+          }
+        }
+      }
+      
+      const noteIds = await search.search();
+      
+      for (const noteId of noteIds) {
+        try {
+          const note = await Zotero.Items.getAsync(noteId);
+          if (!note || !note.isNote()) continue;
+          
+          const noteContent = note.getNote();
+          const contentPreview = noteContent.replace(/<[^>]*>/g, '').substring(0, 200);
+          
+          results.push({
+            noteId: note.id,
+            nodeId: nodeId || '',
+            associationId: '', // 搜索结果可能没有关联
+            noteTitle: note.getNoteTitle ? note.getNoteTitle() : contentPreview.substring(0, 50),
+            content: noteContent,
+            contentPreview,
+            associationType: 'search',
+            createdAt: note.dateAdded,
+            metadata: {}
+          });
+        } catch (error) {
+          Zotero.logError(`Failed to process note ${noteId} in search: ${error}`);
+        }
+      }
+      
+      return results;
+    } catch (error) {
+      Zotero.logError(`Failed to search notes: ${error}`);
+      return [];
+    }
+  }
 
 }
