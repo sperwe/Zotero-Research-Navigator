@@ -383,13 +383,22 @@ export class NoteRelationsTab {
         try {
           const note = await Zotero.Items.getAsync(noteId);
           if (note) {
+            // 安全地获取笔记内容
+            let noteContent = '';
+            try {
+              noteContent = note.getNote();
+            } catch (contentError) {
+              Zotero.logError(`[NoteRelationsTab] Error getting content for note ${noteId}: ${contentError}`);
+              noteContent = '[Error loading note content]';
+            }
+            
             const noteData: AssociatedNote = {
               id: -1,
               noteId: note.id,
               nodeId: this.selectedNode.id,
               relationType: "zotero_native" as any,
               title: note.getField('title') || 'Untitled Note',
-              content: note.getNote(),
+              content: noteContent,
               dateModified: new Date(note.getField('dateModified'))
             };
             
@@ -407,6 +416,7 @@ export class NoteRelationsTab {
           }
         } catch (error) {
           Zotero.logError(`[NoteRelationsTab] Error loading note ${noteId}: ${error}`);
+          // 继续处理下一个笔记，不要中断整个流程
         }
       }
       
@@ -707,10 +717,28 @@ export class NoteRelationsTab {
       overflow: hidden;
       margin-bottom: 10px;
     `;
-    // 去除 HTML 标签
-    const tempDiv = doc.createElement("div");
-    tempDiv.innerHTML = note.content;
-    content.textContent = tempDiv.textContent?.substring(0, 200) + "..." || "";
+    
+    // 安全地提取纯文本内容
+    try {
+      // 使用 DOMParser 来解析 HTML，这是 Zotero 推荐的方式
+      const parser = new DOMParser();
+      const noteDoc = parser.parseFromString(note.content, 'text/html');
+      let text = noteDoc.body ? noteDoc.body.textContent : '';
+      // 标准化空白字符
+      text = (text || '').replace(/\s+/g, ' ').trim();
+      content.textContent = text.substring(0, 200) + (text.length > 200 ? "..." : "");
+    } catch (error) {
+      // 如果 DOMParser 失败，使用简单的正则表达式清理
+      Zotero.log(`[NoteRelationsTab] Failed to parse note content with DOMParser: ${error}`, "warn");
+      try {
+        const text = note.content.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+        content.textContent = text.substring(0, 200) + (text.length > 200 ? "..." : "");
+      } catch (fallbackError) {
+        content.textContent = "[Unable to display note content]";
+        Zotero.logError(`[NoteRelationsTab] Failed to extract text from note: ${fallbackError}`);
+      }
+    }
+    
     card.appendChild(content);
     
     // 元信息
@@ -889,9 +917,19 @@ export class NoteRelationsTab {
           overflow: hidden;
           text-overflow: ellipsis;
         `;
-        const noteContent = note.getNote();
-        const plainText = noteContent.replace(/<[^>]*>/g, '').trim();
-        notePreview.textContent = plainText.substring(0, 100) + (plainText.length > 100 ? "..." : "");
+        // 安全地提取笔记内容
+        try {
+          const parser = new DOMParser();
+          const noteDoc = parser.parseFromString(note.getNote(), 'text/html');
+          let plainText = noteDoc.body ? noteDoc.body.textContent : '';
+          plainText = (plainText || '').replace(/\s+/g, ' ').trim();
+          notePreview.textContent = plainText.substring(0, 100) + (plainText.length > 100 ? "..." : "");
+        } catch (error) {
+          // 回退到正则清理
+          const noteContent = note.getNote();
+          const plainText = noteContent.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+          notePreview.textContent = plainText.substring(0, 100) + (plainText.length > 100 ? "..." : "");
+        }
         noteItem.appendChild(notePreview);
         
         // 点击选择
