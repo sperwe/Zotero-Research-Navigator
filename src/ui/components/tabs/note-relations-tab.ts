@@ -731,8 +731,43 @@ export class NoteRelationsTab {
       border-radius: 5px;
       padding: 15px;
       background: var(--material-background);
-      transition: box-shadow 0.2s;
+      transition: all 0.2s;
+      cursor: pointer;
     `;
+    
+    // 添加悬停效果
+    card.addEventListener("mouseenter", () => {
+      card.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
+      card.style.borderColor = "var(--fill-quarternary)";
+    });
+    
+    card.addEventListener("mouseleave", () => {
+      card.style.boxShadow = "";
+      card.style.borderColor = "var(--material-border-quarternary)";
+    });
+    
+    // 点击整个卡片打开笔记
+    card.addEventListener("click", (e) => {
+      // 避免按钮点击事件冒泡
+      if ((e.target as HTMLElement).tagName === 'BUTTON') return;
+      
+      Zotero.log(`[NoteRelationsTab] Card clicked. Mode: ${this.editorMode}, Has container: ${!!this.editorContainer}`, "info");
+      
+      if (this.editorMode === 'column' && this.editorContainer) {
+        // 分栏模式：在右侧编辑器中打开
+        Zotero.log(`[NoteRelationsTab] Opening note ${note.noteId} in editor from card click`, "info");
+        this.openNoteInEditor(note.noteId);
+        
+        // 视觉反馈：高亮选中的卡片
+        const allCards = card.parentElement?.querySelectorAll('div[style*="border"]');
+        allCards?.forEach(c => {
+          if (c !== card && c.style.border) {
+            (c as HTMLElement).style.background = "var(--material-background)";
+          }
+        });
+        card.style.background = "var(--fill-quinary)";
+      }
+    });
     
     // 标题行
     const header = doc.createElement("div");
@@ -801,7 +836,7 @@ export class NoteRelationsTab {
     }
     
     const openBtn = doc.createElement("button");
-    openBtn.textContent = "Open";
+    openBtn.textContent = this.editorMode === 'column' ? "Edit" : "Open";
     openBtn.style.cssText = `
       padding: 3px 8px;
       font-size: 0.9em;
