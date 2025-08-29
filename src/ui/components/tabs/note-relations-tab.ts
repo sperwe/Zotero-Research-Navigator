@@ -1407,7 +1407,16 @@ export class NoteRelationsTab {
       return;
     }
     
-    // 清空现有编辑器
+    // 清理现有编辑器
+    const existingEditor = this.editorContainer.querySelector('[data-note-id]');
+    if (existingEditor) {
+      const editorInstance = (existingEditor as any)._editorInstance;
+      if (editorInstance && typeof editorInstance.uninit === 'function') {
+        Zotero.log(`[NoteRelationsTab] Uninitializing previous editor`, "info");
+        editorInstance.uninit();
+      }
+    }
+    
     this.editorContainer.innerHTML = "";
     Zotero.log(`[NoteRelationsTab] Cleared editor container`, "info");
     
@@ -1504,10 +1513,72 @@ export class NoteRelationsTab {
         overflow: hidden;
       `;
       
-      // 检查是否可以使用原生 note-editor
-      const useNativeEditor = false; // 暂时禁用原生编辑器，因为它不显示
+      // 尝试使用原生编辑器
+      const useNativeEditor = true;
       
-      if (!useNativeEditor || !win.customElements || !win.customElements.get('note-editor')) {
+      if (useNativeEditor && win.Zotero && win.Zotero.EditorInstance) {
+        Zotero.log(`[NoteRelationsTab] Using native Zotero editor`, "info");
+        
+        // 创建编辑器容器，模仿 note-editor 的结构
+        const noteEditorContainer = doc.createElement('div');
+        noteEditorContainer.style.cssText = `
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          width: 100%;
+        `;
+        
+        // 创建 iframe
+        const iframe = doc.createElement('iframe') as HTMLIFrameElement;
+        iframe.id = 'editor-view';
+        iframe.style.cssText = `
+          border: 0;
+          width: 100%;
+          flex-grow: 1;
+        `;
+        iframe.src = 'resource://zotero/note-editor/editor.html';
+        iframe.setAttribute('type', 'content');
+        
+        noteEditorContainer.appendChild(iframe);
+        editorContainer.appendChild(noteEditorContainer);
+        
+        // 注册 UIProperties
+        if (win.Zotero.UIProperties) {
+          win.Zotero.UIProperties.registerRoot(noteEditorContainer);
+        }
+        
+        // 等待 iframe 加载后初始化编辑器
+        iframe.addEventListener('load', async () => {
+          try {
+            const item = await Zotero.Items.getAsync(noteId);
+            if (item && item.isNote()) {
+              Zotero.log(`[NoteRelationsTab] Initializing native editor for note ${noteId}`, "info");
+              
+              // 创建 EditorInstance
+              const editorInstance = new win.Zotero.EditorInstance();
+              
+              // 初始化编辑器
+              await editorInstance.init({
+                item: item,
+                iframeWindow: iframe.contentWindow,
+                viewMode: 'library',
+                readOnly: false,
+                placeholder: 'Start typing...'
+              });
+              
+              // 保存引用以便清理
+              (noteEditorContainer as any)._editorInstance = editorInstance;
+              this.selectedNoteId = noteId;
+              
+              Zotero.log(`[NoteRelationsTab] Native editor initialized successfully`, "info");
+            }
+          } catch (error) {
+            Zotero.logError(`[NoteRelationsTab] Failed to initialize native editor: ${error}`);
+          }
+        });
+        
+        return editorContainer;
+      } else if (!useNativeEditor || !win.customElements || !win.customElements.get('note-editor')) {
         Zotero.log(`[NoteRelationsTab] Using custom editable display`, "info");
         
         // 创建可编辑的笔记显示
