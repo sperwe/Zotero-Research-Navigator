@@ -551,26 +551,39 @@ export class HistoryTreeZTree {
     // 使用 jQuery 初始化 zTree - 确保 DOM 已经准备好
     const $ = this.window.$;
     
-    // 直接初始化 zTree，不再检查文档状态
-    try {
-      // 再次检查容器是否存在
-      if (!this.treeContainer || !this.treeContainer.parentNode) {
-        Zotero.logError('[HistoryTreeZTree] Tree container not found or not attached to DOM');
-        return;
+    // 使用 DOMContentLoaded 确保 DOM 准备就绪
+    const initializeZTree = () => {
+      try {
+        // 再次检查容器是否存在
+        if (!this.treeContainer || !this.treeContainer.parentNode) {
+          Zotero.logError('[HistoryTreeZTree] Tree container not found or not attached to DOM');
+          return;
+        }
+        
+        // 确保 jQuery 存在
+        const $ = (this.window as any).$ || (this.window as any).jQuery || (window as any).$;
+        if (!$ || !$.fn || !$.fn.zTree) {
+          throw new Error('jQuery or zTree not loaded');
+        }
+        
+        // 执行初始化
+        this.treeObj = $.fn.zTree.init($(this.treeContainer), setting, zNodes);
+        Zotero.log('[HistoryTreeZTree] zTree initialized successfully', 'info');
+      } catch (e) {
+        Zotero.logError(`[HistoryTreeZTree] Failed to initialize zTree: ${e}`);
+        throw e;
       }
-      
-      // 确保 jQuery 存在
-      const $ = (this.window as any).$ || (this.window as any).jQuery || (window as any).$;
-      if (!$ || !$.fn || !$.fn.zTree) {
-        throw new Error('jQuery or zTree not loaded');
-      }
-      
-      // 执行初始化
-      this.treeObj = $.fn.zTree.init($(this.treeContainer), setting, zNodes);
-      Zotero.log('[HistoryTreeZTree] zTree initialized successfully', 'info');
-    } catch (e) {
-      Zotero.logError(`[HistoryTreeZTree] Failed to initialize zTree: ${e}`);
-      throw e;
+    };
+    
+    // 检查文档状态
+    if (this.window.document.readyState === 'loading') {
+      // 文档还在加载，等待 DOMContentLoaded
+      Zotero.log('[HistoryTreeZTree] Document loading, waiting for DOMContentLoaded', 'info');
+      this.window.document.addEventListener('DOMContentLoaded', initializeZTree);
+    } else {
+      // 文档已经准备好，直接执行
+      Zotero.log('[HistoryTreeZTree] Document ready, initializing immediately', 'info');
+      initializeZTree();
     }
   }
   
