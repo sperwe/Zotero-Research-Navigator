@@ -1058,15 +1058,24 @@ export class NoteRelationsTab {
       );
       
       // 打开笔记编辑器
-      const zoteroPane = Zotero.getActiveZoteroPane();
-      if (zoteroPane && zoteroPane.openNoteWindow) {
-        zoteroPane.openNoteWindow(note.id);
-      } else {
-        // 备用方案：在右侧面板打开
-        if (zoteroPane && zoteroPane.selectItem) {
-          await zoteroPane.selectItem(note.id);
+      // 需要稍微延迟以确保笔记已经完全保存
+      setTimeout(() => {
+        try {
+          const zoteroPane = Zotero.getActiveZoteroPane();
+          if (zoteroPane && typeof zoteroPane.openNoteWindow === 'function') {
+            Zotero.log(`[NoteRelationsTab] Opening note window for note ID: ${note.id}`, "info");
+            zoteroPane.openNoteWindow(note.id);
+          } else {
+            Zotero.logError("[NoteRelationsTab] openNoteWindow not available on ZoteroPane");
+            // 备用方案：在右侧面板打开
+            if (zoteroPane && typeof zoteroPane.selectItem === 'function') {
+              zoteroPane.selectItem(note.id);
+            }
+          }
+        } catch (error) {
+          Zotero.logError(`[NoteRelationsTab] Error opening note window: ${error}`);
         }
-      }
+      }, 100);
       
       // 刷新显示
       await this.loadNodeAssociations();
