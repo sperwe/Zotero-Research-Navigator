@@ -300,9 +300,19 @@ export class NoteRelationsTab {
     `;
     
     // 加载关联的笔记
-    Zotero.log(`[NoteRelationsTab] Loading notes for node: ${this.selectedNode.id}`, "info");
+    Zotero.log(`[NoteRelationsTab] Loading notes for node: ${this.selectedNode.id} (Item ID: ${this.selectedNode.itemId})`, "info");
     const associatedNotes = await this.noteAssociationSystem.getAssociatedNotes(this.selectedNode.id);
     Zotero.log(`[NoteRelationsTab] Found ${associatedNotes.length} associated notes`, "info");
+    
+    // 调试：检查节点类型
+    try {
+      const item = await Zotero.Items.getAsync(this.selectedNode.itemId);
+      if (item) {
+        Zotero.log(`[NoteRelationsTab] Item type: ${item.itemType}, Is Attachment: ${item.isAttachment()}, Parent ID: ${item.parentID}`, "info");
+      }
+    } catch (error) {
+      Zotero.logError(`[NoteRelationsTab] Error checking item type: ${error}`);
+    }
     
     if (associatedNotes.length > 0) {
       const associatedSection = this.createAssociatedSection(doc, associatedNotes);
@@ -529,10 +539,17 @@ export class NoteRelationsTab {
     `;
     openBtn.addEventListener("click", () => {
       // 打开笔记窗口
-      const noteItem = Zotero.Items.get(note.noteId);
-      if (noteItem) {
-        const libraryID = noteItem.libraryID;
-        const noteWindow = Zotero.getMainWindow().Zotero_Browser.noteEditor.open(note.noteId, libraryID);
+      try {
+        const noteItem = Zotero.Items.get(note.noteId);
+        if (noteItem) {
+          // 使用 Zotero 的 API 打开笔记编辑器
+          const zoteroPane = Zotero.getActiveZoteroPane();
+          if (zoteroPane) {
+            zoteroPane.openNoteWindow(note.noteId);
+          }
+        }
+      } catch (error) {
+        Zotero.logError(`Failed to open note: ${error}`);
       }
     });
     actions.appendChild(openBtn);
