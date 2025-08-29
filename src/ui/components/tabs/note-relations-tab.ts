@@ -1259,11 +1259,11 @@ export class NoteRelationsTab {
       await note.saveTx();
       
       // 自动关联到历史节点
-      await this.noteAssociationSystem.createContextualAssociation(
+      await this.noteAssociationSystem.createAssociation(
         note.id,
         this.selectedNode.id,
-        "Created from history node",
-        "manual"
+        "created_during",
+        { source: "manual", context: "Created from history node" }
       );
       
       // 选择新创建的笔记并尝试打开编辑器
