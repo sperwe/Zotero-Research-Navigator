@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>zTree Test</title>
+    <script src="addon/content/lib/jquery.min.js"></script>
+    <script src="addon/content/lib/ztree/jquery.ztree.core.min.js"></script>
+    <link rel="stylesheet" href="addon/content/lib/ztree/zTreeStyle.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        #treeDemo {
+            width: 400px;
+            height: 500px;
+            border: 1px solid #ccc;
+            overflow: auto;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>zTree Test Page</h1>
+    
+    <div class="status" id="status">
+        <h3>Status:</h3>
+        <p>jQuery loaded: <span id="jquery-status">❌</span></p>
+        <p>zTree loaded: <span id="ztree-status">❌</span></p>
+        <p>Tree initialized: <span id="tree-status">❌</span></p>
+    </div>
+    
+    <button onclick="initTree()">Initialize Tree</button>
+    <button onclick="testDataURL()">Test Data URL</button>
+    
+    <h2>Tree Container:</h2>
+    <div id="treeDemo" class="ztree"></div>
+    
+    <h2>IFrame Test:</h2>
+    <iframe id="testIframe" style="width: 100%; height: 400px; border: 1px solid #999;"></iframe>
+    
+    <script>
+        // Check jQuery
+        if (typeof $ !== 'undefined') {
+            document.getElementById('jquery-status').textContent = '✅';
+            console.log('jQuery version:', $.fn.jquery);
+        }
+        
+        // Check zTree
+        if (typeof $ !== 'undefined' && $.fn && $.fn.zTree) {
+            document.getElementById('ztree-status').textContent = '✅';
+            console.log('zTree loaded successfully');
+        }
+        
+        // Test data
+        const zNodes = [
+            { id: 1, pId: 0, name: "📅 2024-08-29", open: true },
+            { id: 11, pId: 1, name: "📚 Session 1", open: true },
+            { id: 111, pId: 11, name: "📖 Item 1" },
+            { id: 112, pId: 11, name: "📖 Item 2" },
+            { id: 12, pId: 1, name: "📚 Session 2" },
+            { id: 121, pId: 12, name: "📕 Item 3" },
+            { id: 2, pId: 0, name: "👻 Closed Tabs (2)", open: true },
+            { id: 21, pId: 2, name: "👻 Closed Tab 1" },
+            { id: 22, pId: 2, name: "👻 Closed Tab 2" }
+        ];
+        
+        function initTree() {
+            try {
+                const setting = {
+                    view: {
+                        dblClickExpand: true,
+                        showLine: true,
+                        showIcon: true
+                    },
+                    data: {
+                        simpleData: {
+                            enable: true
+                        }
+                    }
+                };
+                
+                const treeObj = $.fn.zTree.init($("#treeDemo"), setting, zNodes);
+                document.getElementById('tree-status').textContent = '✅';
+                console.log('Tree initialized:', treeObj);
+            } catch (e) {
+                console.error('Failed to initialize tree:', e);
+                alert('Error: ' + e.message);
+            }
+        }
+        
+        function testDataURL() {
+            const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>IFrame zTree Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 10px; }
+        #status { background: #f0f0f0; padding: 10px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div id="status">
+        <h3>IFrame Status:</h3>
+        <p>Document ready: <span id="ready">❌</span></p>
+        <p>jQuery loaded: <span id="jquery">❌</span></p>
+        <p>zTree loaded: <span id="ztree">❌</span></p>
+    </div>
+    <div id="tree" class="ztree"></div>
+    
+    <script>
+        document.getElementById('ready').textContent = '✅';
+        
+        // Wait for parent to inject scripts
+        window.addEventListener('message', function(e) {
+            if (e.data.type === 'checkStatus') {
+                const status = {
+                    jquery: typeof window.$ !== 'undefined',
+                    ztree: typeof window.$ !== 'undefined' && window.$.fn && window.$.fn.zTree
+                };
+                
+                if (status.jquery) document.getElementById('jquery').textContent = '✅';
+                if (status.ztree) document.getElementById('ztree').textContent = '✅';
+                
+                parent.postMessage({ type: 'status', status: status }, '*');
+            }
+        });
+        
+        // Auto notify parent
+        if (parent !== window) {
+            parent.postMessage({ type: 'iframeReady' }, '*');
+        }
+    </script>
+</body>
+</html>`;
+            
+            const iframe = document.getElementById('testIframe');
+            const dataURL = 'data:text/html;charset=UTF-8,' + encodeURIComponent(htmlContent);
+            iframe.src = dataURL;
+            
+            iframe.onload = function() {
+                console.log('IFrame loaded');
+                
+                // Try to inject scripts
+                try {
+                    const iframeWin = iframe.contentWindow;
+                    const iframeDoc = iframe.contentDocument;
+                    
+                    // Method 1: Direct script injection
+                    const script = iframeDoc.createElement('script');
+                    script.textContent = `
+                        console.log('Script injected into iframe');
+                        document.body.style.background = '#e0ffe0';
+                    `;
+                    iframeDoc.body.appendChild(script);
+                    
+                    // Check status
+                    iframeWin.postMessage({ type: 'checkStatus' }, '*');
+                    
+                } catch (e) {
+                    console.error('Failed to access iframe:', e);
+                }
+            };
+        }
+        
+        // Listen for iframe messages
+        window.addEventListener('message', function(e) {
+            console.log('Received message:', e.data);
+        });
+    </script>
+</body>
+</html>
