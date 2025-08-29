@@ -1408,13 +1408,35 @@ export class NoteRelationsTab {
     }
     
     // 清理现有编辑器
-    const existingEditor = this.editorContainer.querySelector('[data-note-id]');
-    if (existingEditor) {
-      const editorInstance = (existingEditor as any)._editorInstance;
-      if (editorInstance && typeof editorInstance.uninit === 'function') {
-        Zotero.log(`[NoteRelationsTab] Uninitializing previous editor`, "info");
-        editorInstance.uninit();
+    try {
+      const existingEditor = this.editorContainer.querySelector('[data-note-id]');
+      if (existingEditor) {
+        // 清理 EditorInstance
+        const editorInstance = (existingEditor as any)._editorInstance;
+        if (editorInstance && typeof editorInstance.uninit === 'function') {
+          Zotero.log(`[NoteRelationsTab] Uninitializing previous editor`, "info");
+          try {
+            editorInstance.uninit();
+          } catch (e) {
+            Zotero.logError(`[NoteRelationsTab] Error uninitializing editor: ${e}`);
+          }
+        }
+        
+        // 清理 iframe 的 EditorInstance
+        const iframe = existingEditor.querySelector('iframe');
+        if (iframe && (iframe as any)._editorInstance) {
+          const iframeInstance = (iframe as any)._editorInstance;
+          if (iframeInstance && typeof iframeInstance.uninit === 'function') {
+            try {
+              iframeInstance.uninit();
+            } catch (e) {
+              Zotero.logError(`[NoteRelationsTab] Error uninitializing iframe editor: ${e}`);
+            }
+          }
+        }
       }
+    } catch (e) {
+      Zotero.logError(`[NoteRelationsTab] Error during editor cleanup: ${e}`);
     }
     
     this.editorContainer.innerHTML = "";
@@ -1537,11 +1559,10 @@ export class NoteRelationsTab {
           flex-grow: 1;
           min-height: 400px;
         `;
-        iframe.src = 'resource://zotero/note-editor/editor.html';
+        // 设置属性以避免 XPC 错误
         iframe.setAttribute('type', 'content');
-        
-        // 添加 DOCTYPE 以避免 Quirks Mode
-        iframe.setAttribute('mozbrowser', 'true');
+        iframe.setAttribute('remote', 'false');
+        iframe.setAttribute('src', 'resource://zotero/note-editor/editor.html');
         
         noteEditorContainer.appendChild(iframe);
         editorContainer.appendChild(noteEditorContainer);
@@ -1581,6 +1602,11 @@ export class NoteRelationsTab {
               const editorInstance = new win.Zotero.EditorInstance();
               Zotero.log(`[NoteRelationsTab] EditorInstance created`, "info");
               
+              // 处理 BetterNotes 兼容性
+              if (iframe.contentWindow && (iframe.contentWindow as any).wrappedJSObject) {
+                (iframe.contentWindow as any).wrappedJSObject._betterNotesIgnore = true;
+              }
+              
               // 初始化编辑器
               await editorInstance.init({
                 item: item,
@@ -1589,7 +1615,10 @@ export class NoteRelationsTab {
                 readOnly: false,
                 placeholder: 'Start typing...',
                 // 添加 popup 参数以避免 BetterNotes 错误
-                popup: null
+                popup: null,
+                // 禁用某些可能导致冲突的功能
+                disableUI: false,
+                _betterNotesIgnore: true
               });
               
               // 保存引用以便清理
