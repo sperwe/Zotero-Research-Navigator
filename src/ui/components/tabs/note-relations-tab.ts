@@ -1422,19 +1422,25 @@ export class NoteRelationsTab {
     const doc = this.window.document;
     
     try {
-      // 首先确保自定义元素已注册
-      if (!customElements.get('note-editor')) {
+      // 确保自定义元素脚本已加载
+      const win = this.window as any;
+      
+      // 检查是否需要加载脚本
+      if (!win.customElements || !win.customElements.get('note-editor')) {
         Zotero.log(`[NoteRelationsTab] note-editor element not registered, loading scripts`, "info");
         
-        // 加载必要的脚本
-        const win = this.window as any;
         if (win.Services && win.Services.scriptloader) {
           try {
+            // 加载 customElements.js 脚本
             win.Services.scriptloader.loadSubScript("chrome://zotero/content/customElements.js", win);
             Zotero.log(`[NoteRelationsTab] Custom elements script loaded`, "info");
           } catch (e) {
             Zotero.logError(`[NoteRelationsTab] Failed to load custom elements: ${e}`);
+            return null;
           }
+        } else {
+          Zotero.logError(`[NoteRelationsTab] Services.scriptloader not available`);
+          return null;
         }
       }
       
