@@ -11,6 +11,7 @@ import { HistoryTreeZTree } from "./history-tree-ztree";
 import { HistoryTreeSimple } from "./history-tree-simple";
 import { HistoryTreeStandalone } from "./history-tree-standalone";
 import { HistoryTreeZTreeDirect } from "./history-tree-ztree-direct";
+import { HistoryTreeBuiltin } from "./history-tree-builtin";
 
 export class HistoryTreeTab {
   private container: HTMLElement | null = null;
@@ -46,13 +47,13 @@ export class HistoryTreeTab {
     
     // 如果使用 zTree，直接初始化 zTree 组件
     if (this.useZTree) {
-      // 使用直接的 zTree 实现
-      const ztreeComponent = new HistoryTreeZTreeDirect(
+      // 使用内置的树实现，避免外部文件加载问题
+      const builtinTree = new HistoryTreeBuiltin(
         this.window,
         this.historyService,
         this.closedTabsManager
       );
-      ztreeComponent.init(container);
+      builtinTree.init(container);
       return;
     }
     

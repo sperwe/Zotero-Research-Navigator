@@ -44,7 +44,7 @@ export class HistoryTreeZTreeDirect {
     doc.getElementById('collapseAllBtn')?.addEventListener('click', () => this.treeObj?.expandAll(false));
     
     // 加载 zTree 样式
-    this.loadStyles(doc);
+    await this.loadStyles(doc);
     
     // 初始化树
     await this.refresh();
@@ -79,17 +79,35 @@ export class HistoryTreeZTreeDirect {
     Zotero.log('[HistoryTreeZTreeDirect] Dependencies loaded successfully', 'info');
   }
   
-  private loadScript(url: string): Promise<void> {
+  private async loadScript(url: string): Promise<void> {
+    // 获取实际的插件路径
+    let actualUrl = url;
+    
+    try {
+      if (url.startsWith('chrome://researchnavigator/')) {
+        // 尝试获取插件的根 URI
+        if (Zotero.Plugins && Zotero.Plugins.getRootURI) {
+          const rootURI = await Zotero.Plugins.getRootURI('research-navigator@zotero.org');
+          if (rootURI) {
+            actualUrl = url.replace('chrome://researchnavigator/', rootURI);
+            Zotero.log(`[HistoryTreeZTreeDirect] Using plugin URI: ${actualUrl}`, 'info');
+          }
+        }
+      }
+    } catch (e) {
+      Zotero.log(`[HistoryTreeZTreeDirect] Failed to get plugin URI: ${e}`, 'warn');
+    }
+    
     return new Promise((resolve, reject) => {
       try {
         if (typeof Services !== 'undefined' && Services.scriptloader) {
-          Services.scriptloader.loadSubScript(url, this.window);
+          Services.scriptloader.loadSubScript(actualUrl, this.window);
           resolve();
         } else {
           const script = this.window.document.createElement('script');
-          script.src = url;
+          script.src = actualUrl;
           script.onload = () => resolve();
-          script.onerror = () => reject(new Error(`Failed to load ${url}`));
+          script.onerror = () => reject(new Error(`Failed to load ${actualUrl}`));
           (this.window.document.head || this.window.document.documentElement).appendChild(script);
         }
       } catch (error) {
@@ -98,11 +116,26 @@ export class HistoryTreeZTreeDirect {
     });
   }
   
-  private loadStyles(doc: Document): void {
+  private async loadStyles(doc: Document): Promise<void> {
+    // 获取实际的插件路径
+    let cssUrl = 'chrome://researchnavigator/content/lib/ztree/zTreeStyle.css';
+    
+    try {
+      if (Zotero.Plugins && Zotero.Plugins.getRootURI) {
+        const rootURI = await Zotero.Plugins.getRootURI('research-navigator@zotero.org');
+        if (rootURI) {
+          cssUrl = rootURI + 'content/lib/ztree/zTreeStyle.css';
+          Zotero.log(`[HistoryTreeZTreeDirect] Using CSS URI: ${cssUrl}`, 'info');
+        }
+      }
+    } catch (e) {
+      Zotero.log(`[HistoryTreeZTreeDirect] Failed to get plugin URI for CSS: ${e}`, 'warn');
+    }
+    
     // 加载 zTree 样式
     const link = doc.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'chrome://researchnavigator/content/lib/ztree/zTreeStyle.css';
+    link.href = cssUrl;
     doc.head.appendChild(link);
     
     // 添加自定义样式
