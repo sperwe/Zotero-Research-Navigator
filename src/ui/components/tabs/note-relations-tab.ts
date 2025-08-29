@@ -1504,22 +1504,71 @@ export class NoteRelationsTab {
         overflow: hidden;
       `;
       
-      // 强制使用简单显示来调试
-      const forceSimpleDisplay = true; // 临时强制使用简单显示
+      // 检查是否可以使用原生 note-editor
+      const useNativeEditor = false; // 暂时禁用原生编辑器，因为它不显示
       
-      if (forceSimpleDisplay || !win.customElements || !win.customElements.get('note-editor')) {
-        Zotero.log(`[NoteRelationsTab] Using simple display (forced=${forceSimpleDisplay})`, "info");
+      if (!useNativeEditor || !win.customElements || !win.customElements.get('note-editor')) {
+        Zotero.log(`[NoteRelationsTab] Using custom editable display`, "info");
         
-        // 创建简单的笔记显示
+        // 创建可编辑的笔记显示
         const noteDisplay = doc.createElement('div');
         noteDisplay.style.cssText = `
-          padding: 20px;
+          display: flex;
+          flex-direction: column;
+          height: 100%;
           background: white;
           border: 1px solid #ddd;
           border-radius: 5px;
-          height: 100%;
-          overflow-y: auto;
+          overflow: hidden;
         `;
+        
+        // 创建工具栏
+        const toolbar = doc.createElement('div');
+        toolbar.style.cssText = `
+          padding: 10px;
+          background: #f5f5f5;
+          border-bottom: 1px solid #ddd;
+          display: flex;
+          gap: 10px;
+          align-items: center;
+        `;
+        
+        const saveBtn = doc.createElement('button');
+        saveBtn.textContent = 'Save';
+        saveBtn.style.cssText = `
+          padding: 5px 15px;
+          background: #4CAF50;
+          color: white;
+          border: none;
+          border-radius: 3px;
+          cursor: pointer;
+        `;
+        
+        const status = doc.createElement('span');
+        status.style.cssText = `
+          margin-left: 10px;
+          color: #666;
+          font-size: 12px;
+        `;
+        
+        toolbar.appendChild(saveBtn);
+        toolbar.appendChild(status);
+        noteDisplay.appendChild(toolbar);
+        
+        // 创建可编辑区域
+        const editor = doc.createElement('div');
+        editor.contentEditable = 'true';
+        editor.style.cssText = `
+          flex: 1;
+          padding: 20px;
+          overflow-y: auto;
+          outline: none;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          font-size: 14px;
+          line-height: 1.6;
+        `;
+        
+        noteDisplay.appendChild(editor);
         
         // 异步加载笔记内容
         setTimeout(async () => {
@@ -1527,17 +1576,51 @@ export class NoteRelationsTab {
             const item = await Zotero.Items.getAsync(noteId);
             if (item && item.isNote()) {
               const noteContent = item.getNote();
-              noteDisplay.innerHTML = `
-                <h3>Note ID: ${noteId}</h3>
-                <div style="margin-top: 10px;">
-                  ${noteContent}
-                </div>
-              `;
-              Zotero.log(`[NoteRelationsTab] Simple note display loaded`, "info");
+              editor.innerHTML = noteContent;
+              this.selectedNoteId = noteId;
+              
+              // 保存按钮事件
+              saveBtn.onclick = async () => {
+                try {
+                  saveBtn.disabled = true;
+                  status.textContent = 'Saving...';
+                  status.style.color = '#666';
+                  
+                  // 保存笔记
+                  item.setNote(editor.innerHTML);
+                  await item.saveTx();
+                  
+                  status.textContent = 'Saved!';
+                  status.style.color = '#4CAF50';
+                  
+                  // 3秒后清除状态
+                  setTimeout(() => {
+                    status.textContent = '';
+                  }, 3000);
+                  
+                } catch (error) {
+                  Zotero.logError(`[NoteRelationsTab] Failed to save note: ${error}`);
+                  status.textContent = 'Save failed!';
+                  status.style.color = '#f44336';
+                } finally {
+                  saveBtn.disabled = false;
+                }
+              };
+              
+              // 添加快捷键支持 (Ctrl+S)
+              editor.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                  e.preventDefault();
+                  saveBtn.click();
+                }
+              });
+              
+              Zotero.log(`[NoteRelationsTab] Editable note display loaded`, "info");
             }
           } catch (error) {
             Zotero.logError(`[NoteRelationsTab] Failed to load note content: ${error}`);
-            noteDisplay.innerHTML = `<p style="color: red;">Failed to load note: ${error}</p>`;
+            editor.innerHTML = `<p style="color: red;">Failed to load note: ${error}</p>`;
+            editor.contentEditable = 'false';
           }
         }, 100);
         
