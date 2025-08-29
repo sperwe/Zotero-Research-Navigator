@@ -53,12 +53,23 @@ export class HistoryTreeSafe {
             .hts-history-item { color: #202124; }
             .hts-closed-group { font-weight: 600; color: #9e9e9e; }
             .hts-closed-item { color: #757575; font-style: italic; }
+            .hts-search-container { flex: 1; display: flex; align-items: center; max-width: 300px; }
+            .hts-search-input { flex: 1; padding: 4px 8px; font-size: 12px; border: 1px solid #ccc; border-radius: 3px; outline: none; }
+            .hts-search-input:focus { border-color: #4a90e2; }
+            .hts-search-clear { margin-left: -24px; padding: 2px 4px; font-size: 12px; color: #999; cursor: pointer; background: none; border: none; display: inline-block; }
+            .hts-search-clear:hover { color: #666; }
+            .hts-node-hidden { display: none !important; }
+            .hts-node-highlight { background: #fff3cd; }
           </style>
           <div class="hts-toolbar">
             <span class="hts-btn" id="hts-refresh" role="button" tabindex="0">🔄 Refresh</span>
             <span class="hts-btn" id="hts-expand-all" role="button" tabindex="0">📂 Expand All</span>
             <span class="hts-btn" id="hts-collapse-all" role="button" tabindex="0">📁 Collapse All</span>
             <span class="hts-btn" id="hts-clear-all" role="button" tabindex="0">🗑️ Clear All</span>
+            <div class="hts-search-container">
+              <input type="text" class="hts-search-input" id="hts-search" placeholder="Search history..." />
+              <span class="hts-search-clear" id="hts-search-clear" style="display: none;">✕</span>
+            </div>
           </div>
           <div class="hts-tree" id="hts-tree-container"></div>
         </div>
@@ -71,6 +82,26 @@ export class HistoryTreeSafe {
       doc.getElementById('hts-expand-all')?.addEventListener('click', () => this.expandAll());
       doc.getElementById('hts-collapse-all')?.addEventListener('click', () => this.collapseAll());
       doc.getElementById('hts-clear-all')?.addEventListener('click', () => this.clearAll());
+      
+      // 搜索功能
+      const searchInput = doc.getElementById('hts-search') as HTMLInputElement;
+      const searchClear = doc.getElementById('hts-search-clear');
+      
+      searchInput?.addEventListener('input', (e) => {
+        const query = (e.target as HTMLInputElement).value.toLowerCase();
+        this.performSearch(query);
+        if (searchClear) {
+          searchClear.style.display = query ? 'inline' : 'none';
+        }
+      });
+      
+      searchClear?.addEventListener('click', () => {
+        if (searchInput) {
+          searchInput.value = '';
+          this.performSearch('');
+          searchClear.style.display = 'none';
+        }
+      });
       
       // 初始化数据
       await this.refresh();
@@ -449,5 +480,58 @@ export class HistoryTreeSafe {
         Zotero.logError(`[HistoryTreeSafe] Failed to clear history: ${error}`);
       }
     }
+  }
+  
+  private performSearch(query: string): void {
+    if (!this.treeContainer) return;
+    
+    const allNodes = this.treeContainer.querySelectorAll('.hts-node');
+    
+    if (!query) {
+      // 清除搜索，显示所有节点
+      allNodes.forEach(node => {
+        node.classList.remove('hts-node-hidden');
+        const content = node.querySelector('.hts-node-content');
+        if (content) {
+          content.classList.remove('hts-node-highlight');
+        }
+      });
+      return;
+    }
+    
+    // 执行搜索
+    allNodes.forEach(node => {
+      const textElement = node.querySelector('.hts-node-text');
+      const text = textElement?.textContent?.toLowerCase() || '';
+      const content = node.querySelector('.hts-node-content');
+      
+      if (text.includes(query)) {
+        // 匹配的节点
+        node.classList.remove('hts-node-hidden');
+        if (content) {
+          content.classList.add('hts-node-highlight');
+        }
+        
+        // 确保父节点也可见并展开
+        let parent = node.parentElement;
+        while (parent && parent !== this.treeContainer) {
+          if (parent.classList.contains('hts-node')) {
+            parent.classList.remove('hts-node-hidden');
+            parent.classList.add('hts-expanded');
+            const expandIcon = parent.querySelector('.hts-expand-icon');
+            if (expandIcon) {
+              expandIcon.textContent = '▼';
+            }
+          }
+          parent = parent.parentElement;
+        }
+      } else {
+        // 不匹配的节点
+        node.classList.add('hts-node-hidden');
+        if (content) {
+          content.classList.remove('hts-node-highlight');
+        }
+      }
+    });
   }
 }
