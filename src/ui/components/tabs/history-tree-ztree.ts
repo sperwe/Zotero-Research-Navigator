@@ -28,6 +28,12 @@ export class HistoryTreeZTree {
     this.container = container;
     const doc = this.window.document;
     
+    // 确保容器存在且已附加到 DOM
+    if (!container || !container.parentNode) {
+      Zotero.logError('[HistoryTreeZTree] Container not attached to DOM');
+      return;
+    }
+    
     // 清空容器
     this.container.innerHTML = '';
     
@@ -46,23 +52,31 @@ export class HistoryTreeZTree {
     `;
     this.container.appendChild(this.treeContainer);
     
-    try {
-      // 加载 jQuery 和 zTree（如果尚未加载）
-      await this.loadDependencies();
-      
-      // 初始化树
-      await this.refreshTree();
-    } catch (error) {
-      Zotero.logError(`[HistoryTreeZTree] Failed to initialize zTree, showing error message: ${error}`);
-      // 显示错误消息
-      this.treeContainer.innerHTML = `
-        <div style="padding: 20px; text-align: center; color: #666;">
-          <p>Failed to load tree view components.</p>
-          <p style="font-size: 12px; margin-top: 10px;">Error: ${error}</p>
-          <p style="font-size: 12px; margin-top: 10px;">Please disable zTree in preferences or contact support if the issue persists.</p>
-        </div>
-      `;
-    }
+    // 定义初始化函数
+    const performInitialization = async () => {
+      try {
+        // 加载 jQuery 和 zTree（如果尚未加载）
+        await this.loadDependencies();
+        
+        // 初始化树
+        await this.refreshTree();
+      } catch (error) {
+        Zotero.logError(`[HistoryTreeZTree] Failed to initialize zTree, showing error message: ${error}`);
+        // 显示错误消息
+        if (this.treeContainer) {
+          this.treeContainer.innerHTML = `
+            <div style="padding: 20px; text-align: center; color: #666;">
+              <p>Failed to load tree view components.</p>
+              <p style="font-size: 12px; margin-top: 10px;">Error: ${error}</p>
+              <p style="font-size: 12px; margin-top: 10px;">Please disable zTree in preferences or contact support if the issue persists.</p>
+            </div>
+          `;
+        }
+      }
+    };
+    
+    // 使用 setTimeout 确保 DOM 操作在下一个事件循环中执行
+    setTimeout(performInitialization, 0);
   }
   
   /**
@@ -475,9 +489,38 @@ export class HistoryTreeZTree {
       }
     };
     
-    // 使用 jQuery 初始化 zTree
+    // 使用 jQuery 初始化 zTree - 确保 DOM 已经准备好
     const $ = this.window.$;
-    this.treeObj = $.fn.zTree.init($(this.treeContainer), setting, zNodes);
+    
+    // 定义初始化函数
+    const initializeZTree = () => {
+      try {
+        // 再次检查容器是否存在
+        if (!this.treeContainer || !this.treeContainer.parentNode) {
+          Zotero.logError('[HistoryTreeZTree] Tree container not found or not attached to DOM');
+          return;
+        }
+        
+        // 执行初始化
+        this.treeObj = $.fn.zTree.init($(this.treeContainer), setting, zNodes);
+        Zotero.log('[HistoryTreeZTree] zTree initialized successfully', 'info');
+      } catch (e) {
+        Zotero.logError(`[HistoryTreeZTree] Failed to initialize zTree: ${e}`);
+        throw e;
+      }
+    };
+    
+    // 检查文档就绪状态
+    const doc = this.window.document;
+    if (doc.readyState === 'loading') {
+      // 文档仍在加载，等待 DOMContentLoaded
+      Zotero.log('[HistoryTreeZTree] Document still loading, waiting for DOMContentLoaded', 'info');
+      doc.addEventListener('DOMContentLoaded', initializeZTree, { once: true });
+    } else {
+      // 文档已加载完成，直接初始化
+      Zotero.log('[HistoryTreeZTree] Document ready, initializing zTree immediately', 'info');
+      initializeZTree();
+    }
   }
   
   /**
