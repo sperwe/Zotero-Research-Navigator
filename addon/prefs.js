@@ -5,4 +5,4 @@ pref("extensions.zotero.researchnavigator.autoSaveHistory", true);
 pref("extensions.zotero.researchnavigator.treeViewType", "expandable");
 pref("extensions.zotero.researchnavigator.historyLoadDays", 7);
 pref("extensions.zotero.researchnavigator.maxHistoryGroups", 50);
-pref("extensions.zotero.researchnavigator.useZTree", true);
+pref("extensions.zotero.researchnavigator.useZTree", false);
