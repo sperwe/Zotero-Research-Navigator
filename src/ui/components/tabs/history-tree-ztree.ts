@@ -47,24 +47,11 @@ export class HistoryTreeZTree {
   async init(container: HTMLElement): Promise<void> {
     this.container = container;
     
-    // 使用容器的 ownerDocument 而不是传入的 window
-    const containerDoc = container.ownerDocument;
-    const containerWin = containerDoc?.defaultView || this.window;
-    
-    Zotero.log(`[HistoryTreeZTree] Using container's document: ${containerDoc}`, 'info');
-    Zotero.log(`[HistoryTreeZTree] Container doc readyState: ${containerDoc?.readyState}`, 'info');
-    Zotero.log(`[HistoryTreeZTree] Container doc has body: ${!!containerDoc?.body}`, 'info');
-    
-    // 如果容器的文档也没有 body，使用 Zotero 主窗口
-    if (!containerDoc?.body) {
-      const mainWindow = Zotero.getMainWindow();
-      if (mainWindow && mainWindow.document && mainWindow.document.body) {
-        Zotero.log('[HistoryTreeZTree] Using Zotero main window for document operations', 'info');
-        this.window = mainWindow;
-      }
-    } else {
-      // 使用容器的窗口
-      this.window = containerWin;
+    // 总是使用 Zotero 主窗口，这是最可靠的
+    const mainWindow = Zotero.getMainWindow();
+    if (mainWindow && mainWindow.document && mainWindow.document.body) {
+      this.window = mainWindow;
+      Zotero.log('[HistoryTreeZTree] Using Zotero main window', 'info');
     }
     
     const doc = this.window.document;
@@ -93,17 +80,18 @@ export class HistoryTreeZTree {
     `;
     this.container.appendChild(this.treeContainer);
     
-    // 定义初始化函数
-    const performInitialization = async () => {
-      try {
-        // 加载 jQuery 和 zTree（如果尚未加载）
-        await this.loadDependencies();
-        
-        // 初始化树
-        await this.refreshTree();
-      } catch (error) {
-        Zotero.logError(`[HistoryTreeZTree] Failed to initialize zTree, showing error message: ${error}`);
-        // 显示错误消息
+    // 确保 DOM 完全准备好后再初始化
+    const initializeWhenReady = () => {
+      // 检查主窗口的 document.body 是否存在
+      if (!this.window.document.body) {
+        Zotero.log('[HistoryTreeZTree] Waiting for document.body...', 'info');
+        setTimeout(initializeWhenReady, 100);
+        return;
+      }
+      
+      // 现在可以安全地初始化了
+      this.performInitialization().catch(error => {
+        Zotero.logError(`[HistoryTreeZTree] Initialization failed: ${error}`);
         if (this.treeContainer) {
           this.treeContainer.innerHTML = `
             <div style="padding: 20px; text-align: center; color: #666;">
@@ -113,11 +101,27 @@ export class HistoryTreeZTree {
             </div>
           `;
         }
-      }
+      });
     };
     
-    // 使用 setTimeout 确保 DOM 操作在下一个事件循环中执行
-    setTimeout(performInitialization, 0);
+    // 开始检查和初始化
+    initializeWhenReady();
+  }
+  
+  /**
+   * 执行实际的初始化
+   */
+  private async performInitialization(): Promise<void> {
+    try {
+      // 加载 jQuery 和 zTree（如果尚未加载）
+      await this.loadDependencies();
+      
+      // 初始化树
+      await this.refreshTree();
+    } catch (error) {
+      Zotero.logError(`[HistoryTreeZTree] Failed to initialize zTree: ${error}`);
+      throw error;
+    }
   }
   
   /**
@@ -178,63 +182,10 @@ export class HistoryTreeZTree {
    */
   private async loadDependencies(): Promise<void> {
     try {
-      // 尝试使用 Zotero 主窗口，如果传入的 window 有问题
-      let doc = this.window.document;
-      let win = this.window as any;
-      
-      // 如果没有 body，尝试获取 Zotero 主窗口
-      if (!doc || !doc.body) {
-        Zotero.log('[HistoryTreeZTree] Current window document not ready, trying Zotero main window', 'warn');
-        const mainWindow = Zotero.getMainWindow();
-        if (mainWindow && mainWindow.document && mainWindow.document.body) {
-          Zotero.log('[HistoryTreeZTree] Using Zotero main window instead', 'info');
-          this.window = mainWindow;
-          doc = mainWindow.document;
-          win = mainWindow;
-        }
-      }
+      const doc = this.window.document;
+      const win = this.window as any;
       
       Zotero.log('[HistoryTreeZTree] Starting dependency loading...', 'info');
-      Zotero.log(`[HistoryTreeZTree] Document state: readyState=${doc?.readyState}, hasBody=${!!doc?.body}`, 'info');
-      
-      // 确保文档基本结构存在
-      if (!doc || !doc.body) {
-        Zotero.log('[HistoryTreeZTree] document.body not available, waiting...', 'warn');
-        
-        // 等待 body 可用
-        await new Promise<void>((resolve) => {
-          if (doc.body) {
-            resolve();
-            return;
-          }
-          
-          const checkBody = () => {
-            if (doc.body) {
-              resolve();
-            } else if (doc.readyState === 'complete') {
-              // 如果文档已完成加载但仍然没有 body，说明有问题
-              throw new Error('Document loaded but body is still null');
-            } else {
-              setTimeout(checkBody, 50);
-            }
-          };
-          
-          // 如果文档还在加载，等待 DOMContentLoaded
-          if (doc.readyState === 'loading') {
-            doc.addEventListener('DOMContentLoaded', () => {
-              if (doc.body) {
-                resolve();
-              } else {
-                checkBody();
-              }
-            }, { once: true });
-          } else {
-            checkBody();
-          }
-        });
-        
-        Zotero.log('[HistoryTreeZTree] document.body now available', 'info');
-      }
       
       // 检查 jQuery 是否已加载
       if (typeof win.$ === 'undefined' && typeof win.jQuery === 'undefined') {
