@@ -1401,6 +1401,12 @@ export class NoteRelationsTab {
       return;
     }
     
+    // 如果正在打开相同的笔记，忽略
+    if (this.selectedNoteId === noteId) {
+      Zotero.log(`[NoteRelationsTab] Note ${noteId} already open`, "info");
+      return;
+    }
+    
     // 清空现有编辑器
     this.editorContainer.innerHTML = "";
     Zotero.log(`[NoteRelationsTab] Cleared editor container`, "info");
@@ -1410,6 +1416,9 @@ export class NoteRelationsTab {
     if (editor) {
       this.editorContainer.appendChild(editor);
       Zotero.log(`[NoteRelationsTab] Editor created and appended`, "info");
+      
+      // 给编辑器一个唯一的 ID 以便调试
+      editor.setAttribute('data-note-id', noteId.toString());
     } else {
       Zotero.log(`[NoteRelationsTab] Failed to create editor`, "error");
     }
@@ -1458,6 +1467,38 @@ export class NoteRelationsTab {
         overflow: hidden;
       `;
       
+      // 如果自定义元素不可用，尝试使用 iframe
+      if (!win.customElements || !win.customElements.get('note-editor')) {
+        Zotero.log(`[NoteRelationsTab] Using iframe fallback for editor`, "info");
+        
+        // 创建 iframe 加载编辑器
+        const iframe = doc.createElement('iframe') as HTMLIFrameElement;
+        iframe.style.cssText = `
+          border: none;
+          width: 100%;
+          height: 100%;
+          flex: 1;
+        `;
+        iframe.src = 'resource://zotero/note-editor/editor.html';
+        
+        editorContainer.appendChild(iframe);
+        
+        // 等待 iframe 加载后设置笔记
+        iframe.addEventListener('load', async () => {
+          try {
+            const item = await Zotero.Items.getAsync(noteId);
+            if (item && item.isNote()) {
+              // TODO: 通过 iframe 的 contentWindow 与编辑器通信
+              Zotero.log(`[NoteRelationsTab] iframe loaded, but note setting not implemented`, "warning");
+            }
+          } catch (error) {
+            Zotero.logError(`[NoteRelationsTab] Failed in iframe load: ${error}`);
+          }
+        });
+        
+        return editorContainer;
+      }
+      
       // 创建 note-editor 元素
       const noteEditor = doc.createElement('note-editor') as any;
       noteEditor.setAttribute('flex', '1');
@@ -1483,22 +1524,33 @@ export class NoteRelationsTab {
           if (item && item.isNote()) {
             Zotero.log(`[NoteRelationsTab] Loading note item into editor`, "info");
             
-            // 确保编辑器已连接到 DOM
-            if (noteEditor.isConnected) {
-              noteEditor.parent = null;
-              noteEditor.item = item;
-              
-              // 隐藏 links 容器（标签和相关）
-              const linksContainer = noteEditor.querySelector('#links-container');
-              if (linksContainer) {
-                (linksContainer as HTMLElement).hidden = true;
+                          // 确保编辑器已连接到 DOM
+              if (noteEditor.isConnected) {
+                noteEditor.parent = null;
+                noteEditor.item = item;
+                
+                // 隐藏 links 容器（标签和相关）
+                setTimeout(() => {
+                  const linksContainer = noteEditor.querySelector('#links-container');
+                  if (linksContainer) {
+                    (linksContainer as HTMLElement).hidden = true;
+                  }
+                }, 300);
+                
+                this.selectedNoteId = noteId;
+                Zotero.log(`[NoteRelationsTab] Note loaded successfully`, "info");
+                
+                // 调试：检查编辑器的实际大小
+                const rect = noteEditor.getBoundingClientRect();
+                Zotero.log(`[NoteRelationsTab] Editor dimensions: ${rect.width}x${rect.height}`, "info");
+                
+                // 确保编辑器可见
+                noteEditor.style.visibility = 'visible';
+                noteEditor.style.opacity = '1';
+                
+              } else {
+                Zotero.log(`[NoteRelationsTab] Editor not connected to DOM`, "warning");
               }
-              
-              this.selectedNoteId = noteId;
-              Zotero.log(`[NoteRelationsTab] Note loaded successfully`, "info");
-            } else {
-              Zotero.log(`[NoteRelationsTab] Editor not connected to DOM`, "warning");
-            }
           }
         } catch (error) {
           Zotero.logError(`[NoteRelationsTab] Failed to load note ${noteId}: ${error}`);
