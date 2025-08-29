@@ -213,10 +213,31 @@ export class HistoryTreeZTree {
       const pluginID = 'research-navigator@zotero.org';
       
       // 使用 Zotero.Plugins API 获取根 URI
-      if (Zotero.Plugins && Zotero.Plugins.getRootURI) {
-        const uri = await Zotero.Plugins.getRootURI(pluginID);
-        Zotero.log(`[HistoryTreeZTree] Plugin root URI: ${uri}`, 'info');
-        return uri;
+      if (Zotero && Zotero.Plugins && typeof Zotero.Plugins.getRootURI === 'function') {
+        try {
+          const uri = await Zotero.Plugins.getRootURI(pluginID);
+          if (uri) {
+            Zotero.log(`[HistoryTreeZTree] Plugin root URI: ${uri}`, 'info');
+            return uri;
+          }
+        } catch (e) {
+          Zotero.log(`[HistoryTreeZTree] getRootURI failed: ${e}`, 'warn');
+        }
+      }
+      
+      // 尝试其他方法获取插件路径
+      if (typeof AddonManager !== 'undefined') {
+        try {
+          const { AddonManager } = ChromeUtils.import("resource://gre/modules/AddonManager.jsm");
+          const addon = await AddonManager.getAddonByID(pluginID);
+          if (addon && addon.getResourceURI) {
+            const uri = addon.getResourceURI().spec;
+            Zotero.log(`[HistoryTreeZTree] Got URI via AddonManager: ${uri}`, 'info');
+            return uri;
+          }
+        } catch (e) {
+          Zotero.log(`[HistoryTreeZTree] AddonManager approach failed: ${e}`, 'warn');
+        }
       }
       
       // 回退到默认的 chrome:// URL
@@ -253,6 +274,13 @@ export class HistoryTreeZTree {
         const doc = this.window.document;
         Zotero.log(`[HistoryTreeZTree] Loading script via DOM: ${src}`, 'info');
         
+        // 确保文档已经准备好
+        if (!doc || (!doc.head && !doc.body && !doc.documentElement)) {
+          Zotero.logError(`[HistoryTreeZTree] Document not ready for script loading`);
+          reject(new Error('Document not ready'));
+          return;
+        }
+        
         const script = doc.createElement('script');
         script.type = 'text/javascript';
         script.src = src;
@@ -279,21 +307,26 @@ export class HistoryTreeZTree {
         
         // 尝试附加到不同的位置
         const appendScript = () => {
-          if (doc.head) {
-            doc.head.appendChild(script);
-          } else if (doc.body) {
-            doc.body.appendChild(script);
-          } else if (doc.documentElement) {
-            doc.documentElement.appendChild(script);
-          } else {
-            // 如果 DOM 还没准备好，等待一下再试
-            setTimeout(() => {
-              if (doc.head || doc.body) {
-                appendScript();
-              } else {
-                onError(new Error('No suitable element to append script'));
-              }
-            }, 100);
+          try {
+            if (doc.head) {
+              doc.head.appendChild(script);
+            } else if (doc.body) {
+              doc.body.appendChild(script);
+            } else if (doc.documentElement) {
+              doc.documentElement.appendChild(script);
+            } else {
+              // 如果 DOM 还没准备好，等待一下再试
+              setTimeout(() => {
+                if (doc.head || doc.body) {
+                  appendScript();
+                } else {
+                  onError(new Error('No suitable element to append script'));
+                }
+              }, 100);
+            }
+          } catch (e) {
+            Zotero.logError(`[HistoryTreeZTree] Error appending script: ${e}`);
+            onError(e);
           }
         };
         
