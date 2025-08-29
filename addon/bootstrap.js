@@ -63,7 +63,8 @@ const ViewMode = {
   TREE: 'tree',
   LIST: 'list',
   GRAPH: 'graph',
-  TIMELINE: 'timeline'
+  TIMELINE: 'timeline',
+  ZTREE: 'ztree'
 };
 
 // 树状历史节点类
@@ -1251,6 +1252,9 @@ var ResearchNavigator = {
       case ViewMode.TIMELINE:
         this.updateTimelineView(doc);
         break;
+      case ViewMode.ZTREE:
+        this.updateZTreeView(doc);
+        break;
     }
     
     // 显示对应的视图
@@ -1384,6 +1388,20 @@ var ResearchNavigator = {
       const item = this.createListItem(doc, node);
       listContainer.appendChild(item);
     });
+  },
+  
+  // 更新 zTree 视图：将当前树数据转换为简单结构并发送到 iframe
+  updateZTreeView(doc) {
+    const container = doc.getElementById('research-navigator-ztree-view');
+    if (!container || !container.refreshWithData) return;
+    const sessions = this.getTreeData();
+    const toSimple = (node) => ({
+      id: node.id,
+      name: node.title,
+      children: (node.children || []).map(toSimple)
+    });
+    const data = sessions.map(s => ({ id: s.id, name: s.title, children: s.roots.map(toSimple) }));
+    container.refreshWithData(data);
   },
   
   // 更新图表视图
@@ -2972,18 +2990,21 @@ function createTreePanel(window) {
   const listView = createListView(doc);
   const graphView = createGraphView(doc);
   const timelineView = createTimelineView(doc);
+  const ztreeView = createZTreeView(doc);
   
   // 根据当前视图模式显示对应视图
   treeView.style.display = ResearchNavigator.viewMode === ViewMode.TREE ? 'flex' : 'none';
   listView.style.display = ResearchNavigator.viewMode === ViewMode.LIST ? 'flex' : 'none';
   graphView.style.display = ResearchNavigator.viewMode === ViewMode.GRAPH ? 'flex' : 'none';
   timelineView.style.display = ResearchNavigator.viewMode === ViewMode.TIMELINE ? 'flex' : 'none';
+  ztreeView.style.display = ResearchNavigator.viewMode === ViewMode.ZTREE ? 'flex' : 'none';
   
   contentWrapper.appendChild(recommendPanel);
   contentWrapper.appendChild(treeView);
   contentWrapper.appendChild(listView);
   contentWrapper.appendChild(graphView);
   contentWrapper.appendChild(timelineView);
+  contentWrapper.appendChild(ztreeView);
   
   // 调整大小手柄
   const resizeHandle = doc.createXULElement('box');
@@ -3064,7 +3085,8 @@ function getViewIcon(viewMode) {
     [ViewMode.TREE]: '🌳',
     [ViewMode.LIST]: '📋',
     [ViewMode.GRAPH]: '🕸️',
-    [ViewMode.TIMELINE]: '📅'
+    [ViewMode.TIMELINE]: '📅',
+    [ViewMode.ZTREE]: '🧭'
   };
   return icons[viewMode] || '🌳';
 }
@@ -3235,6 +3257,58 @@ function createTimelineView(doc) {
   
   scrollbox.appendChild(timelineContainer);
   view.appendChild(scrollbox);
+  
+  return view;
+}
+
+// 创建 zTree 视图（占位，后续接入外部库）
+function createZTreeView(doc) {
+  const view = doc.createXULElement('vbox');
+  view.id = 'research-navigator-ztree-view';
+  view.setAttribute('flex', '1');
+  view.style.cssText = 'display: flex; flex-direction: column;';
+  
+  // 使用 iframe 承载 zTree 的 HTML/CSS/JS，避免污染 XUL 环境
+  const iframe = doc.createElement('iframe');
+  iframe.style.cssText = 'width: 100%; height: 100%; border: none;';
+  iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+  
+  // 简单的占位内容；后续将注入 zTree 脚本和数据
+  const html = `<!DOCTYPE html>
+  <html>
+    <head>
+      <meta charset="utf-8" />
+      <title>zTree View</title>
+      <style>
+        html, body { height:100%; margin:0; }
+        #ztree { height:100%; overflow:auto; font-family: sans-serif; }
+        .placeholder { padding: 12px; color: #666; }
+      </style>
+    </head>
+    <body>
+      <div id="ztree"><div class="placeholder">zTree placeholder - integrating library…</div></div>
+      <script>window.addEventListener('message', (e) => {
+        const { type, payload } = e.data || {};
+        if (type === 'RN_RENDER_ZTREE') {
+          const tree = document.getElementById('ztree');
+          tree.innerHTML = '';
+          const pre = document.createElement('pre');
+          pre.textContent = JSON.stringify(payload, null, 2);
+          tree.appendChild(pre);
+        }
+      });</script>
+    </body>
+  </html>`;
+  iframe.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
+  
+  view.appendChild(iframe);
+  
+  // 暴露一个刷新方法给 ResearchNavigator
+  view.refreshWithData = (data) => {
+    try {
+      iframe.contentWindow.postMessage({ type: 'RN_RENDER_ZTREE', payload: data }, '*');
+    } catch (e) {}
+  };
   
   return view;
 }
