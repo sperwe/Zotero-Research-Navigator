@@ -6,6 +6,7 @@
 import { NoteAssociationSystem } from "../../../managers/note-association-system";
 import { HistoryService } from "../../../services/history-service";
 import { HistoryNode } from "../../../services/database-service";
+import { NoteEditorIntegration, EditorMode } from "./note-editor-integration";
 
 export interface AssociatedNote {
   id: number;
@@ -21,6 +22,9 @@ export class NoteRelationsTab {
   private container: HTMLElement | null = null;
   private contentContainer: HTMLElement | null = null;
   private selectedNode: HistoryNode | null = null;
+  private editorMode: EditorMode = 'column';
+  private editorContainer: HTMLElement | null = null;
+  private selectedNoteId: number | null = null;
   
   constructor(
     private window: Window,
@@ -343,13 +347,51 @@ export class NoteRelationsTab {
       const toolbar = this.createToolbar(doc);
       this.contentContainer.appendChild(toolbar);
       
-      // 内容区域
+      // 内容区域 - 根据模式创建不同的布局
       const content = doc.createElement("div");
-      content.style.cssText = `
-        flex: 1;
-        overflow-y: auto;
-        padding: 15px;
-      `;
+      content.className = "notes-content";
+      
+      let listContainer: HTMLElement;
+      
+      if (this.editorMode === 'column') {
+        // 分栏模式：笔记列表 + 编辑器
+        content.style.cssText = `
+          flex: 1;
+          display: flex;
+          overflow: hidden;
+        `;
+        
+        // 创建笔记列表容器
+        listContainer = doc.createElement("div");
+        listContainer.style.cssText = `
+          width: 300px;
+          overflow-y: auto;
+          padding: 15px;
+          border-right: 1px solid var(--material-border-quarternary);
+        `;
+        content.appendChild(listContainer);
+        
+        // 创建编辑器容器
+        this.editorContainer = doc.createElement("div");
+        this.editorContainer.style.cssText = `
+          flex: 1;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--fill-secondary);
+        `;
+        this.editorContainer.textContent = "Select a note to edit";
+        content.appendChild(this.editorContainer);
+      } else {
+        // 其他模式使用默认布局
+        content.style.cssText = `
+          flex: 1;
+          overflow-y: auto;
+          padding: 15px;
+        `;
+        listContainer = content;
+      }
       
       // 获取 Zotero 中该项目的所有笔记
       Zotero.log(`[NoteRelationsTab] Loading notes for node: ${this.selectedNode.id} (Item ID: ${this.selectedNode.itemId})`, "info");
@@ -432,13 +474,13 @@ export class NoteRelationsTab {
       // 显示已关联的笔记
       if (pluginAssociatedNotes.length > 0) {
         const section = this.createSection(doc, "Associated Notes", pluginAssociatedNotes, true);
-        content.appendChild(section);
+        listContainer.appendChild(section);
       }
       
       // 显示未关联的 Zotero 笔记
       if (zoteroNotes.length > 0) {
         const section = this.createSection(doc, "Zotero Notes (Not Associated)", zoteroNotes, false);
-        content.appendChild(section);
+        listContainer.appendChild(section);
       }
     
       // 如果没有任何笔记，显示空状态
@@ -450,7 +492,7 @@ export class NoteRelationsTab {
           padding: 40px;
         `;
         empty.textContent = "No notes associated with this node";
-        content.appendChild(empty);
+        listContainer.appendChild(empty);
       }
       
       this.contentContainer.appendChild(content);
@@ -478,6 +520,7 @@ export class NoteRelationsTab {
       gap: 10px;
       border-bottom: 1px solid var(--material-border-quarternary);
       background: var(--material-sidepane);
+      align-items: center;
     `;
     
     // 添加笔记按钮
@@ -532,6 +575,51 @@ export class NoteRelationsTab {
       }
     });
     toolbar.appendChild(searchBox);
+    
+    // 添加分隔符
+    const spacer = doc.createElement("div");
+    spacer.style.flex = "1";
+    toolbar.appendChild(spacer);
+    
+    // 模式切换按钮
+    const modeSwitcher = doc.createElement("div");
+    modeSwitcher.style.cssText = `
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      padding: 0 5px;
+    `;
+    
+    const modeLabel = doc.createElement("span");
+    modeLabel.textContent = "View:";
+    modeLabel.style.cssText = `
+      font-size: 12px;
+      color: var(--fill-secondary);
+    `;
+    modeSwitcher.appendChild(modeLabel);
+    
+    const modes: { mode: EditorMode; icon: string; title: string }[] = [
+      { mode: 'column', icon: '📑', title: 'Column view' },
+      { mode: 'tab', icon: '📄', title: 'Tab view' },
+      { mode: 'drawer', icon: '📋', title: 'Drawer view' }
+    ];
+    
+    modes.forEach(({ mode, icon, title }) => {
+      const btn = doc.createElement("button");
+      btn.textContent = icon;
+      btn.title = title;
+      btn.style.cssText = `
+        padding: 2px 8px;
+        background: ${this.editorMode === mode ? 'var(--fill-quinary)' : 'transparent'};
+        border: 1px solid ${this.editorMode === mode ? 'var(--fill-quarternary)' : 'transparent'};
+        cursor: pointer;
+        border-radius: 3px;
+      `;
+      btn.addEventListener("click", () => this.switchEditorMode(mode));
+      modeSwitcher.appendChild(btn);
+    });
+    
+    toolbar.appendChild(modeSwitcher);
     
     return toolbar;
   }
@@ -719,18 +807,23 @@ export class NoteRelationsTab {
       font-size: 0.9em;
     `;
     openBtn.addEventListener("click", () => {
-      // 打开笔记窗口
-      try {
-        const noteItem = Zotero.Items.get(note.noteId);
-        if (noteItem) {
-          // 使用 Zotero 的 API 打开笔记编辑器
-          const zoteroPane = Zotero.getActiveZoteroPane();
-          if (zoteroPane) {
-            zoteroPane.openNoteWindow(note.noteId);
+      // 根据模式打开笔记
+      if (this.editorMode === 'column' && this.editorContainer) {
+        // 分栏模式：在右侧编辑器中打开
+        this.openNoteInEditor(note.noteId);
+      } else {
+        // 其他模式：在新窗口中打开
+        try {
+          const noteItem = Zotero.Items.get(note.noteId);
+          if (noteItem) {
+            const zoteroPane = Zotero.getActiveZoteroPane();
+            if (zoteroPane) {
+              zoteroPane.openNoteWindow(note.noteId);
+            }
           }
+        } catch (error) {
+          Zotero.logError(`Failed to open note: ${error}`);
         }
-      } catch (error) {
-        Zotero.logError(`Failed to open note: ${error}`);
       }
     });
     actions.appendChild(openBtn);
@@ -1208,6 +1301,109 @@ export class NoteRelationsTab {
   private filterNodes(query: string): void {
     // TODO: 实现节点过滤
     Zotero.log(`[NoteRelationsTab] Filter nodes: ${query}`, "info");
+  }
+  
+  /**
+   * 切换编辑器模式
+   */
+  private switchEditorMode(mode: EditorMode): void {
+    if (this.editorMode === mode) return;
+    
+    this.editorMode = mode;
+    Zotero.log(`[NoteRelationsTab] Switching to ${mode} mode`, "info");
+    
+    // 重新渲染内容
+    if (this.selectedNode) {
+      this.loadNodeAssociations();
+    }
+    
+    // 更新工具栏按钮状态
+    this.updateModeButtons();
+  }
+  
+  /**
+   * 更新模式按钮状态
+   */
+  private updateModeButtons(): void {
+    const buttons = this.container?.querySelectorAll('[title*="view"]');
+    buttons?.forEach((btn, index) => {
+      const modes: EditorMode[] = ['column', 'tab', 'drawer'];
+      const isActive = modes[index] === this.editorMode;
+      (btn as HTMLElement).style.background = isActive ? 'var(--fill-quinary)' : 'transparent';
+      (btn as HTMLElement).style.border = `1px solid ${isActive ? 'var(--fill-quarternary)' : 'transparent'}`;
+    });
+  }
+  
+  /**
+   * 在编辑器中打开笔记
+   */
+  private openNoteInEditor(noteId: number): void {
+    if (!this.editorContainer) return;
+    
+    // 清空现有编辑器
+    this.editorContainer.innerHTML = "";
+    
+    // 创建新编辑器
+    const editor = this.createNoteEditor(noteId);
+    if (editor) {
+      this.editorContainer.appendChild(editor);
+    }
+  }
+  
+  /**
+   * 创建笔记编辑器
+   */
+  private createNoteEditor(noteId: number): HTMLElement | null {
+    const doc = this.window.document;
+    
+    try {
+      // 检查是否需要引入编辑器脚本
+      if (!doc.querySelector('script[src*="noteEditor.js"]')) {
+        const script = doc.createElement('script');
+        script.src = 'chrome://zotero/content/elements/noteEditor.js';
+        doc.head.appendChild(script);
+      }
+      
+      // 创建编辑器容器
+      const editorContainer = doc.createElement('div');
+      editorContainer.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        width: 100%;
+        min-height: 300px;
+        background: var(--material-background);
+      `;
+      
+      // 创建 note-editor 元素
+      const noteEditor = doc.createElement('note-editor') as any;
+      noteEditor.style.cssText = `
+        flex: 1;
+        width: 100%;
+      `;
+      
+      // 异步加载笔记
+      setTimeout(async () => {
+        try {
+          const item = await Zotero.Items.getAsync(noteId);
+          if (item && item.isNote()) {
+            noteEditor.mode = 'edit';
+            noteEditor.item = item;
+            noteEditor.parentItem = item.parentItem;
+            this.selectedNoteId = noteId;
+          }
+        } catch (error) {
+          Zotero.logError(`[NoteRelationsTab] Failed to load note ${noteId}: ${error}`);
+        }
+      }, 100);
+      
+      editorContainer.appendChild(noteEditor);
+      return editorContainer;
+      
+    } catch (error) {
+      Zotero.logError(`[NoteRelationsTab] Failed to create editor: ${error}`);
+      return null;
+    }
   }
   
   /**
