@@ -252,7 +252,11 @@ export class HistoryTreeSafe {
     }
     
     content.appendChild(actions);
-    content.addEventListener('click', () => this.handleNodeClick(node));
+    content.addEventListener('click', () => {
+      this.handleNodeClick(node).catch(error => {
+        Zotero.logError(`[HistoryTreeSafe] Error in handleNodeClick: ${error}`);
+      });
+    });
     
     nodeEl.appendChild(content);
     
@@ -292,27 +296,56 @@ export class HistoryTreeSafe {
     }
   }
   
-  private handleNodeClick(node: any): void {
+  private async handleNodeClick(node: any): Promise<void> {
     if (node.type === 'history' && node.data?.itemId) {
       // 在标签页中打开，而不是在库中选择
       try {
-        const item = Zotero.Items.get(node.data.itemId);
-        if (item) {
-          // 检查是否是附件
-          if (item.isAttachment()) {
-            Zotero.OpenPDF.openToPage(item, null);
-          } else if (item.isNote()) {
-            // 打开笔记
-            const win = Zotero.getMainWindow();
-            if (win.ZoteroPane) {
-              win.ZoteroPane.openNoteWindow(item.id);
-            }
-          } else {
-            // 尝试在阅读器中打开
-            const libraryID = item.libraryID;
-            const itemID = item.id;
-            Zotero.Reader.open(itemID, null, { openInWindow: false });
+        const item = await Zotero.Items.getAsync(node.data.itemId);
+        if (!item) return;
+        
+        const ZoteroPane = Zotero.getActiveZoteroPane();
+        
+        // 如果是附件，直接打开
+        if (item.isAttachment()) {
+          await ZoteroPane.viewAttachment(item.id);
+          return;
+        }
+        
+        // 如果是笔记，打开笔记窗口
+        if (item.isNote()) {
+          if (ZoteroPane) {
+            ZoteroPane.openNoteWindow(item.id);
           }
+          return;
+        }
+        
+        // 对于普通项目，尝试找到最佳附件并打开
+        const attachments = await item.getBestAttachments();
+        if (attachments && attachments.length > 0) {
+          // 打开第一个最佳附件
+          await ZoteroPane.viewAttachment(attachments[0].id);
+          return;
+        }
+        
+        // 如果没有附件，尝试获取所有附件
+        const allAttachments = await item.getAttachments();
+        if (allAttachments && allAttachments.length > 0) {
+          // 查找 PDF 附件
+          for (let attachmentId of allAttachments) {
+            const attachment = await Zotero.Items.getAsync(attachmentId);
+            if (attachment && attachment.isPDFAttachment()) {
+              await ZoteroPane.viewAttachment(attachment.id);
+              return;
+            }
+          }
+          // 如果没有 PDF，打开第一个附件
+          await ZoteroPane.viewAttachment(allAttachments[0]);
+          return;
+        }
+        
+        // 如果没有任何附件，在库中选择该项目
+        if (ZoteroPane) {
+          ZoteroPane.selectItem(node.data.itemId);
         }
       } catch (error) {
         Zotero.logError(`[HistoryTreeSafe] Failed to open item: ${error}`);
