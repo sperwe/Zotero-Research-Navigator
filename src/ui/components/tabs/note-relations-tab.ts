@@ -160,19 +160,17 @@ export class NoteRelationsTab {
   private createNodeElement(doc: Document, node: HistoryNode): HTMLElement {
     const element = doc.createElement("div");
     element.style.cssText = `
-      padding: 12px 15px;
-      margin: 6px 0;
-      border-radius: 6px;
+      padding: 10px 12px;
+      margin: 5px 0;
+      border-radius: 5px;
       cursor: pointer;
-      transition: all 0.15s ease;
+      transition: all 0.2s;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       user-select: none;
-      border: 2px solid transparent;
+      border: 1px solid transparent;
       position: relative;
-      min-height: 44px;
-      background: transparent;
     `;
     
     // 图标
@@ -210,61 +208,42 @@ export class NoteRelationsTab {
       }
     });
     
-    // 添加data属性用于事件委托
-    element.setAttribute("data-node-id", node.id);
-    element.setAttribute("data-node-title", node.title);
-    
-    // 点击事件 - 简化处理
+    // 点击事件
     element.addEventListener("click", (e) => {
       e.stopPropagation();
+      e.preventDefault();
       
       Zotero.log(`[NoteRelationsTab] Node clicked: ${node.id} - ${node.title}`, "info");
       
-      this.handleNodeClick(element, node);
+      this.selectNode(node);
+      
+      // 更新选中状态
+      element.parentElement?.querySelectorAll("div").forEach(el => {
+        if (el.style.background) {
+          el.style.background = "";
+          el.style.border = "1px solid transparent";
+        }
+      });
+      element.style.background = "var(--material-mix-quinary)";
+      element.style.border = "1px solid var(--material-border-secondary)";
     });
     
     // 悬停效果
     element.addEventListener("mouseenter", () => {
       if (!this.selectedNode || this.selectedNode.id !== node.id) {
-        element.style.background = "var(--material-mix-quinary)";
-        element.style.border = "2px solid var(--material-border-quarternary)";
-        element.style.transform = "translateX(2px)";
+        element.style.background = "var(--material-button)";
+        element.style.border = "1px solid var(--material-border-quarternary)";
       }
     });
     
     element.addEventListener("mouseleave", () => {
       if (!this.selectedNode || this.selectedNode.id !== node.id) {
-        element.style.background = "transparent";
-        element.style.border = "2px solid transparent";
-        element.style.transform = "translateX(0)";
+        element.style.background = "";
+        element.style.border = "1px solid transparent";
       }
     });
     
     return element;
-  }
-  
-  /**
-   * 处理节点点击
-   */
-  private handleNodeClick(element: HTMLElement, node: HistoryNode): void {
-    // 更新选中状态
-    const container = element.parentElement;
-    if (container) {
-      container.querySelectorAll("div[data-node-id]").forEach(el => {
-        const div = el as HTMLElement;
-        div.style.background = "transparent";
-        div.style.border = "2px solid transparent";
-        div.style.transform = "translateX(0)";
-      });
-    }
-    
-    // 设置选中样式
-    element.style.background = "var(--material-mix-secondary)";
-    element.style.border = "2px solid var(--material-border-secondary)";
-    element.style.transform = "translateX(4px)";
-    
-    // 选择节点
-    this.selectNode(node);
   }
   
   /**
@@ -550,17 +529,10 @@ export class NoteRelationsTab {
     `;
     openBtn.addEventListener("click", () => {
       // 打开笔记窗口
-      try {
-        const noteItem = Zotero.Items.get(note.noteId);
-        if (noteItem) {
-          // 使用 Zotero 的 API 打开笔记编辑器
-          const zoteroPane = Zotero.getActiveZoteroPane();
-          if (zoteroPane) {
-            zoteroPane.openNoteWindow(note.noteId);
-          }
-        }
-      } catch (error) {
-        Zotero.logError(`Failed to open note: ${error}`);
+      const noteItem = Zotero.Items.get(note.noteId);
+      if (noteItem) {
+        const libraryID = noteItem.libraryID;
+        const noteWindow = Zotero.getMainWindow().Zotero_Browser.noteEditor.open(note.noteId, libraryID);
       }
     });
     actions.appendChild(openBtn);
