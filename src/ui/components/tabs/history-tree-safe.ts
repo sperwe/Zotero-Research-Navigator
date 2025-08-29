@@ -60,8 +60,7 @@ export class HistoryTreeSafe {
             .hts-node-hidden { display: none !important; }
             .hts-node-highlight { background: #fff3cd; }
           </style>
-          <div class="hts-search-bar">
-            <input type="text" class="hts-search-input" id="hts-search" placeholder="Search history..." />
+          <div class="hts-search-bar" id="hts-search-bar">
           </div>
           <div class="hts-toolbar">
             <span class="hts-btn" id="hts-refresh" role="button" tabindex="0">🔄 Refresh</span>
@@ -74,16 +73,24 @@ export class HistoryTreeSafe {
       `;
       
       this.treeContainer = doc.getElementById('hts-tree-container');
-      this.searchInput = doc.getElementById('hts-search') as HTMLInputElement;
+      
+      // 动态创建搜索输入框，避免被 Bootstrap 移除
+      const searchBar = doc.getElementById('hts-search-bar');
+      if (searchBar) {
+        this.searchInput = doc.createElement('input');
+        this.searchInput.type = 'text';
+        this.searchInput.className = 'hts-search-input';
+        this.searchInput.id = 'hts-search';
+        this.searchInput.placeholder = 'Search history...';
+        this.searchInput.addEventListener('input', () => this.onSearch());
+        searchBar.appendChild(this.searchInput);
+      }
       
       // 绑定事件
       doc.getElementById('hts-refresh')?.addEventListener('click', () => this.refresh());
       doc.getElementById('hts-expand-all')?.addEventListener('click', () => this.expandAll());
       doc.getElementById('hts-collapse-all')?.addEventListener('click', () => this.collapseAll());
       doc.getElementById('hts-clear-all')?.addEventListener('click', () => this.clearAll());
-      
-      // 搜索功能
-      this.searchInput?.addEventListener('input', () => this.onSearch());
       
       // 初始化数据
       await this.refresh();
