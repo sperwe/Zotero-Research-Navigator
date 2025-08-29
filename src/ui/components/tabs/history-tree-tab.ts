@@ -13,6 +13,7 @@ import { HistoryTreeStandalone } from "./history-tree-standalone";
 import { HistoryTreeZTreeDirect } from "./history-tree-ztree-direct";
 import { HistoryTreeBuiltin } from "./history-tree-builtin";
 import { HistoryTreeDebug } from "./history-tree-debug";
+import { HistoryTreeSafe } from "./history-tree-safe";
 
 export class HistoryTreeTab {
   private container: HTMLElement | null = null;
@@ -48,13 +49,13 @@ export class HistoryTreeTab {
     
     // 如果使用 zTree，直接初始化 zTree 组件
     if (this.useZTree) {
-      // 使用内置的树实现，已修复滚动条问题
-      const builtinTree = new HistoryTreeBuiltin(
+      // 使用安全版本，避免 doc.head is null 错误
+      const safeTree = new HistoryTreeSafe(
         this.window,
         this.historyService,
         this.closedTabsManager
       );
-      builtinTree.init(container);
+      safeTree.init(container);
       return;
     }
     

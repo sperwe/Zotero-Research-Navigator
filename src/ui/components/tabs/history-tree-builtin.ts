@@ -22,10 +22,7 @@ export class HistoryTreeBuiltin {
     this.container = container;
     const doc = container.ownerDocument || this.window.document;
     
-    // 添加样式
-    this.addStyles(doc);
-    
-    // 创建结构
+    // 创建结构 - 先创建DOM结构
     container.innerHTML = `
       <div class="htb-container">
         <div class="htb-toolbar">
@@ -39,6 +36,9 @@ export class HistoryTreeBuiltin {
     `;
     
     this.treeContainer = doc.getElementById('htb-tree-container');
+    
+    // 在DOM创建后添加样式
+    this.addStyles(doc);
     
     // 绑定事件
     doc.getElementById('htb-refresh')?.addEventListener('click', () => this.refresh());
