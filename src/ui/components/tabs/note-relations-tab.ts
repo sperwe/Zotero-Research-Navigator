@@ -629,6 +629,7 @@ export class NoteRelationsTab {
    */
   private createSection(doc: Document, title: string, notes: AssociatedNote[], isAssociated: boolean): HTMLElement {
     const section = doc.createElement("div");
+    section.className = "notes-section";
     section.style.cssText = `
       margin-bottom: 20px;
     `;
@@ -759,12 +760,28 @@ export class NoteRelationsTab {
         this.openNoteInEditor(note.noteId);
         
         // 视觉反馈：高亮选中的卡片
-        const allCards = card.parentElement?.querySelectorAll('div[style*="border"]');
-        allCards?.forEach(c => {
-          if (c !== card && c.style.border) {
-            (c as HTMLElement).style.background = "var(--material-background)";
+        const section = card.closest('.notes-section');
+        if (section) {
+          // 清除同一部分中所有卡片的高亮
+          const allCards = section.querySelectorAll('div[style*="cursor: pointer"]');
+          allCards?.forEach(c => {
+            if (c !== card) {
+              (c as HTMLElement).style.background = "var(--material-background)";
+            }
+          });
+        }
+        
+        // 也清除其他部分的高亮
+        const allSections = this.container?.querySelectorAll('.notes-section');
+        allSections?.forEach(s => {
+          if (s !== section) {
+            const cards = s.querySelectorAll('div[style*="cursor: pointer"]');
+            cards?.forEach(c => {
+              (c as HTMLElement).style.background = "var(--material-background)";
+            });
           }
         });
+        
         card.style.background = "var(--fill-quinary)";
       }
     });
@@ -1405,13 +1422,6 @@ export class NoteRelationsTab {
     const doc = this.window.document;
     
     try {
-      // 检查是否需要引入编辑器脚本
-      if (!doc.querySelector('script[src*="noteEditor.js"]')) {
-        const script = doc.createElement('script');
-        script.src = 'chrome://zotero/content/elements/noteEditor.js';
-        doc.head.appendChild(script);
-      }
-      
       // 创建编辑器容器
       const editorContainer = doc.createElement('div');
       editorContainer.style.cssText = `
@@ -1421,6 +1431,9 @@ export class NoteRelationsTab {
         width: 100%;
         min-height: 300px;
         background: var(--material-background);
+        border: 1px solid var(--material-border-quarternary);
+        border-radius: 5px;
+        padding: 10px;
       `;
       
       // 创建 note-editor 元素
@@ -1428,17 +1441,31 @@ export class NoteRelationsTab {
       noteEditor.style.cssText = `
         flex: 1;
         width: 100%;
+        height: 100%;
       `;
+      
+      // 设置编辑器属性
+      noteEditor.mode = 'edit';
+      noteEditor.viewMode = 'library';
       
       // 异步加载笔记
       setTimeout(async () => {
         try {
           const item = await Zotero.Items.getAsync(noteId);
           if (item && item.isNote()) {
-            noteEditor.mode = 'edit';
+            Zotero.log(`[NoteRelationsTab] Loading note item into editor`, "info");
             noteEditor.item = item;
-            noteEditor.parentItem = item.parentItem;
+            
+            // 如果有父项，也设置
+            if (item.parentID) {
+              const parentItem = await Zotero.Items.getAsync(item.parentID);
+              if (parentItem) {
+                noteEditor.parentItem = parentItem;
+              }
+            }
+            
             this.selectedNoteId = noteId;
+            Zotero.log(`[NoteRelationsTab] Note loaded successfully`, "info");
           }
         } catch (error) {
           Zotero.logError(`[NoteRelationsTab] Failed to load note ${noteId}: ${error}`);
