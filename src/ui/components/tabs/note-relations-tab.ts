@@ -1266,43 +1266,49 @@ export class NoteRelationsTab {
         { source: "manual", context: "Created from history node" }
       );
       
-      // 选择新创建的笔记并尝试打开编辑器
+      // 刷新笔记列表并在面板内打开新笔记
       try {
-        const zoteroPane = Zotero.getActiveZoteroPane();
+        // 先刷新关联列表以显示新创建的笔记
+        await this.loadNodeAssociations();
         
-        // 首先选择这个笔记
-        if (zoteroPane && typeof zoteroPane.selectItem === 'function') {
-          await zoteroPane.selectItem(note.id);
-          Zotero.log(`[NoteRelationsTab] Selected note: ${note.id}`, "info");
-        }
-        
-        // 然后尝试打开笔记窗口
-        // 使用 setTimeout 确保 UI 已经更新
-        setTimeout(() => {
-          try {
-            const zp = Zotero.getActiveZoteroPane();
-            if (zp && typeof zp.openNoteWindow === 'function') {
-              Zotero.log(`[NoteRelationsTab] Opening note window for note ID: ${note.id}`, "info");
-              // 检查笔记是否真的存在
-              const noteItem = Zotero.Items.get(note.id);
-              if (noteItem) {
-                zp.openNoteWindow(note.id);
+        // 如果是列模式，直接在右侧编辑器中打开
+        if (this.editorMode === 'column' && this.editorContainer) {
+          Zotero.log(`[NoteRelationsTab] Opening new note ${note.id} in panel editor`, "info");
+          this.openNoteInEditor(note.id);
+        } else {
+          // 如果不是列模式，则打开独立窗口
+          const zoteroPane = Zotero.getActiveZoteroPane();
+          if (zoteroPane && typeof zoteroPane.selectItem === 'function') {
+            await zoteroPane.selectItem(note.id);
+            Zotero.log(`[NoteRelationsTab] Selected note: ${note.id}`, "info");
+          }
+          
+          // 使用 setTimeout 确保 UI 已经更新
+          setTimeout(() => {
+            try {
+              const zp = Zotero.getActiveZoteroPane();
+              if (zp && typeof zp.openNoteWindow === 'function') {
+                Zotero.log(`[NoteRelationsTab] Opening note window for note ID: ${note.id}`, "info");
+                // 检查笔记是否真的存在
+                const noteItem = Zotero.Items.get(note.id);
+                if (noteItem) {
+                  zp.openNoteWindow(note.id);
+                } else {
+                  Zotero.logError(`[NoteRelationsTab] Note item not found in database: ${note.id}`);
+                }
               } else {
-                Zotero.logError(`[NoteRelationsTab] Note item not found in database: ${note.id}`);
+                // 如果不能打开独立窗口，至少聚焦到笔记编辑器
+                const noteEditor = zp?.document.getElementById('zotero-note-editor');
+                if (noteEditor) {
+                  noteEditor.focus();
+                  Zotero.log("[NoteRelationsTab] Focused on note editor", "info");
+                }
               }
-            } else {
-              // 如果不能打开独立窗口，至少聚焦到笔记编辑器
-              const noteEditor = zp?.document.getElementById('zotero-note-editor');
-              if (noteEditor) {
-                noteEditor.focus();
-                Zotero.log("[NoteRelationsTab] Focused on note editor", "info");
-              }
-            }
           } catch (error) {
             Zotero.logError(`[NoteRelationsTab] Error in setTimeout: ${error}`);
           }
-        }, 100);
-        
+          }, 100);
+        }
       } catch (error) {
         Zotero.logError(`[NoteRelationsTab] Error selecting/opening note: ${error}`);
       }
