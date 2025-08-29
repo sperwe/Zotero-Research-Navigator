@@ -76,18 +76,9 @@ export class MainPanel {
     if (doc.body) {
       doc.body.appendChild(this.container);
     } else {
-      // 如果 body 还不存在，使用简单的延迟重试
-      Zotero.log("[MainPanel] Document body not ready, will retry...", "info");
-      const attachContainer = () => {
-        if (doc.body) {
-          doc.body.appendChild(this.container);
-          Zotero.log("[MainPanel] Container attached to body", "info");
-        } else {
-          // 重试
-          this.window.setTimeout(attachContainer, 100);
-        }
-      };
-      this.window.setTimeout(attachContainer, 100);
+      // 如果 body 还不存在，添加到根元素
+      const root = doc.documentElement || doc;
+      root.appendChild(this.container);
     }
 
     // 初始化标签页
