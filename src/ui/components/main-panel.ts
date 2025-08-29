@@ -10,6 +10,7 @@ import { HistoryTreeTab } from "./tabs/history-tree-tab";
 import { NoteRelationsTab } from "./tabs/note-relations-tab";
 import { AdvancedSearchTab } from "./tabs/advanced-search-tab";
 import { VisualizationTab } from "./tabs/visualization-tab";
+import { NoteBranchingTab } from "./tabs/note-branching-tab";
 import { KeyboardShortcutManager } from "../../managers/keyboard-shortcuts";
 import { ExportImportManager } from "../../managers/export-import";
 import { BatchOperationManager } from "../../managers/batch-operations";
@@ -228,6 +229,7 @@ export class MainPanel {
       { id: "notes", label: "Note Relations", icon: "📝" },
       { id: "search", label: "Search", icon: "🔍" },
       { id: "viz", label: "Visualize", icon: "📊" },
+      { id: "branches", label: "Branches", icon: "🌿" },
     ];
 
     for (const tab of tabs) {
@@ -340,6 +342,14 @@ export class MainPanel {
       );
       this.tabs.set("viz", vizTab);
       Zotero.log(`[MainPanel] VisualizationTab created successfully`, "info");
+      
+      // 笔记分支管理标签页
+      const branchingTab = new NoteBranchingTab(
+        this.window,
+        this.options.noteAssociationSystem
+      );
+      this.tabs.set("branches", branchingTab);
+      Zotero.log(`[MainPanel] NoteBranchingTab created successfully`, "info");
       
       // 初始化管理器
       this.keyboardManager = new KeyboardShortcutManager(this.window);
