@@ -808,11 +808,15 @@ export class NoteRelationsTab {
     `;
     openBtn.addEventListener("click", () => {
       // 根据模式打开笔记
+      Zotero.log(`[NoteRelationsTab] Open button clicked. Mode: ${this.editorMode}, Has container: ${!!this.editorContainer}`, "info");
+      
       if (this.editorMode === 'column' && this.editorContainer) {
         // 分栏模式：在右侧编辑器中打开
+        Zotero.log(`[NoteRelationsTab] Opening note ${note.noteId} in editor`, "info");
         this.openNoteInEditor(note.noteId);
       } else {
         // 其他模式：在新窗口中打开
+        Zotero.log(`[NoteRelationsTab] Opening note ${note.noteId} in new window`, "info");
         try {
           const noteItem = Zotero.Items.get(note.noteId);
           if (noteItem) {
@@ -1338,15 +1342,24 @@ export class NoteRelationsTab {
    * 在编辑器中打开笔记
    */
   private openNoteInEditor(noteId: number): void {
-    if (!this.editorContainer) return;
+    Zotero.log(`[NoteRelationsTab] openNoteInEditor called with noteId: ${noteId}`, "info");
+    
+    if (!this.editorContainer) {
+      Zotero.log(`[NoteRelationsTab] No editor container found!`, "warning");
+      return;
+    }
     
     // 清空现有编辑器
     this.editorContainer.innerHTML = "";
+    Zotero.log(`[NoteRelationsTab] Cleared editor container`, "info");
     
     // 创建新编辑器
     const editor = this.createNoteEditor(noteId);
     if (editor) {
       this.editorContainer.appendChild(editor);
+      Zotero.log(`[NoteRelationsTab] Editor created and appended`, "info");
+    } else {
+      Zotero.log(`[NoteRelationsTab] Failed to create editor`, "error");
     }
   }
   
