@@ -131,8 +131,11 @@ export class HistoryTreeZTree {
       // 检查 jQuery 是否已加载
       if (typeof win.$ === 'undefined' && typeof win.jQuery === 'undefined') {
         Zotero.log('[HistoryTreeZTree] jQuery not found, loading...', 'info');
+        // 获取插件的根 URI
+        const rootURI = await this.getPluginRootURI();
+        
         // 加载 jQuery
-        await this.loadScript('chrome://researchnavigator/content/lib/jquery.min.js');
+        await this.loadScript(rootURI + 'content/lib/jquery.min.js');
         
         // 等待 jQuery 真正可用
         let jQueryCheckCount = 0;
@@ -155,10 +158,13 @@ export class HistoryTreeZTree {
       if (!$ || typeof $.fn.zTree === 'undefined') {
         Zotero.log('[HistoryTreeZTree] zTree not found, loading...', 'info');
         
+        // 获取插件的根 URI（如果还没有的话）
+        const rootURI = await this.getPluginRootURI();
+        
         // 加载 zTree CSS
         const link = doc.createElement('link');
         link.rel = 'stylesheet';
-        link.href = 'chrome://researchnavigator/content/lib/ztree/zTreeStyle.css';
+        link.href = rootURI + 'content/lib/ztree/zTreeStyle.css';
         
         // 确保 head 存在
         if (doc.head) {
@@ -175,7 +181,7 @@ export class HistoryTreeZTree {
         }
         
         // 加载 zTree JS
-        await this.loadScript('chrome://researchnavigator/content/lib/ztree/jquery.ztree.core.min.js');
+        await this.loadScript(rootURI + 'content/lib/ztree/jquery.ztree.core.min.js');
         
         // 等待 zTree 真正可用
         let zTreeCheckCount = 0;
@@ -198,6 +204,30 @@ export class HistoryTreeZTree {
     }
   }
   
+  /**
+   * 获取插件的根 URI
+   */
+  private async getPluginRootURI(): Promise<string> {
+    try {
+      // 获取当前插件的 ID
+      const pluginID = 'research-navigator@zotero.org';
+      
+      // 使用 Zotero.Plugins API 获取根 URI
+      if (Zotero.Plugins && Zotero.Plugins.getRootURI) {
+        const uri = await Zotero.Plugins.getRootURI(pluginID);
+        Zotero.log(`[HistoryTreeZTree] Plugin root URI: ${uri}`, 'info');
+        return uri;
+      }
+      
+      // 回退到默认的 chrome:// URL
+      Zotero.log('[HistoryTreeZTree] Using fallback chrome:// URL', 'warn');
+      return 'chrome://researchnavigator/';
+    } catch (error) {
+      Zotero.logError(`[HistoryTreeZTree] Failed to get plugin root URI: ${error}`);
+      return 'chrome://researchnavigator/';
+    }
+  }
+
   /**
    * 动态加载脚本
    */
