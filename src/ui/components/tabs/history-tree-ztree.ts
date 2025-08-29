@@ -1,44 +1,33 @@
 /**
- * 使用 zTree 的历史树组件
+ * History Tree zTree 实现 - 使用 iframe 隔离方案
  */
 
-/// <reference path="../../../types/ztree.d.ts" />
-
+import { IZTreeObj, IZTreeNode, IZTreeSetting } from '../../../types/ztree';
 import { HistoryService } from '../../../services/history-service';
 import { HistoryNode } from '../../../services/database-service';
 import { ClosedTabsManager } from '../../../managers/closed-tabs-manager';
 
-declare const $: any;
-
 export class HistoryTreeZTree {
   private container: HTMLElement;
-  private treeObj: IZTreeObj | null = null;
-  private treeContainer: HTMLElement | null = null;
+  private iframe: HTMLIFrameElement | null = null;
+  private iframeWindow: Window | null = null;
   
   constructor(
     private window: Window,
     private historyService: HistoryService,
     private closedTabsManager: ClosedTabsManager
   ) {
-    // 验证 window 对象
-    Zotero.log(`[HistoryTreeZTree] Constructor called with window: ${window}`, 'info');
-    Zotero.log(`[HistoryTreeZTree] Window location: ${window.location?.href || 'unknown'}`, 'info');
-    Zotero.log(`[HistoryTreeZTree] Document ready state: ${window.document?.readyState || 'unknown'}`, 'info');
-    Zotero.log(`[HistoryTreeZTree] Has document.body: ${!!window.document?.body}`, 'info');
-    Zotero.log(`[HistoryTreeZTree] Document type: ${window.document?.constructor?.name || 'unknown'}`, 'info');
-    Zotero.log(`[HistoryTreeZTree] Document URL: ${window.document?.URL || 'unknown'}`, 'info');
-    Zotero.log(`[HistoryTreeZTree] Document doctype: ${window.document?.doctype || 'null'}`, 'info');
+    Zotero.log('[HistoryTreeZTree] Using iframe approach for complete isolation', 'info');
     
-    // 检查是否是 iframe
-    try {
-      const isIframe = window !== window.top;
-      Zotero.log(`[HistoryTreeZTree] Is iframe: ${isIframe}`, 'info');
-      if (isIframe) {
-        Zotero.log(`[HistoryTreeZTree] Parent window location: ${window.parent?.location?.href || 'unknown'}`, 'info');
-      }
-    } catch (e) {
-      Zotero.log(`[HistoryTreeZTree] Cannot check iframe status: ${e}`, 'warn');
-    }
+    // 设置全局函数供 iframe 调用
+    (this.window as any).refreshHistoryTree = () => this.refresh();
+    (this.window as any).deleteHistoryNode = (nodeId: string) => this.handleDeleteNode(nodeId);
+    (this.window as any).restoreClosedTab = (tabData: any) => this.handleRestoreTab(tabData);
+    (this.window as any).clearAllHistory = () => this.handleClearAll();
+    (this.window as any).showHistorySettings = () => this.showSettings();
+    (this.window as any).handleHistoryNodeClick = (treeNode: any) => this.handleNodeClick(treeNode);
+    (this.window as any).handleHistoryNodeRightClick = (event: Event, treeNode: any) => this.handleNodeRightClick(event, treeNode);
+    (this.window as any).onHistoryTreeReady = () => this.onIframeReady();
   }
   
   /**
@@ -46,22 +35,7 @@ export class HistoryTreeZTree {
    */
   async init(container: HTMLElement): Promise<void> {
     this.container = container;
-    
-    // 使用容器的文档，这是最可靠的
-    const containerDoc = container.ownerDocument;
-    if (containerDoc && containerDoc.defaultView) {
-      this.window = containerDoc.defaultView;
-      Zotero.log('[HistoryTreeZTree] Using container\'s window', 'info');
-    } else {
-      // 回退到主窗口
-      const mainWindow = Zotero.getMainWindow();
-      if (mainWindow) {
-        this.window = mainWindow;
-        Zotero.log('[HistoryTreeZTree] Using Zotero main window as fallback', 'info');
-      }
-    }
-    
-    const doc = containerDoc || this.window.document;
+    const doc = container.ownerDocument || this.window.document;
     
     // 确保容器存在且已附加到 DOM
     if (!container || !container.parentNode) {
@@ -72,37 +46,92 @@ export class HistoryTreeZTree {
     // 清空容器
     this.container.innerHTML = '';
     
-    // 创建工具栏
-    const toolbar = this.createToolbar(doc);
-    this.container.appendChild(toolbar);
-    
-    // 创建树容器
-    this.treeContainer = doc.createElement('div');
-    this.treeContainer.id = 'history-ztree';
-    this.treeContainer.className = 'ztree';
-    this.treeContainer.style.cssText = `
-      flex: 1;
-      overflow: auto;
-      padding: 10px;
+    // 创建 iframe
+    this.iframe = doc.createElement('iframe');
+    this.iframe.setAttribute('type', 'content'); // 对于 Zotero 6 的 XUL
+    this.iframe.setAttribute('src', 'chrome://researchnavigator/content/history-tree.html');
+    this.iframe.style.cssText = `
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: transparent;
     `;
-    this.container.appendChild(this.treeContainer);
     
-    // 延迟初始化，让 DOM 有时间稳定
-    setTimeout(() => {
-      Zotero.log('[HistoryTreeZTree] Starting initialization after delay', 'info');
-      this.performInitialization().catch(error => {
-        Zotero.logError(`[HistoryTreeZTree] Initialization failed: ${error}`);
-        this.showError(error.toString());
+    // 监听 iframe 加载完成
+    this.iframe.addEventListener('load', () => {
+      this.iframeWindow = this.iframe!.contentWindow;
+      Zotero.log('[HistoryTreeZTree] iframe loaded successfully', 'info');
+    });
+    
+    // 添加到容器
+    this.container.appendChild(this.iframe);
+    
+    Zotero.log('[HistoryTreeZTree] iframe created and appended', 'info');
+  }
+  
+  /**
+   * iframe 准备就绪的回调
+   */
+  private async onIframeReady(): Promise<void> {
+    Zotero.log('[HistoryTreeZTree] iframe ready, loading data', 'info');
+    
+    try {
+      // 获取数据
+      const sessions = await this.historyService.getAllSessions();
+      const closedTabs = this.closedTabsManager.getClosedTabs();
+      
+      // 转换数据为树节点格式
+      const data = await this.prepareTreeData(sessions, closedTabs);
+      
+      // 调用 iframe 中的 API 构建树
+      if (this.iframeWindow && (this.iframeWindow as any).historyTreeAPI) {
+        (this.iframeWindow as any).historyTreeAPI.buildTree(data);
+        Zotero.log('[HistoryTreeZTree] Tree data sent to iframe', 'info');
+      } else {
+        throw new Error('iframe API not available');
+      }
+    } catch (error) {
+      Zotero.logError(`[HistoryTreeZTree] Failed to load tree data: ${error}`);
+      this.showError(error.toString());
+    }
+  }
+  
+  /**
+   * 准备树数据
+   */
+  private async prepareTreeData(sessions: any[], closedTabs: any[]): Promise<any> {
+    const dateGroups = new Map<string, any[]>();
+    
+    // 处理 sessions
+    for (const session of sessions) {
+      const date = new Date(session.startTime).toLocaleDateString();
+      if (!dateGroups.has(date)) {
+        dateGroups.set(date, []);
+      }
+      
+      const nodes = await this.historyService.getSessionNodes(session.id);
+      dateGroups.get(date)!.push({
+        session,
+        nodes
       });
-    }, 100);
+    }
+    
+    return {
+      dateGroups: Array.from(dateGroups.entries()),
+      closedTabs,
+      settings: {
+        historyLoadDays: Zotero.Prefs.get('researchnavigator.historyLoadDays', true) || 7,
+        maxHistoryGroups: Zotero.Prefs.get('researchnavigator.maxHistoryGroups', true) || 50
+      }
+    };
   }
   
   /**
    * 显示错误信息
    */
   private showError(error: string): void {
-    if (this.treeContainer) {
-      this.treeContainer.innerHTML = `
+    if (this.container) {
+      this.container.innerHTML = `
         <div style="padding: 20px; text-align: center; color: #666;">
           <p>Failed to load tree view components.</p>
           <p style="font-size: 12px; margin-top: 10px;">Error: ${error}</p>
@@ -113,586 +142,47 @@ export class HistoryTreeZTree {
   }
   
   /**
-   * 执行实际的初始化
-   */
-  private async performInitialization(): Promise<void> {
-    try {
-      // 加载 jQuery 和 zTree（如果尚未加载）
-      await this.loadDependencies();
-      
-      // 初始化树
-      await this.refreshTree();
-    } catch (error) {
-      Zotero.logError(`[HistoryTreeZTree] Failed to initialize zTree: ${error}`);
-      throw error;
-    }
-  }
-  
-  /**
-   * 创建工具栏
-   */
-  private createToolbar(doc: Document): HTMLElement {
-    const toolbar = doc.createElement('div');
-    toolbar.style.cssText = `
-      display: flex;
-      padding: 8px;
-      gap: 8px;
-      border-bottom: 1px solid var(--fill-quinary);
-      align-items: center;
-    `;
-    
-    // 刷新按钮
-    const refreshBtn = doc.createElement('button');
-    refreshBtn.textContent = '🔄 Refresh';
-    refreshBtn.style.cssText = `
-      padding: 4px 8px;
-      font-size: 12px;
-    `;
-    refreshBtn.addEventListener('click', () => this.refreshTree());
-    toolbar.appendChild(refreshBtn);
-    
-    // 展开/折叠按钮
-    const expandAllBtn = doc.createElement('button');
-    expandAllBtn.textContent = '📂 Expand All';
-    expandAllBtn.style.cssText = `
-      padding: 4px 8px;
-      font-size: 12px;
-    `;
-    expandAllBtn.addEventListener('click', () => {
-      if (this.treeObj) {
-        const isExpanded = expandAllBtn.textContent.includes('Expand');
-        this.treeObj.expandAll(isExpanded);
-        expandAllBtn.textContent = isExpanded ? '📁 Collapse All' : '📂 Expand All';
-      }
-    });
-    toolbar.appendChild(expandAllBtn);
-    
-    // 设置按钮
-    const settingsBtn = doc.createElement('button');
-    settingsBtn.textContent = '⚙️ Settings';
-    settingsBtn.style.cssText = `
-      padding: 4px 8px;
-      font-size: 12px;
-      margin-left: auto;
-    `;
-    settingsBtn.addEventListener('click', () => this.showSettings());
-    toolbar.appendChild(settingsBtn);
-    
-    return toolbar;
-  }
-  
-  /**
-   * 加载依赖
-   */
-  private async loadDependencies(): Promise<void> {
-    try {
-      const doc = this.window.document;
-      const win = this.window as any;
-      
-      Zotero.log('[HistoryTreeZTree] Starting dependency loading...', 'info');
-      
-      // 检查 jQuery 是否已加载
-      if (typeof win.$ === 'undefined' && typeof win.jQuery === 'undefined') {
-        Zotero.log('[HistoryTreeZTree] jQuery not found, loading...', 'info');
-        // 获取插件的根 URI
-        const rootURI = await this.getPluginRootURI();
-        
-        // 加载 jQuery
-        await this.loadScript(rootURI + 'content/lib/jquery.min.js');
-        
-        // 等待 jQuery 真正可用
-        let jQueryCheckCount = 0;
-        while ((typeof win.$ === 'undefined' && typeof win.jQuery === 'undefined') && jQueryCheckCount < 10) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-          jQueryCheckCount++;
-        }
-        
-        if (typeof win.$ === 'undefined' && typeof win.jQuery === 'undefined') {
-          throw new Error('jQuery failed to load after multiple attempts');
-        }
-        
-        Zotero.log('[HistoryTreeZTree] jQuery loaded successfully', 'info');
-      }
-      
-      // 获取 jQuery 引用
-      const $ = win.$ || win.jQuery;
-      
-      // 检查 zTree 是否已加载
-      if (!$ || typeof $.fn.zTree === 'undefined') {
-        Zotero.log('[HistoryTreeZTree] zTree not found, loading...', 'info');
-        
-        // 获取插件的根 URI（如果还没有的话）
-        const rootURI = await this.getPluginRootURI();
-        
-        // 加载 zTree CSS
-        const link = doc.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = rootURI + 'content/lib/ztree/zTreeStyle.css';
-        
-        // 确保 head 存在
-        if (doc.head) {
-          doc.head.appendChild(link);
-        } else if (doc.documentElement) {
-          doc.documentElement.appendChild(link);
-        } else {
-          // 延迟加载
-          setTimeout(() => {
-            if (doc.head) {
-              doc.head.appendChild(link);
-            }
-          }, 100);
-        }
-        
-        // 加载 zTree JS
-        await this.loadScript(rootURI + 'content/lib/ztree/jquery.ztree.core.min.js');
-        
-        // 等待 zTree 真正可用
-        let zTreeCheckCount = 0;
-        while ((!$ || typeof $.fn.zTree === 'undefined') && zTreeCheckCount < 10) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-          zTreeCheckCount++;
-        }
-        
-        if (!$ || typeof $.fn.zTree === 'undefined') {
-          throw new Error('zTree failed to load after multiple attempts');
-        }
-        
-        Zotero.log('[HistoryTreeZTree] zTree loaded successfully', 'info');
-      }
-      
-      Zotero.log('[HistoryTreeZTree] All dependencies loaded', 'info');
-    } catch (error) {
-      Zotero.logError(`[HistoryTreeZTree] Failed to load dependencies: ${error}`);
-      throw error;
-    }
-  }
-  
-  /**
-   * 获取插件的根 URI
-   */
-  private async getPluginRootURI(): Promise<string> {
-    try {
-      // 获取当前插件的 ID
-      const pluginID = 'research-navigator@zotero.org';
-      
-      // 使用 Zotero.Plugins API 获取根 URI
-      if (Zotero && Zotero.Plugins && typeof Zotero.Plugins.getRootURI === 'function') {
-        try {
-          const uri = await Zotero.Plugins.getRootURI(pluginID);
-          if (uri) {
-            Zotero.log(`[HistoryTreeZTree] Plugin root URI: ${uri}`, 'info');
-            return uri;
-          }
-        } catch (e) {
-          Zotero.log(`[HistoryTreeZTree] getRootURI failed: ${e}`, 'warn');
-        }
-      }
-      
-      // 尝试其他方法获取插件路径
-      if (typeof AddonManager !== 'undefined') {
-        try {
-          const { AddonManager } = ChromeUtils.import("resource://gre/modules/AddonManager.jsm");
-          const addon = await AddonManager.getAddonByID(pluginID);
-          if (addon && addon.getResourceURI) {
-            const uri = addon.getResourceURI().spec;
-            Zotero.log(`[HistoryTreeZTree] Got URI via AddonManager: ${uri}`, 'info');
-            return uri;
-          }
-        } catch (e) {
-          Zotero.log(`[HistoryTreeZTree] AddonManager approach failed: ${e}`, 'warn');
-        }
-      }
-      
-      // 回退到默认的 chrome:// URL
-      Zotero.log('[HistoryTreeZTree] Using fallback chrome:// URL', 'warn');
-      return 'chrome://researchnavigator/';
-    } catch (error) {
-      Zotero.logError(`[HistoryTreeZTree] Failed to get plugin root URI: ${error}`);
-      return 'chrome://researchnavigator/';
-    }
-  }
-
-  /**
-   * 动态加载脚本
-   */
-  private loadScript(src: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      try {
-        // 检查是否有 Services.scriptloader 可用
-        if (typeof Services !== 'undefined' && Services.scriptloader) {
-          Zotero.log(`[HistoryTreeZTree] Attempting to load script via Services.scriptloader: ${src}`, 'info');
-          
-          try {
-            // 尝试加载脚本到 window 作用域
-            Services.scriptloader.loadSubScript(src, this.window, 'UTF-8');
-            Zotero.log(`[HistoryTreeZTree] Script loaded successfully via Services.scriptloader: ${src}`, 'info');
-            resolve();
-            return;
-          } catch (e) {
-            Zotero.log(`[HistoryTreeZTree] Services.scriptloader failed, falling back to DOM method: ${e}`, 'warn');
-          }
-        }
-        
-        // 回退到 DOM 方法
-        const doc = this.window.document;
-        Zotero.log(`[HistoryTreeZTree] Loading script via DOM: ${src}`, 'info');
-        
-        // 确保文档已经准备好
-        if (!doc) {
-          Zotero.logError(`[HistoryTreeZTree] No document available`);
-          reject(new Error('No document available'));
-          return;
-        }
-        
-        // 对于 DOM 方法，我们需要至少有 head 或 body
-        if (!doc.head && !doc.body && !doc.documentElement) {
-          Zotero.logError(`[HistoryTreeZTree] Document structure not ready for DOM script loading`);
-          // 等待一下再试
-          setTimeout(() => {
-            if (doc.head || doc.body || doc.documentElement) {
-              this.loadScript(src).then(resolve).catch(reject);
-            } else {
-              reject(new Error('Document structure not ready after waiting'));
-            }
-          }, 100);
-          return;
-        }
-        
-        const script = doc.createElement('script');
-        script.type = 'text/javascript';
-        script.src = src;
-        
-        let loaded = false;
-        const onLoad = () => {
-          if (!loaded) {
-            loaded = true;
-            Zotero.log(`[HistoryTreeZTree] Script loaded successfully via DOM: ${src}`, 'info');
-            resolve();
-          }
-        };
-        
-        const onError = (error: any) => {
-          if (!loaded) {
-            loaded = true;
-            Zotero.logError(`[HistoryTreeZTree] Failed to load script via DOM: ${src}`);
-            reject(new Error(`Failed to load script: ${src}`));
-          }
-        };
-        
-        script.addEventListener('load', onLoad);
-        script.addEventListener('error', onError);
-        
-        // 尝试附加到不同的位置
-        const appendScript = () => {
-          try {
-            if (doc.head) {
-              doc.head.appendChild(script);
-            } else if (doc.body) {
-              doc.body.appendChild(script);
-            } else if (doc.documentElement) {
-              doc.documentElement.appendChild(script);
-            } else {
-              // 如果 DOM 还没准备好，等待一下再试
-              setTimeout(() => {
-                if (doc.head || doc.body) {
-                  appendScript();
-                } else {
-                  onError(new Error('No suitable element to append script'));
-                }
-              }, 100);
-            }
-          } catch (e) {
-            Zotero.logError(`[HistoryTreeZTree] Error appending script: ${e}`);
-            onError(e);
-          }
-        };
-        
-        appendScript();
-      } catch (error) {
-        Zotero.logError(`[HistoryTreeZTree] Unexpected error loading script ${src}: ${error}`);
-        reject(error);
-      }
-    });
-  }
-  
-  /**
    * 刷新树
    */
-  async refreshTree(): Promise<void> {
-    if (!this.treeContainer) return;
-    
-    // 获取数据
-    const sessions = await this.historyService.getAllSessions();
-    const closedTabs = this.closedTabsManager.getClosedTabs();
-    
-    // 转换为 zTree 节点格式
-    const zNodes: IZTreeNode[] = [];
-    
-    // 按日期分组
-    const dateGroups = new Map<string, IZTreeNode[]>();
-    
-    // 处理 sessions
-    for (const session of sessions) {
-      const date = new Date(session.startTime).toLocaleDateString();
-      if (!dateGroups.has(date)) {
-        dateGroups.set(date, []);
-      }
-      
-      // 获取该 session 的所有节点
-      const nodes = await this.historyService.getSessionNodes(session.id);
-      
-      const sessionNode: IZTreeNode = {
-        id: `session_${session.id}`,
-        pId: `date_${date}`,
-        name: `📚 Session ${session.id.slice(-6)}`,
-        title: `${nodes.length} items`,
-        open: false,
-        isParent: true,
-        sessionData: session
-      };
-      
-      dateGroups.get(date)!.push(sessionNode);
-      
-      // 添加子节点
-      for (const node of nodes) {
-        const childNode: IZTreeNode = {
-          id: `node_${node.id}`,
-          pId: sessionNode.id,
-          name: this.formatNodeName(node),
-          title: node.title,
-          icon: this.getNodeIcon(node),
-          nodeData: node
-        };
-        zNodes.push(childNode);
-      }
-    }
-    
-    // 处理 closed tabs（按日期分组）
-    const closedByDate = new Map<string, any[]>();
-    for (const closedTab of closedTabs) {
-      const date = closedTab.closedAt.toLocaleDateString();
-      if (!closedByDate.has(date)) {
-        closedByDate.set(date, []);
-      }
-      closedByDate.get(date)!.push(closedTab);
-    }
-    
-    // 创建日期节点
-    const allDates = new Set([...dateGroups.keys(), ...closedByDate.keys()]);
-    const sortedDates = Array.from(allDates).sort((a, b) => 
-      new Date(b).getTime() - new Date(a).getTime()
-    );
-    
-    for (const date of sortedDates) {
-      const dateNode: IZTreeNode = {
-        id: `date_${date}`,
-        pId: null,
-        name: `📅 ${date}`,
-        open: sortedDates.indexOf(date) < 3, // 默认展开最近3天
-        isParent: true
-      };
-      zNodes.push(dateNode);
-      
-      // 添加该日期的 sessions
-      const dateSessions = dateGroups.get(date) || [];
-      zNodes.push(...dateSessions);
-      
-      // 添加该日期的 closed tabs
-      const dateClosedTabs = closedByDate.get(date) || [];
-      if (dateClosedTabs.length > 0) {
-        const closedGroupNode: IZTreeNode = {
-          id: `closed_${date}`,
-          pId: `date_${date}`,
-          name: `👻 Closed Tabs (${dateClosedTabs.length})`,
-          open: false,
-          isParent: true,
-          icon: 'chrome://researchnavigator/content/icons/ghost.png'
-        };
-        zNodes.push(closedGroupNode);
-        
-        for (const closedTab of dateClosedTabs) {
-          const closedNode: IZTreeNode = {
-            id: `closed_${closedTab.node.id}`,
-            pId: closedGroupNode.id,
-            name: `👻 ${closedTab.node.title || 'Untitled'}`,
-            title: `Closed at ${closedTab.closedAt.toLocaleTimeString()}`,
-            icon: this.getNodeIcon(closedTab.node),
-            closedTabData: closedTab
-          };
-          zNodes.push(closedNode);
-        }
-      }
-    }
-    
-    // 初始化或更新树
-    const setting: IZTreeSetting = {
-      view: {
-        dblClickExpand: true,
-        showLine: true,
-        showIcon: true,
-        nameIsHTML: true,
-        addDiyDom: (treeId: string, treeNode: IZTreeNode) => {
-          this.addCustomButtons(treeId, treeNode);
-        }
-      },
-      data: {
-        simpleData: {
-          enable: true,
-          idKey: "id",
-          pIdKey: "pId"
-        }
-      },
-      callback: {
-        onClick: (event: Event, treeId: string, treeNode: IZTreeNode) => {
-          this.handleNodeClick(treeNode);
-        },
-        onRightClick: (event: Event, treeId: string, treeNode: IZTreeNode) => {
-          this.handleNodeRightClick(event, treeNode);
-        }
-      }
-    };
-    
-    // 使用 jQuery 初始化 zTree - 确保 DOM 已经准备好
-    const $ = this.window.$;
-    
-    // 使用 DOMContentLoaded 确保 DOM 准备就绪
-    const initializeZTree = () => {
-      try {
-        // 再次检查容器是否存在
-        if (!this.treeContainer || !this.treeContainer.parentNode) {
-          Zotero.logError('[HistoryTreeZTree] Tree container not found or not attached to DOM');
-          return;
-        }
-        
-        // 确保 jQuery 存在
-        const $ = (this.window as any).$ || (this.window as any).jQuery || (window as any).$;
-        if (!$ || !$.fn || !$.fn.zTree) {
-          throw new Error('jQuery or zTree not loaded');
-        }
-        
-        // 执行初始化
-        this.treeObj = $.fn.zTree.init($(this.treeContainer), setting, zNodes);
-        Zotero.log('[HistoryTreeZTree] zTree initialized successfully', 'info');
-      } catch (e) {
-        Zotero.logError(`[HistoryTreeZTree] Failed to initialize zTree: ${e}`);
-        throw e;
-      }
-    };
-    
-    // 检查文档状态
-    if (this.window.document.readyState === 'loading') {
-      // 文档还在加载，等待 DOMContentLoaded
-      Zotero.log('[HistoryTreeZTree] Document loading, waiting for DOMContentLoaded', 'info');
-      this.window.document.addEventListener('DOMContentLoaded', initializeZTree);
-    } else {
-      // 文档已经准备好，直接执行
-      Zotero.log('[HistoryTreeZTree] Document ready, initializing immediately', 'info');
-      initializeZTree();
-    }
-  }
-  
-  /**
-   * 格式化节点名称
-   */
-  private formatNodeName(node: HistoryNode): string {
-    const icon = this.getNodeIcon(node);
-    const status = node.status === 'active' ? '🟢' : '⚫';
-    return `${icon} ${status} ${node.title || 'Untitled'}`;
-  }
-  
-  /**
-   * 获取节点图标
-   */
-  private getNodeIcon(node: HistoryNode): string {
-    switch (node.itemType) {
-      case 'journalArticle':
-        return '📄';
-      case 'book':
-        return '📚';
-      case 'webpage':
-        return '🌐';
-      case 'attachment':
-        return node.title?.toLowerCase().includes('.pdf') ? '📑' : '📎';
-      default:
-        return '📝';
-    }
-  }
-  
-  /**
-   * 添加自定义按钮
-   */
-  private addCustomButtons(treeId: string, treeNode: IZTreeNode): void {
-    const $ = this.window.$;
-    const aObj = $(`#${treeNode.tId}_a`);
-    
-    // 为历史节点添加删除按钮
-    if (treeNode.nodeData || treeNode.closedTabData) {
-      const deleteBtn = $('<span class="button" style="margin-left:5px;">🗑️</span>');
-      deleteBtn.bind('click', (e: Event) => {
-        e.stopPropagation();
-        this.handleDeleteNode(treeNode);
-      });
-      aObj.append(deleteBtn);
-    }
-    
-    // 为关闭的标签添加恢复按钮
-    if (treeNode.closedTabData) {
-      const restoreBtn = $('<span class="button" style="margin-left:5px;">↩️</span>');
-      restoreBtn.bind('click', (e: Event) => {
-        e.stopPropagation();
-        this.handleRestoreTab(treeNode.closedTabData);
-      });
-      aObj.append(restoreBtn);
-    }
-  }
-  
-  /**
-   * 处理节点点击
-   */
-  private handleNodeClick(treeNode: IZTreeNode): void {
-    if (treeNode.nodeData) {
-      // 打开项目
-      const itemId = treeNode.nodeData.itemId;
-      Zotero.getActiveZoteroPane().selectItem(itemId);
-    } else if (treeNode.closedTabData) {
-      // 显示关闭标签的信息
-      const info = treeNode.closedTabData;
-      Zotero.log(`Closed tab: ${info.node.title} at ${info.closedAt}`, "info");
-    }
-  }
-  
-  /**
-   * 处理节点右键
-   */
-  private handleNodeRightClick(event: Event, treeNode: IZTreeNode): void {
-    // TODO: 实现右键菜单
-    event.preventDefault();
+  async refresh(): Promise<void> {
+    Zotero.log('[HistoryTreeZTree] Refreshing tree', 'info');
+    await this.onIframeReady();
   }
   
   /**
    * 处理删除节点
    */
-  private async handleDeleteNode(treeNode: IZTreeNode): Promise<void> {
-    if (confirm('Delete this history node?')) {
-      if (treeNode.nodeData) {
-        await this.historyService.deleteNode(treeNode.nodeData.id);
-      } else if (treeNode.closedTabData) {
-        // 使用节点的 ID 来删除
-        const tabId = treeNode.closedTabData.node.id;
-        await this.closedTabsManager.removeClosedTab(tabId);
-      }
-      await this.refreshTree();
+  private async handleDeleteNode(nodeId: string): Promise<void> {
+    try {
+      await this.historyService.deleteNode(nodeId);
+      await this.refresh();
+    } catch (error) {
+      Zotero.logError(`[HistoryTreeZTree] Failed to delete node: ${error}`);
     }
   }
   
   /**
    * 处理恢复标签
    */
-  private async handleRestoreTab(closedTab: any): Promise<void> {
-    const index = this.closedTabsManager.getClosedTabs().indexOf(closedTab);
-    if (index !== -1) {
-      await this.closedTabsManager.restoreTab(index);
-      await this.refreshTree();
+  private handleRestoreTab(closedTab: any): void {
+    try {
+      this.closedTabsManager.restoreTab(closedTab);
+    } catch (error) {
+      Zotero.logError(`[HistoryTreeZTree] Failed to restore tab: ${error}`);
+    }
+  }
+  
+  /**
+   * 处理清空所有历史
+   */
+  private async handleClearAll(): Promise<void> {
+    if (this.window.confirm('Are you sure you want to clear all history? This cannot be undone.')) {
+      try {
+        await this.historyService.clearAll(false);
+        await this.refresh();
+      } catch (error) {
+        Zotero.logError(`[HistoryTreeZTree] Failed to clear history: ${error}`);
+      }
     }
   }
   
@@ -700,109 +190,31 @@ export class HistoryTreeZTree {
    * 显示设置对话框
    */
   private showSettings(): void {
-    const doc = this.window.document;
-    
-    // 创建对话框
-    const dialog = doc.createElement('div');
-    dialog.style.cssText = `
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-      z-index: 1000;
-    `;
-    
-    // 创建标题
-    const title = doc.createElement('h3');
-    title.textContent = 'History Settings';
-    dialog.appendChild(title);
-    
-    // 创建第一个设置项
-    const div1 = doc.createElement('div');
-    div1.style.margin = '10px 0';
-    const label1 = doc.createElement('label');
-    label1.textContent = 'Load history for last ';
-    const input1 = doc.createElement('input');
-    input1.type = 'number';
-    input1.id = 'historyDays';
-    input1.min = '1';
-    input1.max = '365';
-    input1.value = String(Zotero.Prefs.get('researchnavigator.historyLoadDays', true) || 7);
-    input1.style.width = '50px';
-    label1.appendChild(input1);
-    label1.appendChild(doc.createTextNode(' days'));
-    div1.appendChild(label1);
-    dialog.appendChild(div1);
-    
-    // 创建第二个设置项
-    const div2 = doc.createElement('div');
-    div2.style.margin = '10px 0';
-    const label2 = doc.createElement('label');
-    label2.textContent = 'Maximum history groups: ';
-    const input2 = doc.createElement('input');
-    input2.type = 'number';
-    input2.id = 'maxGroups';
-    input2.min = '10';
-    input2.max = '500';
-    input2.value = String(Zotero.Prefs.get('researchnavigator.maxHistoryGroups', true) || 50);
-    input2.style.width = '50px';
-    label2.appendChild(input2);
-    div2.appendChild(label2);
-    dialog.appendChild(div2);
-    
-    // 创建按钮容器
-    const buttonDiv = doc.createElement('div');
-    buttonDiv.style.marginTop = '20px';
-    buttonDiv.style.textAlign = 'right';
-    const saveBtn = doc.createElement('button');
-    saveBtn.id = 'saveSettings';
-    saveBtn.textContent = 'Save';
-    const cancelBtn = doc.createElement('button');
-    cancelBtn.id = 'cancelSettings';
-    cancelBtn.textContent = 'Cancel';
-    buttonDiv.appendChild(saveBtn);
-    buttonDiv.appendChild(doc.createTextNode(' '));
-    buttonDiv.appendChild(cancelBtn);
-    dialog.appendChild(buttonDiv);
-    
-    // 背景遮罩
-    const overlay = doc.createElement('div');
-    overlay.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 999;
-    `;
-    
-    doc.body.appendChild(overlay);
-    doc.body.appendChild(dialog);
-    
-    // 事件处理
-    doc.getElementById('saveSettings')!.addEventListener('click', () => {
-      const days = parseInt((doc.getElementById('historyDays') as HTMLInputElement).value);
-      const groups = parseInt((doc.getElementById('maxGroups') as HTMLInputElement).value);
-      
-      Zotero.Prefs.set('researchnavigator.historyLoadDays', days, true);
-      Zotero.Prefs.set('researchnavigator.maxHistoryGroups', groups, true);
-      
-      doc.body.removeChild(overlay);
-      doc.body.removeChild(dialog);
-      
-      // 重新加载设置并刷新
-      this.closedTabsManager['loadSettings']();
-      this.refreshTree();
-    });
-    
-    doc.getElementById('cancelSettings')!.addEventListener('click', () => {
-      doc.body.removeChild(overlay);
-      doc.body.removeChild(dialog);
-    });
+    // TODO: 实现设置对话框
+    Zotero.log('[HistoryTreeZTree] Settings dialog not implemented yet', 'warn');
+  }
+  
+  /**
+   * 处理节点点击
+   */
+  private handleNodeClick(treeNode: any): void {
+    if (treeNode.historyNode) {
+      const node = treeNode.historyNode;
+      if (node.itemId) {
+        // 在 Zotero 中选择项目
+        const ZoteroPane = Zotero.getActiveZoteroPane();
+        if (ZoteroPane) {
+          ZoteroPane.selectItem(node.itemId);
+        }
+      }
+    }
+  }
+  
+  /**
+   * 处理节点右键点击
+   */
+  private handleNodeRightClick(event: Event, treeNode: any): void {
+    // TODO: 实现右键菜单
+    Zotero.log('[HistoryTreeZTree] Right-click menu not implemented yet', 'info');
   }
 }
