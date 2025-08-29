@@ -1535,9 +1535,13 @@ export class NoteRelationsTab {
           border: 0;
           width: 100%;
           flex-grow: 1;
+          min-height: 400px;
         `;
         iframe.src = 'resource://zotero/note-editor/editor.html';
         iframe.setAttribute('type', 'content');
+        
+        // 添加 DOCTYPE 以避免 Quirks Mode
+        iframe.setAttribute('mozbrowser', 'true');
         
         noteEditorContainer.appendChild(iframe);
         editorContainer.appendChild(noteEditorContainer);
@@ -1546,6 +1550,9 @@ export class NoteRelationsTab {
         if (win.Zotero.UIProperties) {
           win.Zotero.UIProperties.registerRoot(noteEditorContainer);
         }
+        
+        // 先隐藏 iframe，避免闪烁
+        iframe.style.visibility = 'hidden';
         
         // 标记 iframe 初始化状态
         let iframeInitialized = false;
@@ -1580,7 +1587,9 @@ export class NoteRelationsTab {
                 iframeWindow: iframe.contentWindow,
                 viewMode: 'library',
                 readOnly: false,
-                placeholder: 'Start typing...'
+                placeholder: 'Start typing...',
+                // 添加 popup 参数以避免 BetterNotes 错误
+                popup: null
               });
               
               // 保存引用以便清理
@@ -1590,7 +1599,7 @@ export class NoteRelationsTab {
               
               Zotero.log(`[NoteRelationsTab] Native editor initialized successfully`, "info");
               
-              // 检查编辑器状态
+              // 检查编辑器状态并显示
               setTimeout(() => {
                 const iframeDoc = iframe.contentDocument;
                 if (iframeDoc) {
@@ -1601,8 +1610,24 @@ export class NoteRelationsTab {
                   // 尝试找到编辑器元素
                   const editorEl = iframeDoc.querySelector('.editor-core');
                   Zotero.log(`[NoteRelationsTab] Editor element found: ${!!editorEl}`, "info");
+                  
+                  // 如果内容已加载，显示 iframe
+                  if (hasContent && editorEl) {
+                    iframe.style.visibility = 'visible';
+                    iframe.style.opacity = '0';
+                    iframe.style.transition = 'opacity 0.3s ease-in-out';
+                    setTimeout(() => {
+                      iframe.style.opacity = '1';
+                    }, 50);
+                  }
                 }
-              }, 1000);
+              }, 500);
+              
+              // 备用：确保最终显示
+              setTimeout(() => {
+                iframe.style.visibility = 'visible';
+                iframe.style.opacity = '1';
+              }, 1500);
             }
           } catch (error) {
             Zotero.logError(`[NoteRelationsTab] Failed to initialize native editor: ${error}`);
