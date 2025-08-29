@@ -7,12 +7,15 @@ import { HistoryService } from "../../../services/history-service";
 import { ClosedTabsManager } from "../../../managers/closed-tabs-manager";
 import { ZoteroTabsIntegration, ZoteroTabData } from "../../../managers/zotero-tabs-integration";
 import { HistoryNode } from "../../../services/database-service";
+import { HistoryTreeZTree } from "./history-tree-ztree";
 
 export class HistoryTreeTab {
   private container: HTMLElement | null = null;
   private treeContainer: HTMLElement | null = null;
   private searchInput: HTMLInputElement | null = null;
   private tabsIntegration: ZoteroTabsIntegration;
+  private useZTree: boolean = true; // 使用 zTree 实现
+  private zTreeComponent: HistoryTreeZTree | null = null;
   
   constructor(
     private window: Window,
@@ -21,6 +24,9 @@ export class HistoryTreeTab {
   ) {
     this.tabsIntegration = new ZoteroTabsIntegration();
     this.tabsIntegration.addHistoryChangeListener(() => this.refresh());
+    
+    // 从设置中读取是否使用 zTree
+    this.useZTree = Zotero.Prefs.get('researchnavigator.useZTree', true) !== false;
   }
   
   create(container: HTMLElement): void {
@@ -35,6 +41,18 @@ export class HistoryTreeTab {
       overflow: hidden;
     `;
     
+    // 如果使用 zTree，直接初始化 zTree 组件
+    if (this.useZTree) {
+      this.zTreeComponent = new HistoryTreeZTree(
+        this.window,
+        this.historyService,
+        this.closedTabsManager
+      );
+      this.zTreeComponent.init(container);
+      return;
+    }
+    
+    // 以下是原始实现
     // 创建搜索栏
     const searchBar = doc.createElement("div");
     searchBar.className = "history-search-bar";
@@ -168,6 +186,12 @@ export class HistoryTreeTab {
    * 刷新历史树
    */
   async refresh(): Promise<void> {
+    // 如果使用 zTree，调用其 refresh 方法
+    if (this.useZTree && this.zTreeComponent) {
+      await this.zTreeComponent.refreshTree();
+      return;
+    }
+    
     if (!this.treeContainer) return;
     
     Zotero.log("[HistoryTreeTab] Refreshing history tree", "info");

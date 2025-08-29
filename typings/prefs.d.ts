@@ -14,6 +14,7 @@ declare namespace _ZoteroTypes {
       "treeViewType": string;
       "historyLoadDays": number;
       "maxHistoryGroups": number;
+      "useZTree": boolean;
     };
   }
 }

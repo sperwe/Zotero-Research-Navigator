@@ -113,13 +113,16 @@ export class HistoryTreeZTree {
     const doc = this.window.document;
     
     // 检查 jQuery 是否已加载
-    if (typeof this.window.$ === 'undefined' && typeof this.window.jQuery === 'undefined') {
+    if (typeof (this.window as any).$ === 'undefined' && typeof (this.window as any).jQuery === 'undefined') {
       // 加载 jQuery
       await this.loadScript('chrome://researchnavigator/content/lib/jquery.min.js');
     }
     
+    // 获取 jQuery 引用
+    const $ = (this.window as any).$ || (this.window as any).jQuery;
+    
     // 检查 zTree 是否已加载
-    if (typeof $.fn.zTree === 'undefined') {
+    if (!$ || typeof $.fn.zTree === 'undefined') {
       // 加载 zTree CSS
       const link = doc.createElement('link');
       link.rel = 'stylesheet';
@@ -372,9 +375,9 @@ export class HistoryTreeZTree {
       if (treeNode.nodeData) {
         await this.historyService.deleteNode(treeNode.nodeData.id);
       } else if (treeNode.closedTabData) {
-        await this.closedTabsManager.removeClosedTab(
-          this.closedTabsManager.getClosedTabs().indexOf(treeNode.closedTabData)
-        );
+        // 使用节点的 ID 来删除
+        const tabId = treeNode.closedTabData.node.id;
+        await this.closedTabsManager.removeClosedTab(tabId);
       }
       await this.refreshTree();
     }
@@ -384,10 +387,11 @@ export class HistoryTreeZTree {
    * 处理恢复标签
    */
   private async handleRestoreTab(closedTab: any): Promise<void> {
-    await this.closedTabsManager.restoreTab(
-      this.closedTabsManager.getClosedTabs().indexOf(closedTab)
-    );
-    await this.refreshTree();
+    const index = this.closedTabsManager.getClosedTabs().indexOf(closedTab);
+    if (index !== -1) {
+      await this.closedTabsManager.restoreTab(index);
+      await this.refreshTree();
+    }
   }
   
   /**
