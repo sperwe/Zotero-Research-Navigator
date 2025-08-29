@@ -127,7 +127,20 @@ export class HistoryTreeZTree {
       const link = doc.createElement('link');
       link.rel = 'stylesheet';
       link.href = 'chrome://researchnavigator/content/lib/ztree/zTreeStyle.css';
-      doc.head.appendChild(link);
+      
+      // 确保 head 存在
+      if (doc.head) {
+        doc.head.appendChild(link);
+      } else if (doc.documentElement) {
+        doc.documentElement.appendChild(link);
+      } else {
+        // 延迟加载
+        setTimeout(() => {
+          if (doc.head) {
+            doc.head.appendChild(link);
+          }
+        }, 100);
+      }
       
       // 加载 zTree JS
       await this.loadScript('chrome://researchnavigator/content/lib/ztree/jquery.ztree.core.min.js');
@@ -143,7 +156,15 @@ export class HistoryTreeZTree {
       script.src = src;
       script.onload = () => resolve();
       script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
-      this.window.document.head.appendChild(script);
+      
+      // 确保有地方附加脚本
+      if (this.window.document.head) {
+        this.window.document.head.appendChild(script);
+      } else if (this.window.document.documentElement) {
+        this.window.document.documentElement.appendChild(script);
+      } else {
+        reject(new Error('No suitable element to append script'));
+      }
     });
   }
   
@@ -414,26 +435,58 @@ export class HistoryTreeZTree {
       z-index: 1000;
     `;
     
-    dialog.innerHTML = `
-      <h3>History Settings</h3>
-      <div style="margin: 10px 0;">
-        <label>
-          Load history for last 
-          <input type="number" id="historyDays" min="1" max="365" value="${Zotero.Prefs.get('researchnavigator.historyLoadDays', true)}" style="width: 50px;">
-          days
-        </label>
-      </div>
-      <div style="margin: 10px 0;">
-        <label>
-          Maximum history groups: 
-          <input type="number" id="maxGroups" min="10" max="500" value="${Zotero.Prefs.get('researchnavigator.maxHistoryGroups', true)}" style="width: 50px;">
-        </label>
-      </div>
-      <div style="margin-top: 20px; text-align: right;">
-        <button id="saveSettings">Save</button>
-        <button id="cancelSettings">Cancel</button>
-      </div>
-    `;
+    // 创建标题
+    const title = doc.createElement('h3');
+    title.textContent = 'History Settings';
+    dialog.appendChild(title);
+    
+    // 创建第一个设置项
+    const div1 = doc.createElement('div');
+    div1.style.margin = '10px 0';
+    const label1 = doc.createElement('label');
+    label1.textContent = 'Load history for last ';
+    const input1 = doc.createElement('input');
+    input1.type = 'number';
+    input1.id = 'historyDays';
+    input1.min = '1';
+    input1.max = '365';
+    input1.value = String(Zotero.Prefs.get('researchnavigator.historyLoadDays', true) || 7);
+    input1.style.width = '50px';
+    label1.appendChild(input1);
+    label1.appendChild(doc.createTextNode(' days'));
+    div1.appendChild(label1);
+    dialog.appendChild(div1);
+    
+    // 创建第二个设置项
+    const div2 = doc.createElement('div');
+    div2.style.margin = '10px 0';
+    const label2 = doc.createElement('label');
+    label2.textContent = 'Maximum history groups: ';
+    const input2 = doc.createElement('input');
+    input2.type = 'number';
+    input2.id = 'maxGroups';
+    input2.min = '10';
+    input2.max = '500';
+    input2.value = String(Zotero.Prefs.get('researchnavigator.maxHistoryGroups', true) || 50);
+    input2.style.width = '50px';
+    label2.appendChild(input2);
+    div2.appendChild(label2);
+    dialog.appendChild(div2);
+    
+    // 创建按钮容器
+    const buttonDiv = doc.createElement('div');
+    buttonDiv.style.marginTop = '20px';
+    buttonDiv.style.textAlign = 'right';
+    const saveBtn = doc.createElement('button');
+    saveBtn.id = 'saveSettings';
+    saveBtn.textContent = 'Save';
+    const cancelBtn = doc.createElement('button');
+    cancelBtn.id = 'cancelSettings';
+    cancelBtn.textContent = 'Cancel';
+    buttonDiv.appendChild(saveBtn);
+    buttonDiv.appendChild(doc.createTextNode(' '));
+    buttonDiv.appendChild(cancelBtn);
+    dialog.appendChild(buttonDiv);
     
     // 背景遮罩
     const overlay = doc.createElement('div');
