@@ -193,6 +193,7 @@ export class NoteRelationsTab {
     
     // 关联数量
     this.noteAssociationSystem.getNodeNotes(node.id).then(notes => {
+      Zotero.log(`[NoteRelationsTab] Node ${node.id} has ${notes.length} notes`, "info");
       if (notes.length > 0) {
         const badge = doc.createElement("span");
         badge.style.cssText = `
@@ -206,26 +207,32 @@ export class NoteRelationsTab {
         badge.textContent = notes.length.toString();
         element.appendChild(badge);
       }
+    }).catch(error => {
+      Zotero.logError(`[NoteRelationsTab] Error getting notes for node ${node.id}: ${error}`);
     });
     
     // 点击事件
-    element.addEventListener("click", (e) => {
+    element.addEventListener("click", async (e) => {
       e.stopPropagation();
-      e.preventDefault();
       
       Zotero.log(`[NoteRelationsTab] Node clicked: ${node.id} - ${node.title}`, "info");
       
-      this.selectNode(node);
-      
-      // 更新选中状态
-      element.parentElement?.querySelectorAll("div").forEach(el => {
-        if (el.style.background) {
-          el.style.background = "";
-          el.style.border = "1px solid transparent";
-        }
-      });
-      element.style.background = "var(--material-mix-quinary)";
-      element.style.border = "1px solid var(--material-border-secondary)";
+      try {
+        // 更新选中状态
+        element.parentElement?.querySelectorAll("div").forEach(el => {
+          if (el.style.background) {
+            el.style.background = "";
+            el.style.border = "1px solid transparent";
+          }
+        });
+        element.style.background = "var(--material-mix-quinary)";
+        element.style.border = "1px solid var(--material-border-secondary)";
+        
+        // 选择节点
+        await this.selectNode(node);
+      } catch (error) {
+        Zotero.logError(`[NoteRelationsTab] Error handling node click: ${error}`);
+      }
     });
     
     // 悬停效果
@@ -261,58 +268,59 @@ export class NoteRelationsTab {
   private async loadNodeAssociations(): Promise<void> {
     if (!this.selectedNode || !this.contentContainer) return;
     
-    const doc = this.window.document;
-    this.contentContainer.innerHTML = "";
-    
-    // 标题栏
-    const header = doc.createElement("div");
-    header.style.cssText = `
-      padding: 15px;
-      border-bottom: 1px solid var(--material-border-quarternary);
-      background: var(--material-background);
-    `;
-    
-    const title = doc.createElement("h3");
-    title.style.margin = "0 0 5px 0";
-    title.textContent = this.selectedNode.title || `Item ${this.selectedNode.itemId}`;
-    header.appendChild(title);
-    
-    const subtitle = doc.createElement("div");
-    subtitle.style.cssText = `
-      color: var(--fill-secondary);
-      font-size: 0.9em;
-    `;
-    subtitle.textContent = `${new Date(this.selectedNode.timestamp).toLocaleString()} - ${this.selectedNode.status}`;
-    header.appendChild(subtitle);
-    
-    this.contentContainer.appendChild(header);
-    
-    // 工具栏
-    const toolbar = this.createToolbar(doc);
-    this.contentContainer.appendChild(toolbar);
-    
-    // 内容区域
-    const content = doc.createElement("div");
-    content.style.cssText = `
-      flex: 1;
-      overflow-y: auto;
-      padding: 15px;
-    `;
-    
-    // 加载关联的笔记
-    Zotero.log(`[NoteRelationsTab] Loading notes for node: ${this.selectedNode.id} (Item ID: ${this.selectedNode.itemId})`, "info");
-    const associatedNotes = await this.noteAssociationSystem.getAssociatedNotes(this.selectedNode.id);
-    Zotero.log(`[NoteRelationsTab] Found ${associatedNotes.length} associated notes`, "info");
-    
-    // 调试：检查节点类型
     try {
-      const item = await Zotero.Items.getAsync(this.selectedNode.itemId);
-      if (item) {
-        Zotero.log(`[NoteRelationsTab] Item type: ${item.itemType}, Is Attachment: ${item.isAttachment()}, Parent ID: ${item.parentID}`, "info");
+      const doc = this.window.document;
+      this.contentContainer.innerHTML = "";
+      
+      // 标题栏
+      const header = doc.createElement("div");
+      header.style.cssText = `
+        padding: 15px;
+        border-bottom: 1px solid var(--material-border-quarternary);
+        background: var(--material-background);
+      `;
+      
+      const title = doc.createElement("h3");
+      title.style.margin = "0 0 5px 0";
+      title.textContent = this.selectedNode.title || `Item ${this.selectedNode.itemId}`;
+      header.appendChild(title);
+      
+      const subtitle = doc.createElement("div");
+      subtitle.style.cssText = `
+        color: var(--fill-secondary);
+        font-size: 0.9em;
+      `;
+      subtitle.textContent = `${new Date(this.selectedNode.timestamp).toLocaleString()} - ${this.selectedNode.status}`;
+      header.appendChild(subtitle);
+      
+      this.contentContainer.appendChild(header);
+      
+      // 工具栏
+      const toolbar = this.createToolbar(doc);
+      this.contentContainer.appendChild(toolbar);
+      
+      // 内容区域
+      const content = doc.createElement("div");
+      content.style.cssText = `
+        flex: 1;
+        overflow-y: auto;
+        padding: 15px;
+      `;
+      
+      // 加载关联的笔记
+      Zotero.log(`[NoteRelationsTab] Loading notes for node: ${this.selectedNode.id} (Item ID: ${this.selectedNode.itemId})`, "info");
+      const associatedNotes = await this.noteAssociationSystem.getAssociatedNotes(this.selectedNode.id);
+      Zotero.log(`[NoteRelationsTab] Found ${associatedNotes.length} associated notes`, "info");
+      
+      // 调试：检查节点类型
+      try {
+        const item = await Zotero.Items.getAsync(this.selectedNode.itemId);
+        if (item) {
+          Zotero.log(`[NoteRelationsTab] Item type: ${item.itemType}, Is Attachment: ${item.isAttachment()}, Parent ID: ${item.parentID}`, "info");
+        }
+      } catch (error) {
+        Zotero.logError(`[NoteRelationsTab] Error checking item type: ${error}`);
       }
-    } catch (error) {
-      Zotero.logError(`[NoteRelationsTab] Error checking item type: ${error}`);
-    }
     
     if (associatedNotes.length > 0) {
       const associatedSection = this.createAssociatedSection(doc, associatedNotes);
@@ -328,19 +336,30 @@ export class NoteRelationsTab {
       content.appendChild(suggestedSection);
     }
     
-    // 如果都没有，显示空状态
-    if (associatedNotes.length === 0 && suggestedNotes.length === 0) {
-      const empty = doc.createElement("div");
-      empty.style.cssText = `
-        text-align: center;
-        color: var(--fill-secondary);
-        padding: 40px;
-      `;
-      empty.textContent = "No notes associated with this node";
-      content.appendChild(empty);
+      // 如果都没有，显示空状态
+      if (associatedNotes.length === 0 && suggestedNotes.length === 0) {
+        const empty = doc.createElement("div");
+        empty.style.cssText = `
+          text-align: center;
+          color: var(--fill-secondary);
+          padding: 40px;
+        `;
+        empty.textContent = "No notes associated with this node";
+        content.appendChild(empty);
+      }
+      
+      this.contentContainer.appendChild(content);
+    } catch (error) {
+      Zotero.logError(`[NoteRelationsTab] Error loading node associations: ${error}`);
+      // 显示错误状态
+      if (this.contentContainer) {
+        this.contentContainer.innerHTML = `
+          <div style="text-align: center; color: var(--fill-secondary); padding: 40px;">
+            Error loading notes. Please check the console for details.
+          </div>
+        `;
+      }
     }
-    
-    this.contentContainer.appendChild(content);
   }
   
   /**
