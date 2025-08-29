@@ -55,6 +55,20 @@ export class HistoryTreeZTree {
     }
     
     const doc = this.window.document;
+
+    // 如果是 Zotero 主窗口的 XUL/Chrome 文档，可能没有 <body> 元素。
+    // zTree 和 jQuery 等库依赖 document.body，我们在此注入一个“假 body”以兼容。
+    if (!doc.body) {
+      try {
+        const fakeBody = doc.createElementNS("http://www.w3.org/1999/xhtml", "body");
+        // 将其附加到文档根节点，确保后续访问 document.body 不再返回 null
+        doc.documentElement.appendChild(fakeBody);
+        Zotero.log('[HistoryTreeZTree] Injected fallback <body> into XUL document', 'info');
+      } catch (e) {
+        // 出现异常时记录日志，但不要阻塞后续逻辑
+        Zotero.log(`[HistoryTreeZTree] Failed to inject fallback body: ${e}`, 'warn');
+      }
+    }
     
     // 确保容器存在且已附加到 DOM
     if (!container || !container.parentNode) {
