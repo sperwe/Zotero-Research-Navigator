@@ -27,6 +27,14 @@ export class HistoryTreeTab {
     this.container = container;
     const doc = this.window.document;
     
+    // 确保容器使用 flex 布局
+    container.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    `;
+    
     // 创建搜索栏
     const searchBar = doc.createElement("div");
     searchBar.className = "history-search-bar";
@@ -64,7 +72,17 @@ export class HistoryTreeTab {
     // 刷新按钮
     const refreshBtn = doc.createElement("button");
     refreshBtn.textContent = "Refresh";
-    refreshBtn.addEventListener("click", () => this.refresh());
+    refreshBtn.title = "Reload history tree and closed tabs";
+    refreshBtn.addEventListener("click", async () => {
+      refreshBtn.disabled = true;
+      refreshBtn.textContent = "Refreshing...";
+      try {
+        await this.refresh();
+      } finally {
+        refreshBtn.disabled = false;
+        refreshBtn.textContent = "Refresh";
+      }
+    });
     toolbar.appendChild(refreshBtn);
     
     // 测试按钮 - 创建测试数据
@@ -130,7 +148,9 @@ export class HistoryTreeTab {
     this.treeContainer.style.cssText = `
       flex: 1;
       overflow-y: auto;
+      overflow-x: hidden;
       padding: 10px;
+      min-height: 0;  /* 重要：确保 flex 子元素可以收缩 */
     `;
     
     container.appendChild(this.treeContainer);
