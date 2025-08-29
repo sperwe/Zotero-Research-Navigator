@@ -75,27 +75,19 @@ export class MainPanel {
     // 添加到文档
     if (doc.body) {
       doc.body.appendChild(this.container);
-    } else if (doc.documentElement) {
-      // 如果 body 还不存在，等待它
-      Zotero.log("[MainPanel] Waiting for document.body...", "info");
-      const observer = new MutationObserver((mutations, obs) => {
+    } else {
+      // 如果 body 还不存在，使用简单的延迟重试
+      Zotero.log("[MainPanel] Document body not ready, will retry...", "info");
+      const attachContainer = () => {
         if (doc.body) {
           doc.body.appendChild(this.container);
-          obs.disconnect();
           Zotero.log("[MainPanel] Container attached to body", "info");
+        } else {
+          // 重试
+          this.window.setTimeout(attachContainer, 100);
         }
-      });
-      observer.observe(doc.documentElement, { childList: true, subtree: true });
-      
-      // 作为备份，也尝试在 DOMContentLoaded 时附加
-      if (doc.readyState !== 'complete') {
-        doc.addEventListener('DOMContentLoaded', () => {
-          if (doc.body && !this.container.parentNode) {
-            doc.body.appendChild(this.container);
-            Zotero.log("[MainPanel] Container attached to body on DOMContentLoaded", "info");
-          }
-        });
-      }
+      };
+      this.window.setTimeout(attachContainer, 100);
     }
 
     // 初始化标签页
