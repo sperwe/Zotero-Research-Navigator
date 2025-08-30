@@ -1,7 +1,7 @@
 {
   "name": "zotero-research-navigator",
   "type": "module",
-  "version": "2.6.9",
+  "version": "2.7.0",
   "description": "Track research history and enhance note navigation in Zotero",
   "config": {
     "addonName": "Zotero Research Navigator",
@@ -30,6 +30,7 @@
     "build-prod": "NODE_ENV=production zotero-plugin build",
     "build-debug": "DEBUG_BUILD=true zotero-plugin build",
     "build-simple": "SIMPLE_BUILD=true zotero-plugin build",
+    "version:update": "node scripts/update-version.js",
     "build-minimal": "zotero-plugin build --source src/minimal-bootstrap.ts",
     "lint:check": "prettier --check . && eslint .",
     "lint:fix": "prettier --write . && eslint . --fix",

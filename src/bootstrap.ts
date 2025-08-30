@@ -54,8 +54,13 @@ async function startup(
     // 获取插件实例
     const navigator = getResearchNavigator();
     
-    // 立即注册到全局对象，便于调试和外部访问
-    (Zotero as any).ResearchNavigator = navigator;
+    // 确保 Zotero.ResearchNavigator 对象存在
+    if (!(Zotero as any).ResearchNavigator) {
+      (Zotero as any).ResearchNavigator = {};
+    }
+    
+    // 将导航器实例存储在对象中
+    (Zotero as any).ResearchNavigator.instance = navigator;
     
     // 添加基本的调试方法（在初始化之前就可用）
     (Zotero as any).ResearchNavigator.debug = {

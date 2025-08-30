@@ -285,87 +285,66 @@ export class QuickNoteWindow {
         await this.createNewNote();
       }
       
-      // 创建编辑器容器的iframe
       const doc = container.ownerDocument;
-      const iframe = doc.createElement('iframe');
-      iframe.style.cssText = `
+      
+      // 创建 note-editor 元素
+      const noteEditor = doc.createElement('note-editor') as any;
+      noteEditor.setAttribute('flex', '1');
+      noteEditor.setAttribute('notitle', '1');
+      noteEditor.style.cssText = `
+        display: flex;
+        flex: 1;
         width: 100%;
         height: 100%;
-        border: none;
       `;
-      iframe.setAttribute('frameborder', '0');
-      container.appendChild(iframe);
       
-      // 等待iframe加载
-      await new Promise(resolve => {
-        iframe.addEventListener('load', resolve);
-        iframe.src = 'about:blank';
-      });
+      // 设置编辑器属性
+      noteEditor.mode = 'edit';
+      noteEditor.viewMode = 'library';
       
-      // 获取iframe的window和document
-      const iframeWin = iframe.contentWindow;
-      const iframeDoc = iframe.contentDocument;
+      // 立即添加到容器，让编辑器初始化
+      container.appendChild(noteEditor);
       
-      if (!iframeWin || !iframeDoc) {
-        throw new Error('Failed to access iframe');
-      }
-      
-      // 设置iframe的内容
-      iframeDoc.open();
-      iframeDoc.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <style>
-            body {
-              margin: 0;
-              padding: 16px;
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-              font-size: 14px;
-              line-height: 1.6;
-              color: #333;
+      // 异步加载笔记
+      setTimeout(async () => {
+        try {
+          if (this.currentNoteId) {
+            const item = await Zotero.Items.getAsync(this.currentNoteId);
+            if (item && item.isNote()) {
+              Zotero.log(`[QuickNoteWindow] Loading note item into editor`, "info");
+              
+              // 确保编辑器已连接到 DOM
+              if (noteEditor.isConnected) {
+                noteEditor.parent = null;
+                noteEditor.item = item;
+                
+                // 隐藏 links 容器（标签和相关）
+                setTimeout(() => {
+                  const linksContainer = noteEditor.querySelector('#links-container');
+                  if (linksContainer) {
+                    (linksContainer as HTMLElement).hidden = true;
+                  }
+                }, 300);
+                
+                this.editor = noteEditor;
+                
+                // 监听内容变化更新字数
+                if (noteEditor._editorInstance) {
+                  noteEditor._editorInstance.on('change', () => {
+                    this.updateWordCount();
+                  });
+                }
+                
+                Zotero.log(`[QuickNoteWindow] Note loaded successfully`, "info");
+              } else {
+                Zotero.log(`[QuickNoteWindow] Editor not connected to DOM`, "warning");
+              }
             }
-            note-editor {
-              display: block;
-              width: 100%;
-              height: 100%;
-            }
-          </style>
-        </head>
-        <body>
-          <note-editor></note-editor>
-        </body>
-        </html>
-      `);
-      iframeDoc.close();
-      
-      // 等待DOM准备好
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // 创建编辑器
-      const noteEditor = iframeDoc.querySelector('note-editor');
-      if (noteEditor && this.currentNoteId) {
-        // 使用Zotero的原生编辑器
-        const note = await Zotero.Items.getAsync(this.currentNoteId);
-        if (note) {
-          // 初始化编辑器实例
-          const editorInstance = new Zotero.EditorInstance();
-          await editorInstance.init({
-            item: note,
-            viewMode: 'edit',
-            parent: noteEditor,
-            saveOnClose: true
-          });
-          
-          this.editor = editorInstance;
-          
-          // 监听内容变化更新字数
-          editorInstance.on('change', () => {
-            this.updateWordCount();
-          });
+          }
+        } catch (error) {
+          Zotero.logError(`[QuickNoteWindow] Failed to load note: ${error}`);
         }
-      }
+      }, 100);
       
     } catch (error) {
       Zotero.logError(`[QuickNoteWindow] Failed to initialize editor: ${error}`);
@@ -396,10 +375,6 @@ export class QuickNoteWindow {
       }
       
       // 重新初始化编辑器
-      if (this.editor) {
-        this.editor.uninit();
-      }
-      
       const container = this.container?.querySelector('#quick-note-editor-container');
       if (container) {
         container.innerHTML = '';
@@ -424,7 +399,10 @@ export class QuickNoteWindow {
         return;
       }
       
-      await this.editor.saveSync();
+      // note-editor 会自动保存，这里只是触发保存
+      if (this.editor._editorInstance && this.editor._editorInstance.save) {
+        await this.editor._editorInstance.save();
+      }
       this.updateStatus('Note saved');
       
       // 触发一个短暂的视觉反馈
@@ -489,16 +467,27 @@ export class QuickNoteWindow {
    * 更新字数统计
    */
   private updateWordCount(): void {
-    if (!this.editor) return;
+    if (!this.editor || !this.container) return;
     
     try {
-      const content = this.editor.getNote();
-      const plainText = content.replace(/<[^>]*>/g, ' ');
-      const words = plainText.trim().split(/\s+/).filter(w => w.length > 0);
+      // 从 note-editor 获取内容
+      let content = '';
+      if (this.editor._editorInstance && this.editor._editorInstance.getContent) {
+        content = this.editor._editorInstance.getContent();
+      } else if (this.currentNoteId) {
+        // 备用方案：从 item 获取
+        const item = Zotero.Items.get(this.currentNoteId);
+        if (item && item.isNote()) {
+          content = item.getNote();
+        }
+      }
       
-      const wordCountEl = this.container?.querySelector('#word-count');
-      if (wordCountEl) {
-        wordCountEl.textContent = `${words.length} words`;
+      const text = content.replace(/<[^>]*>/g, '').trim();
+      const wordCount = text.split(/\s+/).filter(word => word.length > 0).length;
+      
+      const countElement = this.container.querySelector('#word-count');
+      if (countElement) {
+        countElement.textContent = `${wordCount} words`;
       }
     } catch (error) {
       // 忽略错误
@@ -570,10 +559,8 @@ export class QuickNoteWindow {
    * 关闭窗口
    */
   close(): void {
-    if (this.editor) {
-      this.editor.uninit();
-      this.editor = null;
-    }
+    // note-editor 会自动处理清理
+    this.editor = null;
     
     if (this.container) {
       this.container.remove();
