@@ -116,8 +116,10 @@ export class MainPanel {
     `;
 
     // 关闭按钮（红色）
-    const closeButton = doc.createElement("button");
+    const closeButton = doc.createElement("span");
     closeButton.className = "panel-close-button";
+    closeButton.setAttribute("role", "button");
+    closeButton.setAttribute("tabindex", "0");
     closeButton.title = "Close";
     closeButton.style.cssText = `
       width: 12px;
@@ -129,11 +131,14 @@ export class MainPanel {
       cursor: pointer;
       position: relative;
       transition: all 0.2s;
+      display: inline-block;
     `;
     
     // 停靠按钮（黄色）
-    const dockButton = doc.createElement("button");
+    const dockButton = doc.createElement("span");
     dockButton.className = "panel-dock-button";
+    dockButton.setAttribute("role", "button");
+    dockButton.setAttribute("tabindex", "0");
     dockButton.title = this.isDocked ? "Undock" : "Dock to sidebar";
     dockButton.style.cssText = `
       width: 12px;
@@ -145,6 +150,7 @@ export class MainPanel {
       cursor: pointer;
       position: relative;
       transition: all 0.2s;
+      display: inline-block;
     `;
     
     // 添加悬停效果的内联样式
@@ -220,9 +226,11 @@ export class MainPanel {
     ];
 
     for (const tab of tabs) {
-      const tabButton = doc.createElement("button");
+      const tabButton = doc.createElement("span");
       tabButton.className = `panel-tab ${tab.id === this.activeTab ? "active" : ""}`;
       tabButton.setAttribute("data-tab", tab.id);
+      tabButton.setAttribute("role", "button");
+      tabButton.setAttribute("tabindex", "0");
       tabButton.style.cssText = `
         background: none;
         border: none;
@@ -232,6 +240,7 @@ export class MainPanel {
         font-size: 13px;
         color: var(--text-color);
         opacity: ${tab.id === this.activeTab ? "1" : "0.7"};
+        display: inline-block;
         ${tab.id === this.activeTab ? "border-bottom-color: var(--accent-blue);" : ""}
       `;
       tabButton.innerHTML = `${tab.icon} ${tab.label}`;

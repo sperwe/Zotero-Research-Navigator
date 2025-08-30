@@ -128,14 +128,15 @@ export class QuickNoteWindowV2 {
         cursor: move;
       ">
         <h3 style="margin: 0; font-size: 16px; font-weight: 500;">Quick Note</h3>
-        <button class="quick-note-close" style="
+        <span class="quick-note-close" role="button" tabindex="0" style="
           background: none;
           border: none;
           font-size: 20px;
           cursor: pointer;
           padding: 0 8px;
           color: #666;
-        ">×</button>
+          display: inline-block;
+        ">×</span>
       </div>
       
       <div class="quick-note-toolbar" style="
@@ -145,22 +146,24 @@ export class QuickNoteWindowV2 {
         background: #fafafa;
         border-bottom: 1px solid #eee;
       ">
-        <button class="quick-note-save" style="
+        <span class="quick-note-save" role="button" tabindex="0" style="
           padding: 4px 12px;
           background: #2196F3;
           color: white;
           border: none;
           border-radius: 4px;
           cursor: pointer;
-        ">Save</button>
-        <button class="quick-note-new" style="
+          display: inline-block;
+        ">Save</span>
+        <span class="quick-note-new" role="button" tabindex="0" style="
           padding: 4px 12px;
           background: #4CAF50;
           color: white;
           border: none;
           border-radius: 4px;
           cursor: pointer;
-        ">New Note</button>
+          display: inline-block;
+        ">New Note</span>
       </div>
       
       <div id="quick-note-editor-container" style="
