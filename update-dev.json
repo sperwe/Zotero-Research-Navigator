@@ -4,7 +4,7 @@
       "updates": [
         {
           "version": "2.7.0",
-          "update_link": "https://github.com/sperwe/Zotero-Research-Navigator/releases/download/dev-v2.7.0-113/zotero-research-navigator.xpi",
+          "update_link": "https://github.com/sperwe/Zotero-Research-Navigator/releases/download/dev-v2.7.0-114/zotero-research-navigator.xpi",
           "applications": {
             "zotero": {
               "strict_min_version": "7.0",
