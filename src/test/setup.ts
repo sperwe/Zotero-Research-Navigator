@@ -1,5 +1,7 @@
+/// <reference types="jest" />
+
 // Mock Zotero global object
-global.Zotero = {
+(global as any).Zotero = {
   log: jest.fn((msg: string, level?: string) => {
     if (process.env.DEBUG) {
       console.log(`[${level || 'info'}] ${msg}`);
@@ -39,8 +41,8 @@ global.Zotero = {
 } as any;
 
 // Mock window object
-global.window = {
-  document: global.Zotero.getMainWindow().document,
+(global as any).window = {
+  document: (global as any).Zotero.getMainWindow().document,
   setTimeout: jest.fn((fn: Function, delay: number) => {
     if (process.env.IMMEDIATE_TIMERS) {
       fn();

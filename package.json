@@ -43,7 +43,7 @@
     "test:ui": "node scripts/test-runner.js ui",
     "test:debug": "node scripts/test-runner.js debug",
     "test:legacy": "node test/simple-test.cjs",
-    "test:debug": "node test/debug-test.cjs",
+    "test:debug-legacy": "node test/debug-test.cjs",
     "test:full": "node test/run-tests.cjs",
     "test:xpi": "node test/zotero-test-environment.cjs",
     "version:check": "node -e \"const p=require('./package.json'),m=require('./addon/manifest.json');if(p.version!==m.version){console.error('Version mismatch!');process.exit(1);}else{console.log('✅ Versions match:',p.version);}\"",
