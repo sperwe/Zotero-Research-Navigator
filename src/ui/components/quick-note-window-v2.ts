@@ -264,10 +264,12 @@ export class QuickNoteWindowV2 {
       
       // 如果已有笔记，加载编辑器
       if (this.currentNoteId) {
+        Zotero.log(`[QuickNoteWindowV2] Loading existing note ${this.currentNoteId} in editor`, 'info');
         await this.loadNoteEditor(this.currentNoteId, container);
       } else {
         // 暂时显示加载中
         const loading = container.ownerDocument.createElement('div');
+        loading.id = 'editor-loading';
         loading.style.cssText = `
           display: flex;
           align-items: center;
@@ -276,8 +278,9 @@ export class QuickNoteWindowV2 {
           color: #666;
           font-size: 14px;
         `;
-        loading.textContent = 'Initializing editor...';
+        loading.textContent = 'Preparing editor...';
         container.appendChild(loading);
+        Zotero.log('[QuickNoteWindowV2] Editor container ready, waiting for note creation', 'info');
       }
       
     } catch (error) {
@@ -618,14 +621,24 @@ export class QuickNoteWindowV2 {
         note.parentID = parentItemID;
       }
       
-      await note.saveTx();
+      // 保存笔记但不触发默认的打开行为
+      await note.saveTx({
+        skipSelect: true,
+        skipNotifier: false
+      });
       
       this.currentNoteId = note.id;
       
       // 在编辑器中加载新笔记
       const editorContainer = this.container?.querySelector('#quick-note-editor-container');
+      Zotero.log(`[QuickNoteWindowV2] Looking for editor container, found: ${!!editorContainer}`, 'info');
+      
       if (editorContainer) {
+        Zotero.log(`[QuickNoteWindowV2] Loading note ${this.currentNoteId} in editor...`, 'info');
         await this.loadNoteEditor(this.currentNoteId, editorContainer as HTMLElement);
+        Zotero.log(`[QuickNoteWindowV2] Note loaded in editor`, 'info');
+      } else {
+        Zotero.logError('[QuickNoteWindowV2] Editor container not found!');
       }
       
       // 创建关联
