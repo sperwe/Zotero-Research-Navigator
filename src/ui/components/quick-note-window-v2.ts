@@ -11,6 +11,7 @@ export class QuickNoteWindowV2 {
   private currentNoteId: number | null = null;
   private associatedNodeId: string | null = null;
   private isCreating = false;  // 防止重复创建
+  private isLoadingNote = false;  // 防止重复加载笔记
   
   constructor(
     private noteAssociationSystem: NoteAssociationSystem,
@@ -25,11 +26,13 @@ export class QuickNoteWindowV2 {
     
     // 如果已经有容器，直接显示
     if (this.container && this.container.parentElement) {
+      Zotero.log(`[QuickNoteWindowV2] Reusing existing window, currentNoteId: ${this.currentNoteId}`, 'info');
       this.container.style.display = 'flex';
       this.associatedNodeId = nodeId || null;
       
       // 如果没有当前笔记，自动创建一个
-      if (!this.currentNoteId) {
+      if (!this.currentNoteId && !this.isLoadingNote) {
+        Zotero.log('[QuickNoteWindowV2] No current note in existing window, creating new one', 'info');
         setTimeout(() => this.createNewNote(), 500);
       }
       return;
@@ -108,7 +111,7 @@ export class QuickNoteWindowV2 {
         
         // 窗口初始化完成后，如果没有笔记就创建一个
         setTimeout(() => {
-          if (!this.currentNoteId) {
+          if (!this.currentNoteId && !this.isLoadingNote) {
             Zotero.log('[QuickNoteWindowV2] No current note, creating new note after window init', 'info');
             this.createNewNote();
           }
@@ -575,7 +578,14 @@ export class QuickNoteWindowV2 {
    * 创建新笔记
    */
   private async createNewNote(): Promise<void> {
+    // 防止重复创建
+    if (this.isLoadingNote) {
+      Zotero.log('[QuickNoteWindowV2] Already creating/loading a note, skipping', 'info');
+      return;
+    }
+    
     try {
+      this.isLoadingNote = true;
       this.updateStatus('Creating new note...');
       
       // 创建新的 Zotero 笔记
@@ -669,6 +679,8 @@ export class QuickNoteWindowV2 {
     } catch (error) {
       Zotero.logError(`[QuickNoteWindowV2] Failed to create note: ${error}`);
       this.updateStatus('Failed to create note');
+    } finally {
+      this.isLoadingNote = false;
     }
   }
   
@@ -690,6 +702,7 @@ export class QuickNoteWindowV2 {
   hide(): void {
     if (this.container) {
       this.container.style.display = 'none';
+      Zotero.log(`[QuickNoteWindowV2] Window hidden, keeping note ${this.currentNoteId} in memory`, 'info');
     }
   }
   
