@@ -39,6 +39,13 @@ export class QuickNoteWindow {
     // 创建主窗口
     const doc = this.mainWindow.document;
     
+    // 确保 body 存在
+    if (!doc.body) {
+      Zotero.logError('[QuickNoteWindow] Document body not available, delaying...');
+      this.mainWindow.setTimeout(() => this.createWindow(nodeId), 100);
+      return;
+    }
+    
     // 创建浮动容器
     this.container = doc.createElement('div');
     this.container.id = 'quick-note-window';
@@ -80,8 +87,36 @@ export class QuickNoteWindow {
     const statusBar = this.createStatusBar(doc);
     this.container.appendChild(statusBar);
     
-    // 添加到文档
-    doc.body.appendChild(this.container);
+    // 添加到文档 - 使用更安全的方式
+    try {
+      doc.body.appendChild(this.container);
+    } catch (error) {
+      // 如果 body 不可用，尝试其他父元素
+      const alternativeParents = [
+        doc.getElementById('main-window'),
+        doc.getElementById('zotero-pane'),
+        doc.documentElement
+      ];
+      
+      let appended = false;
+      for (const parent of alternativeParents) {
+        if (parent) {
+          try {
+            parent.appendChild(this.container);
+            appended = true;
+            Zotero.log(`[QuickNoteWindow] Appended to: ${parent.id || parent.tagName}`, 'info');
+            break;
+          } catch (e) {
+            // 继续尝试下一个
+          }
+        }
+      }
+      
+      if (!appended) {
+        Zotero.logError(`[QuickNoteWindow] Failed to append container: ${error}`);
+        return;
+      }
+    }
     
     // 初始化编辑器
     this.initializeEditor(editorContainer);
