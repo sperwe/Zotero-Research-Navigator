@@ -3,13 +3,13 @@
  * 基于 v2.0.3 的成功经验，采用更直接的实现方式
  */
 
-import { QuickNoteWindow } from './quick-note-window';
+import { QuickNoteWindowV2 } from './quick-note-window-v2';
 import { NoteAssociationSystem } from '../../managers/note-association-system';
 import { HistoryService } from '../../services/history-service';
 
 export class QuickNoteButtonSimple {
   private button: HTMLElement | null = null;
-  private quickNoteWindow: QuickNoteWindow | null = null;
+  private quickNoteWindow: QuickNoteWindowV2 | null = null;
   
   constructor(
     private window: Window,
@@ -25,8 +25,7 @@ export class QuickNoteButtonSimple {
       Zotero.log('[QuickNoteButtonSimple] Initializing...', 'info');
       
       // 创建快速笔记窗口实例
-      this.quickNoteWindow = new QuickNoteWindow(
-        this.window,
+      this.quickNoteWindow = new QuickNoteWindowV2(
         this.noteAssociationSystem,
         this.historyService
       );

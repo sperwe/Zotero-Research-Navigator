@@ -1,7 +1,7 @@
 {
   "name": "zotero-research-navigator",
   "type": "module",
-  "version": "2.6.5",
+  "version": "2.6.6",
   "description": "Track research history and enhance note navigation in Zotero",
   "config": {
     "addonName": "Zotero Research Navigator",
@@ -34,20 +34,27 @@
     "lint:check": "prettier --check . && eslint .",
     "lint:fix": "prettier --write . && eslint . --fix",
     "release": "zotero-plugin release",
-    "test": "node test/simple-test.cjs",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:legacy": "node test/simple-test.cjs",
     "test:debug": "node test/debug-test.cjs",
     "test:full": "node test/run-tests.cjs",
     "test:xpi": "node test/zotero-test-environment.cjs",
+    "version:check": "node -e \"const p=require('./package.json'),m=require('./addon/manifest.json');if(p.version!==m.version){console.error('Version mismatch!');process.exit(1);}else{console.log('✅ Versions match:',p.version);}\"",
     "update-deps": "npm update --save"
   },
   "dependencies": {
     "zotero-plugin-toolkit": "^5.1.0-beta.4"
   },
   "devDependencies": {
+    "@types/jest": "^29.5.0",
     "@types/node": "^20.0.0",
     "@zotero-plugin/eslint-config": "^0.6.7",
     "eslint": "^9.32.0",
+    "jest": "^29.5.0",
     "prettier": "^3.6.2",
+    "ts-jest": "^29.1.0",
     "typescript": "^5.9.2",
     "zotero-plugin-scaffold": "^0.8.0",
     "zotero-types": "^4.1.0-beta.1"
