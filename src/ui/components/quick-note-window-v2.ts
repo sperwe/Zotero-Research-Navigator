@@ -288,37 +288,125 @@ export class QuickNoteWindowV2 {
       // 清空容器
       container.innerHTML = '';
       
+      const doc = container.ownerDocument;
+      const win = this.window;
+      
+      // 确保自定义元素脚本已加载
+      if (!win.customElements || !win.customElements.get('note-editor')) {
+        Zotero.log(`[QuickNoteWindowV2] note-editor element not registered, loading scripts`, "info");
+        
+        if (win.Services && win.Services.scriptloader) {
+          try {
+            win.Services.scriptloader.loadSubScript("chrome://zotero/content/customElements.js", win);
+            Zotero.log(`[QuickNoteWindowV2] Custom elements script loaded`, "info");
+          } catch (e) {
+            Zotero.logError(`[QuickNoteWindowV2] Failed to load custom elements: ${e}`);
+            throw e;
+          }
+        }
+      }
+      
       // 创建编辑器容器
-      const editorContainer = container.ownerDocument.createElement('div');
-      editorContainer.style.cssText = 'width: 100%; height: 100%;';
-      editorContainer.id = `quick-note-editor-${noteId}`;
+      const editorContainer = doc.createElement('div');
+      editorContainer.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        width: 100%;
+        background: white;
+      `;
       container.appendChild(editorContainer);
       
-      // 获取笔记项
-      const note = await Zotero.Items.getAsync(noteId);
-      if (!note || !note.isNote()) {
-        throw new Error('Invalid note item');
+      // 创建 iframe
+      const iframe = doc.createElement('iframe') as HTMLIFrameElement;
+      iframe.id = 'quick-note-editor-iframe';
+      iframe.style.cssText = `
+        border: 0;
+        width: 100%;
+        flex-grow: 1;
+        min-height: 300px;
+        background: white;
+      `;
+      iframe.setAttribute('type', 'content');
+      iframe.setAttribute('remote', 'false');
+      iframe.setAttribute('src', 'resource://zotero/note-editor/editor.html');
+      
+      editorContainer.appendChild(iframe);
+      
+      // 注册 UIProperties
+      if (win.Zotero.UIProperties) {
+        win.Zotero.UIProperties.registerRoot(editorContainer);
       }
       
-      // 尝试创建 Zotero 编辑器实例
-      if (Zotero.EditorInstance) {
-        const editorInstance = new Zotero.EditorInstance();
-        editorInstance.init({
-          item: note,
-          container: editorContainer,
-          mode: 'edit',
-          disableUI: false,
-          onNavigate: (uri: string) => {
-            Zotero.log(`[QuickNoteWindowV2] Navigate to: ${uri}`, 'info');
-          }
-        });
+      // 先隐藏 iframe，避免闪烁
+      iframe.style.visibility = 'hidden';
+      
+      // 标记初始化状态
+      let iframeInitialized = false;
+      
+      // 等待 iframe 内容加载
+      const initializeEditor = async () => {
+        if (iframeInitialized) return;
+        iframeInitialized = true;
         
-        this.editor = editorInstance;
-        Zotero.log('[QuickNoteWindowV2] Native editor loaded successfully', 'info');
-      } else {
-        // 如果 EditorInstance 不可用，尝试其他方法
-        throw new Error('Zotero.EditorInstance not available');
-      }
+        try {
+          Zotero.log(`[QuickNoteWindowV2] iframe ready, initializing editor for note ${noteId}`, "info");
+          
+          // 等待一下确保 iframe 完全准备好
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+          const item = await Zotero.Items.getAsync(noteId);
+          if (!item || !item.isNote()) {
+            throw new Error('Invalid note item');
+          }
+          
+          // 创建 EditorInstance
+          const editorInstance = new win.Zotero.EditorInstance();
+          
+          // 处理 BetterNotes 兼容性
+          if (iframe.contentWindow && (iframe.contentWindow as any).wrappedJSObject) {
+            (iframe.contentWindow as any).wrappedJSObject._betterNotesIgnore = true;
+          }
+          
+          // 存储实例引用以便清理
+          (iframe as any)._editorInstance = editorInstance;
+          (editorContainer as any)._editorInstance = editorInstance;
+          
+          // 初始化编辑器
+          await editorInstance.init({
+            item: item,
+            viewMode: 'library',
+            readOnly: false,
+            iframeWindow: iframe.contentWindow,
+            popup: false,
+            saveOnClose: true,
+            ignoreUpdate: true
+          });
+          
+          // 显示 iframe
+          iframe.style.visibility = 'visible';
+          
+          this.editor = editorInstance;
+          this.currentNoteId = noteId;
+          
+          Zotero.log('[QuickNoteWindowV2] Native editor loaded successfully', 'info');
+          this.updateStatus('Note loaded');
+          
+        } catch (error) {
+          Zotero.logError(`[QuickNoteWindowV2] Failed to initialize editor: ${error}`);
+          throw error;
+        }
+      };
+      
+      // 监听 iframe 加载
+      iframe.addEventListener('load', initializeEditor);
+      
+      // 备用：如果 load 事件没触发
+      setTimeout(() => {
+        if (!iframeInitialized && iframe.contentWindow) {
+          initializeEditor();
+        }
+      }, 1000);
       
     } catch (error) {
       Zotero.logError(`[QuickNoteWindowV2] Failed to load native editor: ${error}`);
@@ -477,11 +565,36 @@ export class QuickNoteWindowV2 {
    * 关闭窗口
    */
   close(): void {
-    if (this.container) {
-      this.container.remove();
-      this.container = null;
+    try {
+      // 清理编辑器实例
+      if (this.editor && typeof this.editor.uninit === 'function') {
+        Zotero.log('[QuickNoteWindowV2] Uninitializing editor', 'info');
+        this.editor.uninit();
+      }
+      
+      // 清理 iframe 的编辑器实例
+      const iframe = this.container?.querySelector('#quick-note-editor-iframe');
+      if (iframe && (iframe as any)._editorInstance) {
+        const editorInstance = (iframe as any)._editorInstance;
+        if (typeof editorInstance.uninit === 'function') {
+          try {
+            editorInstance.uninit();
+          } catch (e) {
+            Zotero.logError(`[QuickNoteWindowV2] Error uninitializing iframe editor: ${e}`);
+          }
+        }
+      }
+      
+      // 移除容器
+      if (this.container) {
+        this.container.remove();
+        this.container = null;
+      }
+      
+      this.editor = null;
+      this.currentNoteId = null;
+    } catch (error) {
+      Zotero.logError(`[QuickNoteWindowV2] Error during close: ${error}`);
     }
-    this.editor = null;
-    this.currentNoteId = null;
   }
 }
