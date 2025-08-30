@@ -8,7 +8,7 @@
 const fs = require('fs');
 const path = require('path');
 
-console.log('🔍 Zotero Research Navigator - Smoke Test v2.6.8\n');
+console.log('🔍 Zotero Research Navigator - Smoke Test v2.6.9\n');
 
 const tests = [];
 let passed = 0;
@@ -42,7 +42,7 @@ test('Manifest is valid', () => {
   assert(fs.existsSync(manifestPath), 'Manifest not found in build');
   
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  assert(manifest.version === '2.6.8', `Version mismatch: ${manifest.version}`);
+  assert(manifest.version === '2.6.9', `Version mismatch: ${manifest.version}`);
   assert(manifest.applications.zotero.id === 'research-navigator@zotero.org', 'Invalid addon ID');
   
   console.log('  ✓ Manifest version: ' + manifest.version);

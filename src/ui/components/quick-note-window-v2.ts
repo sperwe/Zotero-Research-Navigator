@@ -246,47 +246,118 @@ export class QuickNoteWindowV2 {
    */
   private async initializeEditor(container: HTMLElement): Promise<void> {
     try {
-      // 简化的编辑器初始化
-      const iframe = container.ownerDocument.createElement('iframe');
-      iframe.style.cssText = 'width: 100%; height: 100%; border: none;';
-      iframe.setAttribute('frameborder', '0');
-      container.appendChild(iframe);
+      Zotero.log('[QuickNoteWindowV2] Initializing Zotero native editor...', 'info');
       
-      // 等待 iframe 加载
-      await new Promise(resolve => {
-        iframe.addEventListener('load', resolve);
-        iframe.src = 'about:blank';
-      });
-      
-      // 设置基本的可编辑内容
-      const iframeDoc = iframe.contentDocument;
-      if (iframeDoc) {
-        iframeDoc.open();
-        iframeDoc.write(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <style>
-              body { 
-                margin: 16px; 
-                font-family: -apple-system, sans-serif;
-                font-size: 14px;
-                line-height: 1.6;
-              }
-            </style>
-          </head>
-          <body contenteditable="true">
-            <p>Start typing your note...</p>
-          </body>
-          </html>
-        `);
-        iframeDoc.close();
+      // 如果已有笔记，加载 Zotero 原生编辑器
+      if (this.currentNoteId) {
+        await this.loadNoteEditor(this.currentNoteId, container);
+      } else {
+        // 否则显示占位符
+        const placeholder = container.ownerDocument.createElement('div');
+        placeholder.style.cssText = `
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 100%;
+          color: #999;
+          font-size: 14px;
+          text-align: center;
+          padding: 20px;
+        `;
+        placeholder.innerHTML = `
+          <div>
+            <p>Click "New Note" to create a note</p>
+            <p style="font-size: 12px; margin-top: 10px;">or select an existing note</p>
+          </div>
+        `;
+        container.appendChild(placeholder);
       }
-      
-      Zotero.log('[QuickNoteWindowV2] Editor initialized', 'info');
       
     } catch (error) {
       Zotero.logError(`[QuickNoteWindowV2] Failed to initialize editor: ${error}`);
+      // 回退到简单编辑器
+      this.initializeSimpleEditor(container);
+    }
+  }
+  
+  /**
+   * 加载 Zotero 原生编辑器
+   */
+  private async loadNoteEditor(noteId: number, container: HTMLElement): Promise<void> {
+    try {
+      // 清空容器
+      container.innerHTML = '';
+      
+      // 创建编辑器容器
+      const editorContainer = container.ownerDocument.createElement('div');
+      editorContainer.style.cssText = 'width: 100%; height: 100%;';
+      editorContainer.id = `quick-note-editor-${noteId}`;
+      container.appendChild(editorContainer);
+      
+      // 获取笔记项
+      const note = await Zotero.Items.getAsync(noteId);
+      if (!note || !note.isNote()) {
+        throw new Error('Invalid note item');
+      }
+      
+      // 尝试创建 Zotero 编辑器实例
+      if (Zotero.EditorInstance) {
+        const editorInstance = new Zotero.EditorInstance();
+        editorInstance.init({
+          item: note,
+          container: editorContainer,
+          mode: 'edit',
+          disableUI: false,
+          onNavigate: (uri: string) => {
+            Zotero.log(`[QuickNoteWindowV2] Navigate to: ${uri}`, 'info');
+          }
+        });
+        
+        this.editor = editorInstance;
+        Zotero.log('[QuickNoteWindowV2] Native editor loaded successfully', 'info');
+      } else {
+        // 如果 EditorInstance 不可用，尝试其他方法
+        throw new Error('Zotero.EditorInstance not available');
+      }
+      
+    } catch (error) {
+      Zotero.logError(`[QuickNoteWindowV2] Failed to load native editor: ${error}`);
+      // 回退到简单编辑器
+      this.initializeSimpleEditor(container);
+    }
+  }
+  
+  /**
+   * 初始化简单编辑器（备用）
+   */
+  private initializeSimpleEditor(container: HTMLElement): void {
+    const iframe = container.ownerDocument.createElement('iframe');
+    iframe.style.cssText = 'width: 100%; height: 100%; border: none;';
+    iframe.setAttribute('frameborder', '0');
+    container.appendChild(iframe);
+    
+    const iframeDoc = iframe.contentDocument;
+    if (iframeDoc) {
+      iframeDoc.open();
+      iframeDoc.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { 
+              margin: 16px; 
+              font-family: -apple-system, sans-serif;
+              font-size: 14px;
+              line-height: 1.6;
+            }
+          </style>
+        </head>
+        <body contenteditable="true">
+          <p>Start typing your note...</p>
+        </body>
+        </html>
+      `);
+      iframeDoc.close();
     }
   }
   
@@ -356,6 +427,12 @@ export class QuickNoteWindowV2 {
       await note.saveTx();
       
       this.currentNoteId = note.id;
+      
+      // 在编辑器中加载新笔记
+      const editorContainer = this.container?.querySelector('#quick-note-editor-container');
+      if (editorContainer) {
+        await this.loadNoteEditor(this.currentNoteId, editorContainer as HTMLElement);
+      }
       
       // 创建关联
       if (this.associatedNodeId) {

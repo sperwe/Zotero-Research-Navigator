@@ -70,11 +70,17 @@ async function startup(
     // 初始化
     await navigator.initialize();
 
-    // 注册 Bootstrap 测试工具（仅在开发版）
-    if (config.version.includes('dev') || config.version.includes('beta') || version.includes('dev')) {
+    // 注册 Bootstrap 测试工具（开发版或从 dev 分支构建）
+    const isDev = config.version.includes('dev') || 
+                  config.version.includes('beta') || 
+                  version.includes('dev') ||
+                  rootURI.includes('dev') ||
+                  true; // 暂时总是启用测试工具
+    
+    if (isDev) {
       try {
         registerBootstrapTests();
-        Zotero.log("[Research Navigator] Bootstrap tests registered for development", "info");
+        Zotero.log("[Research Navigator] Bootstrap tests registered", "info");
       } catch (e) {
         Zotero.logError(`[Research Navigator] Failed to register tests: ${e}`);
       }

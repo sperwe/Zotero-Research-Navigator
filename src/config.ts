@@ -4,7 +4,7 @@
  */
 
 export const config = {
-  version: "2.6.8",
+  version: "2.6.9",
   addonName: "Zotero Research Navigator",
   addonID: "research-navigator@zotero.org",
   addonRef: "researchnavigator",
