@@ -71,7 +71,7 @@ export function initializeAddon(addon: any, config: any): boolean {
 
   if (Zotero.debug) {
     Zotero.debug("[Research Navigator] Addon registered successfully");
-    Zotero.debug("[Research Navigator] Version: " + config.version);
+    Zotero.debug("[Research Navigator] Version: 2.6.8");
   }
 
   return true;

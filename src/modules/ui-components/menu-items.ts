@@ -4,7 +4,7 @@
  */
 
 import { MenuManager } from "zotero-plugin-toolkit";
-import { config } from "../../../package.json";
+import { config } from "@/config";
 
 export interface MenuCallbacks {
   onOpenHistory: () => void;

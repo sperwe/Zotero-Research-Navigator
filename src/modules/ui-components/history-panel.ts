@@ -3,7 +3,7 @@
  * 创建和管理历史记录面板
  */
 
-import { config } from "../../../package.json";
+import { config } from "@/config";
 import { HistoryTracker, HistoryNode } from "../historyTracker";
 import { SearchEngine } from "../searchEngine";
 import { createElement } from "../../utils/ui-helper";

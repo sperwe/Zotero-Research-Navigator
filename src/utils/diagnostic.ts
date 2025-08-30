@@ -3,7 +3,8 @@
  * 提供详细的运行时诊断和验证功能
  */
 
-import { config, version } from "../../package.json";
+import { config } from "@/config";
+const version = config.version;
 
 export interface DiagnosticInfo {
   timestamp: number;

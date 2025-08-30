@@ -8,7 +8,7 @@ import "./bootstrap-init";
 
 import { BasicTool } from "zotero-plugin-toolkit";
 import Addon from "./addon";
-import { config } from "../package.json";
+import { config } from "@/config";
 import { setupConsolePolyfill } from "./polyfills/console";
 
 // 再次确保 console polyfill 被设置

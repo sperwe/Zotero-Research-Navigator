@@ -1,5 +1,5 @@
 import { ZoteroToolkit } from "zotero-plugin-toolkit";
-import { config } from "../../package.json";
+import { config } from "@/config";
 
 export function createZToolkit() {
   // 直接尝试创建，如果失败则返回 mock

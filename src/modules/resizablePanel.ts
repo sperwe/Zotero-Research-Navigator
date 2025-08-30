@@ -2,7 +2,7 @@
  * 可调整大小的面板模块
  */
 
-import { config } from "../../package.json";
+import { config } from "@/config";
 import { getString } from "../utils/locale";
 import { HistoryTreeView } from "./views/historyTreeView";
 import { NoteRelationView } from "./views/noteRelationView";

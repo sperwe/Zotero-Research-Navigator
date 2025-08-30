@@ -3,7 +3,7 @@
  * Tracks research history in a tree structure
  */
 
-import { config } from "../../package.json";
+import { config } from "@/config";
 
 export interface AccessRecord {
   timestamp: number;

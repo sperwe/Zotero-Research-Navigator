@@ -143,4 +143,4 @@ export class UIDebugger {
 }
 
 // 导入配置
-import { config } from "../../package.json";
+import { config } from "@/config";

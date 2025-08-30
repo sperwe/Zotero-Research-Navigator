@@ -2,7 +2,7 @@
  * 工具栏功能模块
  */
 
-import { config } from "../../package.json";
+import { config } from "@/config";
 import { getString } from "../utils/locale";
 import { HistoryNode } from "./historyTree";
 

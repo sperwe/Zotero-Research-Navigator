@@ -8,7 +8,7 @@ import { NoteAssociationSystem } from "../managers/note-association-system";
 import { UIManager } from "../ui/ui-manager";
 import { DatabaseService } from "../services/database-service";
 import { HistoryService } from "../services/history-service";
-import { config } from "../../package.json";
+import { config } from "@/config";
 
 export class ResearchNavigator {
   private static instance: ResearchNavigator;

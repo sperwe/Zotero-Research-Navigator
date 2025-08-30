@@ -12,7 +12,7 @@ import { ToolbarButtonV2 } from "./components/toolbar-button-v2";
 import { ToolbarButtonZotero7 } from "./components/toolbar-button-zotero7";
 import { SidebarManager } from "./sidebar-manager";
 import { QuickNoteButtonSimple } from "./components/quick-note-button-simple";
-import { config } from "../../package.json";
+import { config } from "@/config";
 
 export interface UIManagerOptions {
   closedTabsManager: ClosedTabsManager;

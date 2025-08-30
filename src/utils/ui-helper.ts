@@ -3,7 +3,7 @@
  * 提供UI创建的辅助函数
  */
 
-import { config } from "../../package.json";
+import { config } from "@/config";
 
 export interface ElementOptions {
   id?: string;

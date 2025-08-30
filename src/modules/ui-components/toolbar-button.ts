@@ -3,7 +3,7 @@
  * 创建和管理工具栏按钮
  */
 
-import { config } from "../../../package.json";
+import { config } from "@/config";
 import { createElement } from "../../utils/ui-helper";
 
 export async function createToolbarButton(

@@ -2,7 +2,7 @@ import { BasicTool, UITool, ProgressWindowHelper } from "zotero-plugin-toolkit";
 import { HistoryTracker } from "./modules/historyTracker";
 import { SearchEngine } from "./modules/searchEngine";
 import { UIManager } from "./modules/ui-manager";
-import { config } from "../package.json";
+import { config } from "@/config";
 import { diagnostic } from "./utils/diagnostic";
 import { safeLoader } from "./bootstrap/safe-loader";
 

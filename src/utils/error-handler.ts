@@ -4,7 +4,7 @@
  */
 
 import { BasicTool, ProgressWindowHelper } from "zotero-plugin-toolkit";
-import { config } from "../../package.json";
+import { config } from "@/config";
 
 export enum ErrorLevel {
   DEBUG = "debug",

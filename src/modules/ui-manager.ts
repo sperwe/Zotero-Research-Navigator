@@ -4,7 +4,7 @@
  */
 
 import { UITool, MenuManager, KeyboardManager } from "zotero-plugin-toolkit";
-import { config } from "../../package.json";
+import { config } from "@/config";
 import { HistoryTracker } from "./historyTracker";
 import { SearchEngine } from "./searchEngine";
 import { createHistoryPanel } from "./ui-components/history-panel";

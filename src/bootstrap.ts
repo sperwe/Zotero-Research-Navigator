@@ -5,8 +5,8 @@
  */
 
 import { getResearchNavigator } from "./core/research-navigator";
-import { config } from "../package.json";
 import { registerBootstrapTests } from "./test/bootstrap-tests";
+import { config } from "./config";
 
 // Bootstrap 函数必须在全局作用域
 declare global {
@@ -71,9 +71,13 @@ async function startup(
     await navigator.initialize();
 
     // 注册 Bootstrap 测试工具（仅在开发版）
-    if (config.version.includes('dev') || config.version.includes('beta')) {
-      registerBootstrapTests();
-      Zotero.log("[Research Navigator] Bootstrap tests registered for development", "info");
+    if (config.version.includes('dev') || config.version.includes('beta') || version.includes('dev')) {
+      try {
+        registerBootstrapTests();
+        Zotero.log("[Research Navigator] Bootstrap tests registered for development", "info");
+      } catch (e) {
+        Zotero.logError(`[Research Navigator] Failed to register tests: ${e}`);
+      }
     }
 
     // 注册关闭处理器

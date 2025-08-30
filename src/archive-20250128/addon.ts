@@ -1,6 +1,6 @@
 import { ZoteroToolkit } from "zotero-plugin-toolkit";
 import hooks from "./hooks";
-import { config } from "../package.json";
+import { config } from "@/config";
 import { createZToolkit } from "./utils/ztoolkit";
 
 class Addon {

@@ -3,7 +3,7 @@
  * 改进的工具栏按钮创建逻辑，兼容 Zotero 7 的新 UI 结构
  */
 
-import { config } from "../../../package.json";
+import { config } from "@/config";
 
 export async function createToolbarButtonZ7(
   win: Window,
