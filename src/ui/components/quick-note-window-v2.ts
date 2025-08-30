@@ -16,6 +16,21 @@ export class QuickNoteWindowV2 {
   private lastShowTime = 0;  // 防抖动
   private pendingNodeId: string | null = null;  // 待处理的节点ID
   
+  // Pin to Tab 功能
+  private isPinned = false;  // 是否固定到标签页
+  private pinnedContext: string | null = null;  // 固定的上下文
+  private pinnedTabId: string | null = null;  // 固定的标签页ID
+  private pinnedTitle: string | null = null;  // 固定的标题
+  
+  // 自动保存
+  private autoSaveTimer: any = null;
+  private lastSaveTime = 0;
+  private hasUnsavedChanges = false;
+  
+  // 笔记历史
+  private noteHistory: number[] = [];  // 最近使用的笔记ID列表
+  private currentHistoryIndex = -1;
+  
   constructor(
     private noteAssociationSystem: NoteAssociationSystem,
     private historyService: HistoryService
@@ -136,6 +151,9 @@ export class QuickNoteWindowV2 {
       // 设置事件处理
       this.setupEventHandlers();
       
+      // 初始化UI状态
+      this.updateModeIcon();
+      
       // 初始化编辑器
       const editorContainer = this.container.querySelector('#quick-note-editor-container');
       if (editorContainer) {
@@ -183,16 +201,50 @@ export class QuickNoteWindowV2 {
         border-bottom: 1px solid #ddd;
         cursor: move;
       ">
-        <h3 style="margin: 0; font-size: 16px; font-weight: 500;">Quick Note</h3>
-        <span class="quick-note-close" role="button" tabindex="0" style="
-          background: none;
-          border: none;
-          font-size: 20px;
-          cursor: pointer;
-          padding: 0 8px;
-          color: #666;
-          display: inline-block;
-        ">×</span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="quick-note-mode-icon" style="
+            font-size: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            background: #e8e8e8;
+            color: #666;
+            cursor: help;
+          " title="Mode: Context">🎯</span>
+          <h3 style="margin: 0; font-size: 16px; font-weight: 500;">Quick Note</h3>
+          <span class="quick-note-context-info" style="
+            font-size: 12px;
+            color: #666;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          "></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <span class="quick-note-save-status" style="
+            font-size: 12px;
+            color: #4CAF50;
+            display: none;
+            align-items: center;
+            gap: 4px;
+          ">
+            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>
+            Saved
+          </span>
+          <span class="quick-note-close" role="button" tabindex="0" style="
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0 8px;
+            color: #666;
+            display: inline-block;
+          ">×</span>
+        </div>
       </div>
       
       <div class="quick-note-toolbar" style="
@@ -201,7 +253,50 @@ export class QuickNoteWindowV2 {
         padding: 8px 16px;
         background: #fafafa;
         border-bottom: 1px solid #eee;
+        align-items: center;
       ">
+        <span class="quick-note-pin" role="button" tabindex="0" style="
+          padding: 4px 8px;
+          background: #f0f0f0;
+          color: #666;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 12px;
+          transition: all 0.2s;
+        " title="Pin to current tab">
+          <span style="font-size: 14px;">📌</span>
+          <span class="pin-text">Pin to Tab</span>
+        </span>
+        
+        <div style="display: flex; gap: 4px; padding: 0 8px;">
+          <span class="quick-note-prev" role="button" tabindex="0" style="
+            padding: 2px 6px;
+            background: #f0f0f0;
+            color: #666;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: inline-block;
+            font-size: 14px;
+            opacity: 0.5;
+          " title="Previous note">⬅️</span>
+          <span class="quick-note-next" role="button" tabindex="0" style="
+            padding: 2px 6px;
+            background: #f0f0f0;
+            color: #666;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: inline-block;
+            font-size: 14px;
+            opacity: 0.5;
+          " title="Next note">➡️</span>
+        </div>
+        
         <span class="quick-note-info" style="
           flex: 1;
           font-size: 12px;
@@ -211,6 +306,7 @@ export class QuickNoteWindowV2 {
           text-overflow: ellipsis;
           white-space: nowrap;
         "></span>
+        
         <span class="quick-note-save" role="button" tabindex="0" style="
           padding: 4px 12px;
           background: #2196F3;
@@ -304,6 +400,29 @@ export class QuickNoteWindowV2 {
     if (newBtn) {
       newBtn.addEventListener('click', () => this.forceCreateNewNote());
     }
+    
+    // Pin 按钮
+    const pinBtn = this.container.querySelector('.quick-note-pin');
+    if (pinBtn) {
+      pinBtn.addEventListener('click', () => this.togglePin());
+    }
+    
+    // 历史导航按钮
+    const prevBtn = this.container.querySelector('.quick-note-prev');
+    if (prevBtn) {
+      prevBtn.addEventListener('click', () => this.navigateHistory(-1));
+    }
+    
+    const nextBtn = this.container.querySelector('.quick-note-next');
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => this.navigateHistory(1));
+    }
+    
+    // 监听编辑器变化，启用自动保存
+    const editorContainer = this.container.querySelector('#quick-note-editor-container');
+    if (editorContainer) {
+      editorContainer.addEventListener('input', () => this.onEditorChange());
+    }
   }
   
   /**
@@ -317,6 +436,8 @@ export class QuickNoteWindowV2 {
       if (this.currentNoteId) {
         Zotero.log(`[QuickNoteWindowV2] Loading existing note ${this.currentNoteId} in editor`, 'info');
         await this.loadNoteEditor(this.currentNoteId, container);
+        // 添加到历史记录
+        this.addToHistory(this.currentNoteId);
       } else {
         // 暂时显示加载中
         const loading = container.ownerDocument.createElement('div');
@@ -544,6 +665,18 @@ export class QuickNoteWindowV2 {
    * 判断是否需要创建新笔记
    */
   private shouldCreateNewNote(nodeId?: string): boolean {
+    // 如果固定到标签页，检查是否是同一个标签页
+    if (this.isPinned) {
+      const currentTabId = this.getCurrentTabId();
+      if (currentTabId === this.pinnedTabId) {
+        // 同一个标签页，不创建新笔记
+        return false;
+      } else {
+        // 不同标签页，解除固定
+        this.unpin();
+      }
+    }
+    
     const mode = Zotero.Prefs.get('extensions.zotero.researchnavigator.quickNoteMode') || 'context';
     
     // A模式：总是创建新笔记
@@ -577,19 +710,36 @@ export class QuickNoteWindowV2 {
    * 更新笔记信息显示
    */
   private async updateNoteInfo(): Promise<void> {
-    const infoEl = this.container?.querySelector('.quick-note-info');
+    // 更新模式图标
+    this.updateModeIcon();
+    
+    // 更新上下文信息
+    const contextEl = this.container?.querySelector('.quick-note-context-info') as HTMLElement;
+    if (contextEl && this.associatedNodeId) {
+      const nodeInfo = await this.getNodeInfo(this.associatedNodeId);
+      if (nodeInfo) {
+        contextEl.textContent = nodeInfo.title;
+        contextEl.title = nodeInfo.title;  // 完整标题的悬停提示
+      }
+    }
+    
+    // 更新笔记标题信息
+    const infoEl = this.container?.querySelector('.quick-note-info') as HTMLElement;
     if (!infoEl || !this.currentNoteId) return;
     
     try {
       const note = await Zotero.Items.getAsync(this.currentNoteId);
       if (note) {
         const title = note.getField('title') || 'Quick Note';
-        const context = this.noteContext ? ` (${this.noteContext})` : '';
-        infoEl.textContent = `${title}${context}`;
+        const date = new Date(note.dateModified).toLocaleString();
+        infoEl.innerHTML = `<strong>${title}</strong> <span style="color: #999; font-size: 11px;">${date}</span>`;
       }
     } catch (error) {
       Zotero.logError(`[QuickNoteWindowV2] Failed to update note info: ${error}`);
     }
+    
+    // 更新历史导航按钮状态
+    this.updateHistoryButtons();
   }
   
   /**
@@ -788,6 +938,9 @@ export class QuickNoteWindowV2 {
       this.currentNoteId = note.id;
       this.noteContext = this.associatedNodeId;  // 记录创建时的上下文
       
+      // 添加到历史记录
+      this.addToHistory(note.id);
+      
       // 在编辑器中加载新笔记
       const editorContainer = this.container?.querySelector('#quick-note-editor-container');
       Zotero.log(`[QuickNoteWindowV2] Looking for editor container, found: ${!!editorContainer}`, 'info');
@@ -850,6 +1003,284 @@ export class QuickNoteWindowV2 {
       this.pendingNodeId = null;
       setTimeout(() => this.show(pendingId), 100);
     }
+  }
+  
+  /**
+   * 更新模式图标
+   */
+  private updateModeIcon(): void {
+    const iconEl = this.container?.querySelector('.quick-note-mode-icon') as HTMLElement;
+    if (!iconEl) return;
+    
+    const mode = Zotero.Prefs.get('extensions.zotero.researchnavigator.quickNoteMode') || 'context';
+    
+    if (this.isPinned) {
+      iconEl.textContent = '📌';
+      iconEl.style.background = '#2196F3';
+      iconEl.style.color = 'white';
+      iconEl.title = `Pinned to: ${this.pinnedTitle || 'Tab'}`;
+    } else {
+      switch (mode) {
+        case 'always-new':
+          iconEl.textContent = '📝';
+          iconEl.title = 'Mode: Always New';
+          break;
+        case 'always-reuse':
+          iconEl.textContent = '🔄';
+          iconEl.title = 'Mode: Always Reuse';
+          break;
+        default:
+          iconEl.textContent = '🎯';
+          iconEl.title = 'Mode: Context-based';
+      }
+      iconEl.style.background = '#e8e8e8';
+      iconEl.style.color = '#666';
+    }
+  }
+  
+  /**
+   * 切换固定状态
+   */
+  private async togglePin(): Promise<void> {
+    if (this.isPinned) {
+      this.unpin();
+    } else {
+      await this.pin();
+    }
+  }
+  
+  /**
+   * 固定到当前标签页
+   */
+  private async pin(): Promise<void> {
+    this.isPinned = true;
+    this.pinnedContext = this.associatedNodeId;
+    this.pinnedTabId = this.getCurrentTabId();
+    
+    // 获取当前标签页标题
+    if (this.associatedNodeId) {
+      const nodeInfo = await this.getNodeInfo(this.associatedNodeId);
+      this.pinnedTitle = nodeInfo?.title || 'Unknown';
+    }
+    
+    // 更新UI
+    const pinBtn = this.container?.querySelector('.quick-note-pin') as HTMLElement;
+    if (pinBtn) {
+      pinBtn.style.background = '#2196F3';
+      pinBtn.style.color = 'white';
+      const textEl = pinBtn.querySelector('.pin-text');
+      if (textEl) {
+        textEl.textContent = `Pinned to: ${this.pinnedTitle}`;
+      }
+    }
+    
+    this.updateModeIcon();
+    Zotero.log(`[QuickNoteWindowV2] Pinned to tab: ${this.pinnedTabId}`, 'info');
+  }
+  
+  /**
+   * 解除固定
+   */
+  private unpin(): void {
+    this.isPinned = false;
+    this.pinnedContext = null;
+    this.pinnedTabId = null;
+    this.pinnedTitle = null;
+    
+    // 更新UI
+    const pinBtn = this.container?.querySelector('.quick-note-pin') as HTMLElement;
+    if (pinBtn) {
+      pinBtn.style.background = '#f0f0f0';
+      pinBtn.style.color = '#666';
+      const textEl = pinBtn.querySelector('.pin-text');
+      if (textEl) {
+        textEl.textContent = 'Pin to Tab';
+      }
+    }
+    
+    this.updateModeIcon();
+    Zotero.log('[QuickNoteWindowV2] Unpinned from tab', 'info');
+  }
+  
+  /**
+   * 获取当前标签页ID
+   */
+  private getCurrentTabId(): string | null {
+    try {
+      const win = Zotero.getMainWindow();
+      if (win?.Zotero_Tabs) {
+        return win.Zotero_Tabs.selectedID;
+      }
+    } catch (error) {
+      Zotero.logError(`[QuickNoteWindowV2] Failed to get current tab ID: ${error}`);
+    }
+    return null;
+  }
+  
+  /**
+   * 编辑器内容变化处理
+   */
+  private onEditorChange(): void {
+    this.hasUnsavedChanges = true;
+    
+    // 清除之前的定时器
+    if (this.autoSaveTimer) {
+      clearTimeout(this.autoSaveTimer);
+    }
+    
+    // 显示"未保存"状态
+    this.updateSaveStatus('unsaved');
+    
+    // 2秒后自动保存
+    this.autoSaveTimer = setTimeout(() => {
+      this.autoSave();
+    }, 2000);
+  }
+  
+  /**
+   * 自动保存
+   */
+  private async autoSave(): Promise<void> {
+    if (!this.hasUnsavedChanges || !this.currentNoteId) return;
+    
+    this.updateSaveStatus('saving');
+    
+    try {
+      await this.saveNote();
+      this.hasUnsavedChanges = false;
+      this.lastSaveTime = Date.now();
+      this.updateSaveStatus('saved');
+      
+      // 3秒后隐藏保存状态
+      setTimeout(() => {
+        this.updateSaveStatus('hidden');
+      }, 3000);
+    } catch (error) {
+      Zotero.logError(`[QuickNoteWindowV2] Auto-save failed: ${error}`);
+      this.updateSaveStatus('error');
+    }
+  }
+  
+  /**
+   * 更新保存状态显示
+   */
+  private updateSaveStatus(status: 'saved' | 'saving' | 'unsaved' | 'error' | 'hidden'): void {
+    const statusEl = this.container?.querySelector('.quick-note-save-status') as HTMLElement;
+    if (!statusEl) return;
+    
+    switch (status) {
+      case 'saved':
+        statusEl.style.display = 'flex';
+        statusEl.style.color = '#4CAF50';
+        statusEl.innerHTML = '<span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span> Saved';
+        break;
+      case 'saving':
+        statusEl.style.display = 'flex';
+        statusEl.style.color = '#FF9800';
+        statusEl.innerHTML = '<span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: pulse 1s infinite;"></span> Saving...';
+        break;
+      case 'unsaved':
+        statusEl.style.display = 'flex';
+        statusEl.style.color = '#f44336';
+        statusEl.innerHTML = '<span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span> Unsaved';
+        break;
+      case 'error':
+        statusEl.style.display = 'flex';
+        statusEl.style.color = '#f44336';
+        statusEl.innerHTML = '⚠️ Save failed';
+        break;
+      case 'hidden':
+        statusEl.style.display = 'none';
+        break;
+    }
+  }
+  
+  /**
+   * 导航历史记录
+   */
+  private async navigateHistory(direction: number): Promise<void> {
+    const newIndex = this.currentHistoryIndex + direction;
+    
+    if (newIndex < 0 || newIndex >= this.noteHistory.length) {
+      return;  // 超出范围
+    }
+    
+    // 保存当前笔记
+    if (this.hasUnsavedChanges) {
+      await this.saveNote();
+    }
+    
+    // 切换到历史笔记
+    this.currentHistoryIndex = newIndex;
+    const noteId = this.noteHistory[newIndex];
+    
+    try {
+      const note = await Zotero.Items.getAsync(noteId);
+      if (note && !note.deleted) {
+        this.currentNoteId = noteId;
+        
+        // 加载笔记到编辑器
+        const editorContainer = this.container?.querySelector('#quick-note-editor-container');
+        if (editorContainer) {
+          await this.loadNoteEditor(noteId, editorContainer as HTMLElement);
+        }
+        
+        // 更新UI
+        await this.updateNoteInfo();
+        this.updateHistoryButtons();
+      } else {
+        // 笔记已删除，从历史中移除
+        this.noteHistory.splice(newIndex, 1);
+        if (this.currentHistoryIndex >= this.noteHistory.length) {
+          this.currentHistoryIndex = this.noteHistory.length - 1;
+        }
+        this.updateHistoryButtons();
+      }
+    } catch (error) {
+      Zotero.logError(`[QuickNoteWindowV2] Failed to navigate history: ${error}`);
+    }
+  }
+  
+  /**
+   * 更新历史导航按钮状态
+   */
+  private updateHistoryButtons(): void {
+    const prevBtn = this.container?.querySelector('.quick-note-prev') as HTMLElement;
+    const nextBtn = this.container?.querySelector('.quick-note-next') as HTMLElement;
+    
+    if (prevBtn) {
+      prevBtn.style.opacity = this.currentHistoryIndex > 0 ? '1' : '0.5';
+      prevBtn.style.pointerEvents = this.currentHistoryIndex > 0 ? 'auto' : 'none';
+    }
+    
+    if (nextBtn) {
+      nextBtn.style.opacity = this.currentHistoryIndex < this.noteHistory.length - 1 ? '1' : '0.5';
+      nextBtn.style.pointerEvents = this.currentHistoryIndex < this.noteHistory.length - 1 ? 'auto' : 'none';
+    }
+  }
+  
+  /**
+   * 添加笔记到历史记录
+   */
+  private addToHistory(noteId: number): void {
+    // 如果已在历史中，先移除
+    const existingIndex = this.noteHistory.indexOf(noteId);
+    if (existingIndex !== -1) {
+      this.noteHistory.splice(existingIndex, 1);
+    }
+    
+    // 添加到历史末尾
+    this.noteHistory.push(noteId);
+    
+    // 限制历史记录数量
+    if (this.noteHistory.length > 10) {
+      this.noteHistory.shift();
+    }
+    
+    // 更新当前索引
+    this.currentHistoryIndex = this.noteHistory.length - 1;
+    
+    this.updateHistoryButtons();
   }
   
   /**
