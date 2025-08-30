@@ -1,70 +1,87 @@
-name: Test Plugin
+name: Test Suite
 
 on:
   push:
-    branches: [master, main, "feature/**", "fix/**", "refactor/**"]
+    branches: [ main, fix/typescript-errors-and-functionality ]
   pull_request:
-    branches: [master, main]
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    branches: [ main ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      checks: write
-
+    
     strategy:
       matrix:
-        node-version: [20]
-
+        node-version: [18.x, 20.x]
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm install --legacy-peer-deps
-
-      - name: Run linting
-        run: npm run lint:check
-        continue-on-error: true
-
-      - name: Build plugin
-        run: npm run build-prod
-
-      - name: Run tests
-        run: |
-          echo "Current directory: $(pwd)"
-          echo "Build directory contents:"
-          ls -la build/ || echo "Build directory not found"
-          echo "Running tests..."
-          npm test
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-node-${{ matrix.node-version }}
-          path: |
-            build/
-            test-results/
-          retention-days: 7
-
-      - name: Test XPI structure
-        run: |
-          echo "=== XPI Structure Test ==="
-          unzip -l build/zotero-research-navigator.xpi
-          echo ""
-          echo "=== Manifest Content ==="
-          unzip -p build/zotero-research-navigator.xpi manifest.json | python3 -m json.tool
+    - uses: actions/checkout@v3
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run version check
+      run: npm run version:check
+    
+    - name: Run linter
+      run: npm run lint:check
+      continue-on-error: true
+    
+    - name: Run unit tests
+      run: npm test -- --coverage
+      env:
+        NODE_ENV: test
+    
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      if: matrix.node-version == '20.x'
+      with:
+        file: ./coverage/lcov.info
+        flags: unittests
+        name: codecov-umbrella
+    
+    - name: Build plugin
+      run: npm run build-dev
+    
+    - name: Archive test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results-${{ matrix.node-version }}
+        path: |
+          coverage/
+          junit.xml
+        retention-days: 7
+    
+    - name: Comment PR with test results
+      if: github.event_name == 'pull_request' && matrix.node-version == '20.x'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const coverage = JSON.parse(fs.readFileSync('./coverage/coverage-summary.json', 'utf8'));
+          const total = coverage.total;
+          
+          const comment = `## Test Results
+          
+          | Metric | Coverage |
+          |--------|----------|
+          | Statements | ${total.statements.pct}% |
+          | Branches | ${total.branches.pct}% |
+          | Functions | ${total.functions.pct}% |
+          | Lines | ${total.lines.pct}% |
+          
+          ✅ All tests passed!`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });

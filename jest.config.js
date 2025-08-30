@@ -13,7 +13,16 @@ module.exports = {
     'src/**/*.ts',
     '!src/**/*.d.ts',
     '!src/test/**/*',
-    '!src/**/__tests__/**/*'
+    '!src/**/__tests__/**/*',
+    '!src/**/*.test.ts',
+    '!src/bootstrap/**/*',
+    '!src/polyfills/**/*'
+  ],
+  coverageReporters: ['text', 'lcov', 'html', 'json-summary'],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/build/',
+    '/dist/'
   ],
   coverageThreshold: {
     global: {

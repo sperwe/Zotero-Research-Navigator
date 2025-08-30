@@ -1,7 +1,7 @@
 {
   "name": "zotero-research-navigator",
   "type": "module",
-  "version": "2.6.6",
+  "version": "2.6.7",
   "description": "Track research history and enhance note navigation in Zotero",
   "config": {
     "addonName": "Zotero Research Navigator",
@@ -37,6 +37,11 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:runner": "node scripts/test-runner.js",
+    "test:unit": "node scripts/test-runner.js unit",
+    "test:integration": "node scripts/test-runner.js integration",
+    "test:ui": "node scripts/test-runner.js ui",
+    "test:debug": "node scripts/test-runner.js debug",
     "test:legacy": "node test/simple-test.cjs",
     "test:debug": "node test/debug-test.cjs",
     "test:full": "node test/run-tests.cjs",
