@@ -12,6 +12,7 @@ export class QuickNoteWindowV2 {
   private associatedNodeId: string | null = null;
   private isCreating = false;  // 防止重复创建
   private isLoadingNote = false;  // 防止重复加载笔记
+  private noteContext: string | null = null;  // 记录笔记创建时的上下文
   
   constructor(
     private noteAssociationSystem: NoteAssociationSystem,
@@ -28,12 +29,17 @@ export class QuickNoteWindowV2 {
     if (this.container && this.container.parentElement) {
       Zotero.log(`[QuickNoteWindowV2] Reusing existing window, currentNoteId: ${this.currentNoteId}`, 'info');
       this.container.style.display = 'flex';
-      this.associatedNodeId = nodeId || null;
       
-      // 如果没有当前笔记，自动创建一个
-      if (!this.currentNoteId && !this.isLoadingNote) {
-        Zotero.log('[QuickNoteWindowV2] No current note in existing window, creating new one', 'info');
+      // 检查是否需要创建新笔记
+      const shouldCreateNew = this.shouldCreateNewNote(nodeId);
+      
+      if (shouldCreateNew || (!this.currentNoteId && !this.isLoadingNote)) {
+        this.associatedNodeId = nodeId || null;
+        Zotero.log('[QuickNoteWindowV2] Creating new note based on mode/context', 'info');
         setTimeout(() => this.createNewNote(), 500);
+      } else {
+        // 更新信息显示
+        this.updateNoteInfo();
       }
       return;
     }
@@ -114,6 +120,9 @@ export class QuickNoteWindowV2 {
           if (!this.currentNoteId && !this.isLoadingNote) {
             Zotero.log('[QuickNoteWindowV2] No current note, creating new note after window init', 'info');
             this.createNewNote();
+          } else if (this.currentNoteId) {
+            // 如果有笔记，更新信息显示
+            this.updateNoteInfo();
           }
         }, 500);
       }
@@ -166,6 +175,15 @@ export class QuickNoteWindowV2 {
         background: #fafafa;
         border-bottom: 1px solid #eee;
       ">
+        <span class="quick-note-info" style="
+          flex: 1;
+          font-size: 12px;
+          color: #666;
+          padding: 0 10px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        "></span>
         <span class="quick-note-save" role="button" tabindex="0" style="
           padding: 4px 12px;
           background: #2196F3;
@@ -257,7 +275,7 @@ export class QuickNoteWindowV2 {
     // 新建按钮
     const newBtn = this.container.querySelector('.quick-note-new');
     if (newBtn) {
-      newBtn.addEventListener('click', () => this.createNewNote());
+      newBtn.addEventListener('click', () => this.forceCreateNewNote());
     }
   }
   
@@ -496,6 +514,58 @@ export class QuickNoteWindowV2 {
 
   
   /**
+   * 判断是否需要创建新笔记
+   */
+  private shouldCreateNewNote(nodeId?: string): boolean {
+    const mode = Zotero.Prefs.get('extensions.zotero.researchnavigator.quickNoteMode') || 'context';
+    
+    // A模式：总是创建新笔记
+    if (mode === 'always-new') {
+      return true;
+    }
+    
+    // 当前模式：总是重用
+    if (mode === 'always-reuse') {
+      return false;
+    }
+    
+    // B模式：基于上下文
+    if (mode === 'context') {
+      // 如果没有当前笔记，需要创建
+      if (!this.currentNoteId) {
+        return true;
+      }
+      
+      // 如果上下文改变了，需要创建新笔记
+      if (nodeId && nodeId !== this.noteContext) {
+        Zotero.log(`[QuickNoteWindowV2] Context changed from ${this.noteContext} to ${nodeId}`, 'info');
+        return true;
+      }
+    }
+    
+    return false;
+  }
+  
+  /**
+   * 更新笔记信息显示
+   */
+  private async updateNoteInfo(): Promise<void> {
+    const infoEl = this.container?.querySelector('.quick-note-info');
+    if (!infoEl || !this.currentNoteId) return;
+    
+    try {
+      const note = await Zotero.Items.getAsync(this.currentNoteId);
+      if (note) {
+        const title = note.getField('title') || 'Quick Note';
+        const context = this.noteContext ? ` (${this.noteContext})` : '';
+        infoEl.textContent = `${title}${context}`;
+      }
+    } catch (error) {
+      Zotero.logError(`[QuickNoteWindowV2] Failed to update note info: ${error}`);
+    }
+  }
+  
+  /**
    * 获取节点信息
    */
   private async getNodeInfo(nodeId: string): Promise<{title: string, type: string, itemID: number, parentID?: number} | null> {
@@ -575,6 +645,37 @@ export class QuickNoteWindowV2 {
   }
   
   /**
+   * 强制创建新笔记（用户点击新建按钮）
+   */
+  private async forceCreateNewNote(): Promise<void> {
+    Zotero.log('[QuickNoteWindowV2] User requested new note', 'info');
+    // 清除当前笔记信息
+    this.currentNoteId = null;
+    this.noteContext = null;
+    
+    // 清空编辑器
+    const editorContainer = this.container?.querySelector('#quick-note-editor-container');
+    if (editorContainer) {
+      editorContainer.innerHTML = '';
+      const loading = editorContainer.ownerDocument.createElement('div');
+      loading.id = 'editor-loading';
+      loading.style.cssText = `
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: #666;
+        font-size: 14px;
+      `;
+      loading.textContent = 'Creating new note...';
+      editorContainer.appendChild(loading);
+    }
+    
+    // 创建新笔记
+    await this.createNewNote();
+  }
+  
+  /**
    * 创建新笔记
    */
   private async createNewNote(): Promise<void> {
@@ -651,6 +752,7 @@ export class QuickNoteWindowV2 {
       Zotero.Notifier.unregisterObserver(notifierID);
       
       this.currentNoteId = note.id;
+      this.noteContext = this.associatedNodeId;  // 记录创建时的上下文
       
       // 在编辑器中加载新笔记
       const editorContainer = this.container?.querySelector('#quick-note-editor-container');
@@ -663,6 +765,9 @@ export class QuickNoteWindowV2 {
       } else {
         Zotero.logError('[QuickNoteWindowV2] Editor container not found!');
       }
+      
+      // 更新信息显示
+      await this.updateNoteInfo();
       
       // 创建关联
       if (this.associatedNodeId) {
