@@ -147,13 +147,35 @@ export class QuickNoteButtonSimple {
         return;
       }
       
-      // 获取当前选中的项目（如果有）
-      const selectedItems = Zotero.getActiveZoteroPane()?.getSelectedItems();
       let nodeId: string | undefined;
       
-      if (selectedItems && selectedItems.length === 1) {
-        const item = selectedItems[0];
-        nodeId = `item-${item.id}`;
+      // 获取当前打开的标签页
+      const Zotero_Tabs = (this.window as any).Zotero_Tabs;
+      if (Zotero_Tabs && Zotero_Tabs.selectedID) {
+        // 获取当前选中的标签页
+        const selectedTab = Zotero_Tabs._tabs.find((tab: any) => tab.id === Zotero_Tabs.selectedID);
+        
+        if (selectedTab && selectedTab.type === 'reader' && selectedTab.data?.itemID) {
+          // 如果是阅读器标签页，使用附件 ID
+          nodeId = `attachment-${selectedTab.data.itemID}`;
+          Zotero.log(`[QuickNoteButtonSimple] Current tab is reader: ${selectedTab.title}, itemID: ${selectedTab.data.itemID}`, 'info');
+        } else if (selectedTab && selectedTab.type === 'library') {
+          // 如果是库标签页，获取选中的项目
+          const selectedItems = Zotero.getActiveZoteroPane()?.getSelectedItems();
+          if (selectedItems && selectedItems.length === 1) {
+            const item = selectedItems[0];
+            if (item.isAttachment()) {
+              nodeId = `attachment-${item.id}`;
+            } else {
+              nodeId = `item-${item.id}`;
+            }
+            Zotero.log(`[QuickNoteButtonSimple] Library tab selected item: ${item.getField('title')}, id: ${item.id}`, 'info');
+          }
+        }
+      }
+      
+      if (!nodeId) {
+        Zotero.log('[QuickNoteButtonSimple] No tab or item selected for quick note', 'info');
       }
       
       // 显示快速笔记窗口

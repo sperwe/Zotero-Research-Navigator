@@ -497,7 +497,7 @@ export class QuickNoteWindowV2 {
   /**
    * 获取节点信息
    */
-  private async getNodeInfo(nodeId: string): Promise<{title: string, type: string} | null> {
+  private async getNodeInfo(nodeId: string): Promise<{title: string, type: string, itemID: number, parentID?: number} | null> {
     try {
       // 解析节点ID (格式: "item-123" 或 "attachment-456")
       const [type, id] = nodeId.split('-');
@@ -508,10 +508,25 @@ export class QuickNoteWindowV2 {
       const item = await Zotero.Items.getAsync(itemId);
       if (!item) return null;
       
-      return {
+      const result: any = {
         title: item.getField('title') || 'Untitled',
-        type: type
+        type: type,
+        itemID: itemId
       };
+      
+      // 如果是附件，获取父项ID
+      if (item.isAttachment() && item.parentID) {
+        result.parentID = item.parentID;
+        // 如果附件没有标题，尝试使用父项的标题
+        if (result.title === 'Untitled') {
+          const parent = await Zotero.Items.getAsync(item.parentID);
+          if (parent) {
+            result.title = parent.getField('title') || 'Untitled';
+          }
+        }
+      }
+      
+      return result;
     } catch (error) {
       Zotero.logError(`[QuickNoteWindowV2] Failed to get node info: ${error}`);
       return null;
@@ -561,16 +576,33 @@ export class QuickNoteWindowV2 {
       // 设置初始内容
       const timestamp = new Date().toLocaleString();
       let noteContent = `<h2>Quick Note</h2><p>Created at ${timestamp}</p><p></p>`;
+      let parentItemID: number | undefined;
       
-      // 如果有关联的节点，添加相关信息
+      // 如果有关联的节点，添加相关信息并设置父项
       if (this.associatedNodeId) {
         const nodeInfo = await this.getNodeInfo(this.associatedNodeId);
         if (nodeInfo) {
           noteContent = `<h2>Quick Note - ${nodeInfo.title}</h2><p>Created at ${timestamp}</p><p></p>`;
+          
+          // 如果是附件，获取其父项作为笔记的父项
+          if (nodeInfo.type === 'attachment' && nodeInfo.parentID) {
+            parentItemID = nodeInfo.parentID;
+            Zotero.log(`[QuickNoteWindowV2] Setting parent item ID: ${parentItemID}`, 'info');
+          } else if (nodeInfo.type === 'item' && nodeInfo.itemID) {
+            // 如果是普通项目，直接作为父项
+            parentItemID = nodeInfo.itemID;
+            Zotero.log(`[QuickNoteWindowV2] Setting parent item ID: ${parentItemID}`, 'info');
+          }
         }
       }
       
       note.setNote(noteContent);
+      
+      // 设置父项（如果有）
+      if (parentItemID) {
+        note.parentID = parentItemID;
+      }
+      
       await note.saveTx();
       
       this.currentNoteId = note.id;
