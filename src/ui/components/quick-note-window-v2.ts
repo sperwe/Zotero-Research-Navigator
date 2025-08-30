@@ -44,12 +44,7 @@ export class QuickNoteWindowV2 {
     // 创建新窗口
     this.createWindow(nodeId);
     
-    // 窗口创建后自动创建笔记
-    setTimeout(() => {
-      if (!this.currentNoteId) {
-        this.createNewNote();
-      }
-    }, 1000);
+    // 不再自动创建笔记，等待用户操作或窗口完全初始化后再创建
   }
   
   /**
@@ -110,6 +105,14 @@ export class QuickNoteWindowV2 {
       const editorContainer = this.container.querySelector('#quick-note-editor-container');
       if (editorContainer) {
         this.initializeEditor(editorContainer as HTMLElement);
+        
+        // 窗口初始化完成后，如果没有笔记就创建一个
+        setTimeout(() => {
+          if (!this.currentNoteId) {
+            Zotero.log('[QuickNoteWindowV2] No current note, creating new note after window init', 'info');
+            this.createNewNote();
+          }
+        }, 500);
       }
       
       // 使窗口可拖动
@@ -621,11 +624,21 @@ export class QuickNoteWindowV2 {
         note.parentID = parentItemID;
       }
       
-      // 保存笔记但不触发默认的打开行为
-      await note.saveTx({
-        skipSelect: true,
-        skipNotifier: false
-      });
+      // 临时禁用项目选择通知
+      const notifierID = Zotero.Notifier.registerObserver({
+        notify: (event: string, type: string, ids: number[]) => {
+          if (event === 'add' && type === 'item' && ids.includes(note.id)) {
+            // 阻止选择新创建的笔记
+            return false;
+          }
+        }
+      }, ['item']);
+      
+      // 保存笔记
+      await note.saveTx();
+      
+      // 移除通知监听
+      Zotero.Notifier.unregisterObserver(notifierID);
       
       this.currentNoteId = note.id;
       
