@@ -423,10 +423,14 @@ export class QuickNoteWindowV2 {
     if (editorContainer) {
       editorContainer.addEventListener('input', () => this.onEditorChange());
       
-      // 添加拖拽事件监听
+      // 添加拖拽事件监听到容器
       editorContainer.addEventListener('dragover', (e) => this.handleDragOver(e));
       editorContainer.addEventListener('drop', (e) => this.handleDrop(e));
       editorContainer.addEventListener('dragleave', (e) => this.handleDragLeave(e));
+      
+      // 添加到整个窗口，确保能捕获拖拽
+      this.container.addEventListener('dragover', (e) => this.handleDragOver(e));
+      this.container.addEventListener('drop', (e) => this.handleDrop(e));
     }
   }
   
@@ -575,6 +579,30 @@ export class QuickNoteWindowV2 {
           
           this.editor = editorInstance;
           this.currentNoteId = noteId;
+          
+          // 给 iframe 内部也添加拖拽事件监听
+          if (iframe.contentDocument) {
+            // 绑定到 body 元素
+            const iframeBody = iframe.contentDocument.body;
+            if (iframeBody) {
+              iframeBody.addEventListener('dragover', (e) => this.handleDragOver(e));
+              iframeBody.addEventListener('drop', (e) => this.handleDrop(e));
+              iframeBody.addEventListener('dragleave', (e) => this.handleDragLeave(e));
+              
+              // 监听编辑器内容变化
+              iframeBody.addEventListener('input', () => this.onEditorChange());
+              
+              Zotero.log('[QuickNoteWindowV2] Drag-drop events attached to iframe body', 'info');
+            }
+            
+            // 也绑定到 contentWindow
+            if (iframe.contentWindow) {
+              iframe.contentWindow.addEventListener('dragover', (e) => this.handleDragOver(e));
+              iframe.contentWindow.addEventListener('drop', (e) => this.handleDrop(e));
+              
+              Zotero.log('[QuickNoteWindowV2] Drag-drop events attached to iframe window', 'info');
+            }
+          }
           
           Zotero.log('[QuickNoteWindowV2] Native editor loaded successfully', 'info');
           this.updateStatus('Note loaded');
@@ -1295,6 +1323,8 @@ export class QuickNoteWindowV2 {
     e.preventDefault();
     e.stopPropagation();
     
+    Zotero.log('[QuickNoteWindowV2] DragOver event triggered', 'info');
+    
     // 设置拖拽效果
     if (e.dataTransfer) {
       e.dataTransfer.dropEffect = 'copy';
@@ -1303,8 +1333,8 @@ export class QuickNoteWindowV2 {
     // 添加视觉反馈
     const editorContainer = this.container?.querySelector('#quick-note-editor-container') as HTMLElement;
     if (editorContainer) {
-      editorContainer.style.background = '#f0f8ff';
-      editorContainer.style.border = '2px dashed #2196F3';
+      editorContainer.style.cssText = editorContainer.style.cssText + 
+        '; background-color: #f0f8ff !important; outline: 2px dashed #2196F3 !important; outline-offset: -2px !important;';
     }
   }
   
@@ -1318,8 +1348,12 @@ export class QuickNoteWindowV2 {
     // 恢复编辑器样式
     const editorContainer = this.container?.querySelector('#quick-note-editor-container') as HTMLElement;
     if (editorContainer) {
-      editorContainer.style.background = '';
-      editorContainer.style.border = '';
+      // 移除拖拽样式
+      const currentStyle = editorContainer.style.cssText;
+      editorContainer.style.cssText = currentStyle
+        .replace(/;\s*background-color:\s*[^;]+!important/gi, '')
+        .replace(/;\s*outline:\s*[^;]+!important/gi, '')
+        .replace(/;\s*outline-offset:\s*[^;]+!important/gi, '');
     }
   }
   
@@ -1330,22 +1364,37 @@ export class QuickNoteWindowV2 {
     e.preventDefault();
     e.stopPropagation();
     
+    Zotero.log('[QuickNoteWindowV2] Drop event triggered', 'info');
+    
     // 恢复编辑器样式
     const editorContainer = this.container?.querySelector('#quick-note-editor-container') as HTMLElement;
     if (editorContainer) {
-      editorContainer.style.background = '';
-      editorContainer.style.border = '';
+      // 移除拖拽样式
+      const currentStyle = editorContainer.style.cssText;
+      editorContainer.style.cssText = currentStyle
+        .replace(/;\s*background-color:\s*[^;]+!important/gi, '')
+        .replace(/;\s*outline:\s*[^;]+!important/gi, '')
+        .replace(/;\s*outline-offset:\s*[^;]+!important/gi, '');
     }
     
-    if (!e.dataTransfer || !this.editor) {
+    if (!e.dataTransfer) {
+      Zotero.log('[QuickNoteWindowV2] No dataTransfer in drop event', 'warn');
+      return;
+    }
+    
+    if (!this.editor) {
+      Zotero.log('[QuickNoteWindowV2] No editor instance available', 'warn');
       return;
     }
     
     // 获取拖拽的文本
     const text = e.dataTransfer.getData('text/plain');
     if (!text) {
+      Zotero.log('[QuickNoteWindowV2] No text data in drop event', 'warn');
       return;
     }
+    
+    Zotero.log(`[QuickNoteWindowV2] Dropped text: ${text.substring(0, 50)}...`, 'info');
     
     try {
       // 格式化为引用格式
@@ -1362,48 +1411,60 @@ export class QuickNoteWindowV2 {
       
       // 获取当前内容并添加引用
       try {
-        if (this.editor && typeof this.editor._editorInstance === 'object') {
-          // 使用 Zotero 编辑器的内部实例
-          const editorInstance = this.editor._editorInstance;
-          if (editorInstance?.view) {
-            // 获取当前内容
-            const currentHTML = await this.editor.getContentHTML();
-            
-            // 将新内容添加到末尾
-            const newHTML = currentHTML + formattedText.replace(/\n/g, '<br>');
-            await this.editor.setContentHTML(newHTML);
-            
-            // 滚动到底部
-            const editorBody = editorInstance.view.dom;
-            if (editorBody) {
-              editorBody.scrollTop = editorBody.scrollHeight;
+        if (this.editor && this.editor.getContentHTML && this.editor.setContentHTML) {
+          // 使用 Zotero 编辑器 API
+          const currentHTML = await this.editor.getContentHTML();
+          
+          // 创建格式化的 HTML
+          const quoteHTML = `
+            <blockquote style="margin: 1em 0; padding-left: 1em; border-left: 3px solid #ccc;">
+              ${text.trim().replace(/\n/g, '<br>')}
+            </blockquote>
+            <p style="margin-top: 0.5em; color: #666;">
+              <em>— ${sourceInfo ? sourceInfo + ', ' : ''}${timestamp}</em>
+            </p>
+            <p><br></p>
+          `;
+          
+          // 添加到内容末尾
+          const newHTML = currentHTML + quoteHTML;
+          await this.editor.setContentHTML(newHTML);
+          
+          // 尝试滚动到底部
+          setTimeout(() => {
+            const iframe = this.container?.querySelector('#quick-note-editor-iframe') as HTMLIFrameElement;
+            if (iframe?.contentDocument?.body) {
+              iframe.contentDocument.body.scrollTop = iframe.contentDocument.body.scrollHeight;
             }
-          }
+          }, 100);
+          
+          Zotero.log('[QuickNoteWindowV2] Quote inserted successfully', 'info');
         } else {
-          // 后备方案：直接操作 DOM
-          const iframe = this.container?.querySelector('#quick-note-editor-iframe') as HTMLIFrameElement;
-          if (iframe?.contentDocument) {
-            const body = iframe.contentDocument.body;
-            if (body) {
-              const quote = iframe.contentDocument.createElement('blockquote');
-              quote.textContent = text.trim();
-              quote.style.cssText = 'margin: 1em 0; padding-left: 1em; border-left: 3px solid #ccc;';
-              
-              const citation = iframe.contentDocument.createElement('p');
-              citation.innerHTML = `<em>— ${sourceInfo || ''} ${timestamp}</em>`;
-              citation.style.cssText = 'margin-top: 0.5em; color: #666;';
-              
-              body.appendChild(quote);
-              body.appendChild(citation);
-              body.appendChild(iframe.contentDocument.createElement('p')); // 空行
-              
-              // 滚动到底部
-              body.scrollTop = body.scrollHeight;
-            }
-          }
+          throw new Error('Editor API not available');
         }
       } catch (error) {
         Zotero.logError(`[QuickNoteWindowV2] Failed to insert text: ${error}`);
+        
+        // 后备方案：使用简单的文本格式
+        try {
+          if (this.currentNoteId) {
+            const note = await Zotero.Items.getAsync(this.currentNoteId);
+            if (note) {
+              const currentContent = note.getNote();
+              const newContent = currentContent + formattedText.replace(/\n/g, '<br>');
+              note.setNote(newContent);
+              await note.saveTx();
+              
+              // 重新加载编辑器
+              const editorContainer = this.container?.querySelector('#quick-note-editor-container');
+              if (editorContainer) {
+                await this.loadNoteEditor(this.currentNoteId, editorContainer as HTMLElement);
+              }
+            }
+          }
+        } catch (fallbackError) {
+          Zotero.logError(`[QuickNoteWindowV2] Fallback also failed: ${fallbackError}`);
+        }
       }
       
       // 触发内容变化事件
