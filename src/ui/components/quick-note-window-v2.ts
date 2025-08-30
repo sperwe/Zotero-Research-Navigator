@@ -27,6 +27,11 @@ export class QuickNoteWindowV2 {
     if (this.container && this.container.parentElement) {
       this.container.style.display = 'flex';
       this.associatedNodeId = nodeId || null;
+      
+      // 如果没有当前笔记，自动创建一个
+      if (!this.currentNoteId) {
+        setTimeout(() => this.createNewNote(), 500);
+      }
       return;
     }
     
@@ -38,6 +43,13 @@ export class QuickNoteWindowV2 {
     
     // 创建新窗口
     this.createWindow(nodeId);
+    
+    // 窗口创建后自动创建笔记
+    setTimeout(() => {
+      if (!this.currentNoteId) {
+        this.createNewNote();
+      }
+    }, 1000);
   }
   
   /**
@@ -246,31 +258,24 @@ export class QuickNoteWindowV2 {
    */
   private async initializeEditor(container: HTMLElement): Promise<void> {
     try {
-      Zotero.log('[QuickNoteWindowV2] Initializing Zotero native editor...', 'info');
+      Zotero.log('[QuickNoteWindowV2] Initializing editor...', 'info');
       
-      // 如果已有笔记，加载 Zotero 原生编辑器
+      // 如果已有笔记，加载编辑器
       if (this.currentNoteId) {
         await this.loadNoteEditor(this.currentNoteId, container);
       } else {
-        // 否则显示占位符
-        const placeholder = container.ownerDocument.createElement('div');
-        placeholder.style.cssText = `
+        // 暂时显示加载中
+        const loading = container.ownerDocument.createElement('div');
+        loading.style.cssText = `
           display: flex;
           align-items: center;
           justify-content: center;
           height: 100%;
-          color: #999;
+          color: #666;
           font-size: 14px;
-          text-align: center;
-          padding: 20px;
         `;
-        placeholder.innerHTML = `
-          <div>
-            <p>Click "New Note" to create a note</p>
-            <p style="font-size: 12px; margin-top: 10px;">or select an existing note</p>
-          </div>
-        `;
-        container.appendChild(placeholder);
+        loading.textContent = 'Initializing editor...';
+        container.appendChild(loading);
       }
       
     } catch (error) {
@@ -487,15 +492,56 @@ export class QuickNoteWindowV2 {
     header.ownerDocument.addEventListener('mousemove', drag);
   }
   
+
+  
+  /**
+   * 获取节点信息
+   */
+  private async getNodeInfo(nodeId: string): Promise<{title: string, type: string} | null> {
+    try {
+      // 解析节点ID (格式: "item-123" 或 "attachment-456")
+      const [type, id] = nodeId.split('-');
+      const itemId = parseInt(id);
+      
+      if (!itemId) return null;
+      
+      const item = await Zotero.Items.getAsync(itemId);
+      if (!item) return null;
+      
+      return {
+        title: item.getField('title') || 'Untitled',
+        type: type
+      };
+    } catch (error) {
+      Zotero.logError(`[QuickNoteWindowV2] Failed to get node info: ${error}`);
+      return null;
+    }
+  }
+  
   /**
    * 保存笔记
    */
   private async saveNote(): Promise<void> {
     try {
+      if (!this.currentNoteId) {
+        this.updateStatus('No note to save');
+        return;
+      }
+      
       this.updateStatus('Saving...');
-      // 实际的保存逻辑
-      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // EditorInstance 会自动保存，这里只需要更新状态
+      if (this.editor && typeof this.editor.saveSync === 'function') {
+        this.editor.saveSync();
+      }
+      
       this.updateStatus('Saved');
+      
+      // 2秒后恢复状态
+      setTimeout(() => {
+        this.updateStatus('Ready');
+      }, 2000);
+      
     } catch (error) {
       Zotero.logError(`[QuickNoteWindowV2] Save failed: ${error}`);
       this.updateStatus('Save failed');
@@ -511,7 +557,20 @@ export class QuickNoteWindowV2 {
       
       // 创建新的 Zotero 笔记
       const note = new Zotero.Item('note');
-      note.setNote('<p>New quick note</p>');
+      
+      // 设置初始内容
+      const timestamp = new Date().toLocaleString();
+      let noteContent = `<h2>Quick Note</h2><p>Created at ${timestamp}</p><p></p>`;
+      
+      // 如果有关联的节点，添加相关信息
+      if (this.associatedNodeId) {
+        const nodeInfo = await this.getNodeInfo(this.associatedNodeId);
+        if (nodeInfo) {
+          noteContent = `<h2>Quick Note - ${nodeInfo.title}</h2><p>Created at ${timestamp}</p><p></p>`;
+        }
+      }
+      
+      note.setNote(noteContent);
       await note.saveTx();
       
       this.currentNoteId = note.id;
