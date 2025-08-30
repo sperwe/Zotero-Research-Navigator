@@ -67,6 +67,8 @@ export class QuickNoteWindowV2 {
         return;
       }
       
+      // 保存 window 引用
+      this.window = win;
       const doc = win.document;
       
       // 创建容器
@@ -294,7 +296,7 @@ export class QuickNoteWindowV2 {
       container.innerHTML = '';
       
       const doc = container.ownerDocument;
-      const win = this.window;
+      const win = doc.defaultView || this.window || Zotero.getMainWindow();
       
       // 确保自定义元素脚本已加载
       if (!win.customElements || !win.customElements.get('note-editor')) {
@@ -424,34 +426,24 @@ export class QuickNoteWindowV2 {
    * 初始化简单编辑器（备用）
    */
   private initializeSimpleEditor(container: HTMLElement): void {
-    const iframe = container.ownerDocument.createElement('iframe');
-    iframe.style.cssText = 'width: 100%; height: 100%; border: none;';
-    iframe.setAttribute('frameborder', '0');
-    container.appendChild(iframe);
+    // 创建一个简单的文本区域作为备用
+    const textArea = container.ownerDocument.createElement('textarea');
+    textArea.style.cssText = `
+      width: 100%;
+      height: 100%;
+      border: none;
+      padding: 16px;
+      font-family: -apple-system, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      resize: none;
+      outline: none;
+    `;
+    textArea.placeholder = 'Start typing your note...';
+    container.appendChild(textArea);
     
-    const iframeDoc = iframe.contentDocument;
-    if (iframeDoc) {
-      iframeDoc.open();
-      iframeDoc.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { 
-              margin: 16px; 
-              font-family: -apple-system, sans-serif;
-              font-size: 14px;
-              line-height: 1.6;
-            }
-          </style>
-        </head>
-        <body contenteditable="true">
-          <p>Start typing your note...</p>
-        </body>
-        </html>
-      `);
-      iframeDoc.close();
-    }
+    // 保存引用以便后续使用
+    (container as any)._simpleEditor = textArea;
   }
   
   /**
