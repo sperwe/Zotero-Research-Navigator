@@ -422,6 +422,11 @@ export class QuickNoteWindowV2 {
     const editorContainer = this.container.querySelector('#quick-note-editor-container');
     if (editorContainer) {
       editorContainer.addEventListener('input', () => this.onEditorChange());
+      
+      // 添加拖拽事件监听
+      editorContainer.addEventListener('dragover', (e) => this.handleDragOver(e));
+      editorContainer.addEventListener('drop', (e) => this.handleDrop(e));
+      editorContainer.addEventListener('dragleave', (e) => this.handleDragLeave(e));
     }
   }
   
@@ -1281,6 +1286,220 @@ export class QuickNoteWindowV2 {
     this.currentHistoryIndex = this.noteHistory.length - 1;
     
     this.updateHistoryButtons();
+  }
+  
+  /**
+   * 处理拖拽悬停
+   */
+  private handleDragOver(e: DragEvent): void {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // 设置拖拽效果
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
+    
+    // 添加视觉反馈
+    const editorContainer = this.container?.querySelector('#quick-note-editor-container') as HTMLElement;
+    if (editorContainer) {
+      editorContainer.style.background = '#f0f8ff';
+      editorContainer.style.border = '2px dashed #2196F3';
+    }
+  }
+  
+  /**
+   * 处理拖拽离开
+   */
+  private handleDragLeave(e: DragEvent): void {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // 恢复编辑器样式
+    const editorContainer = this.container?.querySelector('#quick-note-editor-container') as HTMLElement;
+    if (editorContainer) {
+      editorContainer.style.background = '';
+      editorContainer.style.border = '';
+    }
+  }
+  
+  /**
+   * 处理拖拽释放
+   */
+  private async handleDrop(e: DragEvent): Promise<void> {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // 恢复编辑器样式
+    const editorContainer = this.container?.querySelector('#quick-note-editor-container') as HTMLElement;
+    if (editorContainer) {
+      editorContainer.style.background = '';
+      editorContainer.style.border = '';
+    }
+    
+    if (!e.dataTransfer || !this.editor) {
+      return;
+    }
+    
+    // 获取拖拽的文本
+    const text = e.dataTransfer.getData('text/plain');
+    if (!text) {
+      return;
+    }
+    
+    try {
+      // 格式化为引用格式
+      const timestamp = new Date().toLocaleString();
+      const sourceInfo = await this.getSourceInfo();
+      
+      // 创建格式化的引用文本
+      let formattedText = `\n\n> ${text.trim()}\n\n`;
+      if (sourceInfo) {
+        formattedText += `*— ${sourceInfo}, ${timestamp}*\n\n`;
+      } else {
+        formattedText += `*— ${timestamp}*\n\n`;
+      }
+      
+      // 获取当前内容并添加引用
+      try {
+        if (this.editor && typeof this.editor._editorInstance === 'object') {
+          // 使用 Zotero 编辑器的内部实例
+          const editorInstance = this.editor._editorInstance;
+          if (editorInstance?.view) {
+            // 获取当前内容
+            const currentHTML = await this.editor.getContentHTML();
+            
+            // 将新内容添加到末尾
+            const newHTML = currentHTML + formattedText.replace(/\n/g, '<br>');
+            await this.editor.setContentHTML(newHTML);
+            
+            // 滚动到底部
+            const editorBody = editorInstance.view.dom;
+            if (editorBody) {
+              editorBody.scrollTop = editorBody.scrollHeight;
+            }
+          }
+        } else {
+          // 后备方案：直接操作 DOM
+          const iframe = this.container?.querySelector('#quick-note-editor-iframe') as HTMLIFrameElement;
+          if (iframe?.contentDocument) {
+            const body = iframe.contentDocument.body;
+            if (body) {
+              const quote = iframe.contentDocument.createElement('blockquote');
+              quote.textContent = text.trim();
+              quote.style.cssText = 'margin: 1em 0; padding-left: 1em; border-left: 3px solid #ccc;';
+              
+              const citation = iframe.contentDocument.createElement('p');
+              citation.innerHTML = `<em>— ${sourceInfo || ''} ${timestamp}</em>`;
+              citation.style.cssText = 'margin-top: 0.5em; color: #666;';
+              
+              body.appendChild(quote);
+              body.appendChild(citation);
+              body.appendChild(iframe.contentDocument.createElement('p')); // 空行
+              
+              // 滚动到底部
+              body.scrollTop = body.scrollHeight;
+            }
+          }
+        }
+      } catch (error) {
+        Zotero.logError(`[QuickNoteWindowV2] Failed to insert text: ${error}`);
+      }
+      
+      // 触发内容变化事件
+      this.onEditorChange();
+      
+      // 记录拖拽源信息  
+      if (sourceInfo) {
+        Zotero.log(`[QuickNoteWindowV2] Text dropped from: ${sourceInfo}`, 'info');
+      }
+      
+      // 显示提示
+      this.showDropFeedback('Text added as quote');
+      
+    } catch (error) {
+      Zotero.logError(`[QuickNoteWindowV2] Failed to handle drop: ${error}`);
+    }
+  }
+  
+  /**
+   * 获取拖拽源信息
+   */
+  private async getSourceInfo(): Promise<string | null> {
+    try {
+      const win = Zotero.getMainWindow();
+      if (!win?.Zotero_Tabs) {
+        return null;
+      }
+      
+      const selectedID = win.Zotero_Tabs.selectedID;
+      if (!selectedID) {
+        return null;
+      }
+      
+      // 检查是否是阅读器标签页
+      const reader = Zotero.Reader.getByTabID(selectedID);
+      if (reader) {
+        const item = reader._item;
+        const title = item?.getField('title') || 'Unknown';
+        const page = reader._state?.pageIndex ? `p. ${reader._state.pageIndex + 1}` : '';
+        return `${title} ${page}`.trim();
+      }
+      
+      // 检查是否是普通文献
+      const items = win.ZoteroPane?.getSelectedItems();
+      if (items && items.length > 0) {
+        return items[0].getField('title') || 'Unknown';
+      }
+      
+      return null;
+    } catch (error) {
+      Zotero.logError(`[QuickNoteWindowV2] Failed to get source info: ${error}`);
+      return null;
+    }
+  }
+  
+  /**
+   * 显示拖拽反馈
+   */
+  private showDropFeedback(message: string): void {
+    const feedback = this.container?.ownerDocument.createElement('div');
+    if (!feedback || !this.container) return;
+    
+    feedback.style.cssText = `
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(33, 150, 243, 0.9);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 4px;
+      font-size: 14px;
+      z-index: 10000;
+      pointer-events: none;
+      animation: fadeInOut 2s ease-in-out;
+    `;
+    feedback.textContent = message;
+    
+    // 添加淡入淡出动画
+    const style = this.container.ownerDocument.createElement('style');
+    style.textContent = `
+      @keyframes fadeInOut {
+        0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+        20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+      }
+    `;
+    this.container.appendChild(style);
+    this.container.appendChild(feedback);
+    
+    // 2秒后移除
+    setTimeout(() => {
+      feedback.remove();
+      style.remove();
+    }, 2000);
   }
   
   /**
