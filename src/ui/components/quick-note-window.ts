@@ -36,15 +36,16 @@ export class QuickNoteWindow {
   private createWindow(nodeId?: string): void {
     this.associatedNodeId = nodeId || null;
     
-    // 创建主窗口
-    const doc = this.mainWindow.document;
-    
-    // 确保 body 存在
-    if (!doc.body) {
-      Zotero.logError('[QuickNoteWindow] Document body not available, delaying...');
-      this.mainWindow.setTimeout(() => this.createWindow(nodeId), 100);
+    // 获取正确的主窗口
+    const mainWindow = Zotero.getMainWindow();
+    if (!mainWindow) {
+      Zotero.logError('[QuickNoteWindow] Main window not available');
       return;
     }
+    
+    const doc = mainWindow.document;
+    
+    // 不再等待 body，直接尝试多个父元素
     
     // 创建浮动容器
     this.container = doc.createElement('div');
@@ -87,35 +88,34 @@ export class QuickNoteWindow {
     const statusBar = this.createStatusBar(doc);
     this.container.appendChild(statusBar);
     
-    // 添加到文档 - 使用更安全的方式
-    try {
-      doc.body.appendChild(this.container);
-    } catch (error) {
-      // 如果 body 不可用，尝试其他父元素
-      const alternativeParents = [
-        doc.getElementById('main-window'),
-        doc.getElementById('zotero-pane'),
-        doc.documentElement
-      ];
-      
-      let appended = false;
-      for (const parent of alternativeParents) {
-        if (parent) {
-          try {
-            parent.appendChild(this.container);
-            appended = true;
-            Zotero.log(`[QuickNoteWindow] Appended to: ${parent.id || parent.tagName}`, 'info');
-            break;
-          } catch (e) {
-            // 继续尝试下一个
-          }
+    // 添加到文档 - 按优先级尝试多个父元素
+    const possibleParents = [
+      doc.getElementById('main-window'),
+      doc.getElementById('zotero-pane'),
+      doc.getElementById('browser'),
+      doc.querySelector('#zotero-tabs-deck'),
+      doc.querySelector('.zotero-view-tabbox'),
+      doc.body,
+      doc.documentElement
+    ];
+    
+    let appended = false;
+    for (const parent of possibleParents) {
+      if (parent) {
+        try {
+          parent.appendChild(this.container);
+          appended = true;
+          Zotero.log(`[QuickNoteWindow] Successfully appended to: ${parent.id || parent.tagName || parent.className}`, 'info');
+          break;
+        } catch (e) {
+          Zotero.log(`[QuickNoteWindow] Failed to append to ${parent.id || parent.tagName}: ${e}`, 'info');
         }
       }
-      
-      if (!appended) {
-        Zotero.logError(`[QuickNoteWindow] Failed to append container: ${error}`);
-        return;
-      }
+    }
+    
+    if (!appended) {
+      Zotero.logError('[QuickNoteWindow] Failed to append container to any parent element');
+      return;
     }
     
     // 初始化编辑器
@@ -123,6 +123,9 @@ export class QuickNoteWindow {
     
     // 使窗口可拖动
     this.makeDraggable(header);
+    
+    // 保存窗口引用
+    this.window = mainWindow;
   }
   
   /**
