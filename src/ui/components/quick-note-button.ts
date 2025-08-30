@@ -10,7 +10,7 @@ import { HistoryService } from '../../services/history-service';
 export class QuickNoteButton {
   private button: HTMLElement | null = null;
   private quickNoteWindow: QuickNoteWindow | null = null;
-  private observer: MutationObserver | null = null;
+  private intervalId: number | null = null;
   
   constructor(
     private window: Window,
@@ -32,13 +32,41 @@ export class QuickNoteButton {
         this.historyService
       );
       
+      // 等待DOM准备就绪
+      await this.waitForDOM();
+      
       // 直接在主窗口创建按钮
       this.createFloatingButton();
+      
+      // 开始监听标签页变化
+      this.observeTabChanges();
       
       Zotero.log('[QuickNoteButton] Initialized successfully', 'info');
     } catch (error) {
       Zotero.logError(`[QuickNoteButton] Initialization error: ${error}`);
     }
+  }
+  
+  /**
+   * 等待DOM准备就绪
+   */
+  private async waitForDOM(): Promise<void> {
+    const doc = this.window.document;
+    
+    // 如果body已存在，直接返回
+    if (doc.body) {
+      return;
+    }
+    
+    // 等待DOM准备就绪
+    return new Promise((resolve) => {
+      if (doc.readyState === 'loading') {
+        doc.addEventListener('DOMContentLoaded', () => resolve());
+      } else {
+        // 等待下一个事件循环
+        this.window.setTimeout(() => resolve(), 0);
+      }
+    });
   }
   
   /**
@@ -48,13 +76,21 @@ export class QuickNoteButton {
     try {
       Zotero.log('[QuickNoteButton] Creating floating button...', 'info');
       
-      // 检查是否已存在
-      if (this.button && this.window.document.getElementById('quick-note-floating-button')) {
-        Zotero.log('[QuickNoteButton] Button already exists', 'info');
+      const doc = this.window.document;
+      
+      // 再次检查body是否存在
+      if (!doc.body) {
+        Zotero.logError('[QuickNoteButton] Document body still not available');
+        // 稍后重试
+        this.window.setTimeout(() => this.createFloatingButton(), 100);
         return;
       }
       
-      const doc = this.window.document;
+      // 检查是否已存在
+      if (this.button || doc.getElementById('quick-note-floating-button')) {
+        Zotero.log('[QuickNoteButton] Button already exists', 'info');
+        return;
+      }
       
       // 创建按钮
       this.button = doc.createElement('div');
@@ -101,10 +137,19 @@ export class QuickNoteButton {
       // 添加提示
       this.button.title = 'Quick Note (Click to open)';
       
+      // 设置初始显示状态
+      this.button.style.display = 'none'; // 初始隐藏，等待updateButton决定
+      
       // 添加到文档
       doc.body.appendChild(this.button);
       
       Zotero.log('[QuickNoteButton] Button created and added to body', 'info');
+      
+      // 立即更新按钮显示状态
+      // 延迟一下以确保标签页DOM已经加载
+      this.window.setTimeout(() => {
+        this.updateButton();
+      }, 100);
     } catch (error) {
       Zotero.logError(`[QuickNoteButton] Create button error: ${error}`);
     }
@@ -114,32 +159,31 @@ export class QuickNoteButton {
    * 监听标签页变化
    */
   private observeTabChanges(): void {
-    // 监听 Zotero 标签页容器的变化
-    const tabContainer = this.window.document.getElementById('zotero-tabs-deck');
-    if (!tabContainer) {
-      Zotero.log('[QuickNoteButton] Tab container not found', 'warn');
-      return;
-    }
-    
-    // 创建 MutationObserver 监听 DOM 变化
-    this.observer = new this.window.MutationObserver(() => {
-      this.updateButton();
-    });
-    
-    // 配置观察选项
-    this.observer.observe(tabContainer, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['selected']
-    });
-    
-    // 监听标签页切换事件
-    this.window.addEventListener('select', (e) => {
-      if ((e.target as any)?.id === 'zotero-tabs') {
-        setTimeout(() => this.updateButton(), 100);
+    try {
+      // 监听标签页切换事件
+      this.window.addEventListener('select', (e) => {
+        if ((e.target as any)?.id === 'zotero-tabs') {
+          setTimeout(() => this.updateButton(), 100);
+        }
+      });
+      
+      // 监听 tabbox 的选择变化
+      const tabbox = this.window.document.getElementById('zotero-tabs');
+      if (tabbox) {
+        tabbox.addEventListener('select', () => {
+          setTimeout(() => this.updateButton(), 100);
+        });
       }
-    });
+      
+      // 定期检查标签页变化（作为备用方案）
+      this.intervalId = this.window.setInterval(() => {
+        this.updateButton();
+      }, 1000) as unknown as number;
+      
+      Zotero.log('[QuickNoteButton] Tab change observers set up', 'info');
+    } catch (error) {
+      Zotero.logError(`[QuickNoteButton] Error setting up tab observers: ${error}`);
+    }
   }
   
   /**
@@ -147,14 +191,17 @@ export class QuickNoteButton {
    */
   private updateButton(): void {
     try {
-      Zotero.log('[QuickNoteButton] updateButton called', 'info');
+      if (!this.button) {
+        Zotero.log('[QuickNoteButton] No button to update', 'info');
+        return;
+      }
       
       // 获取当前活动的标签页
       const activeTab = this.getActiveTab();
       Zotero.log(`[QuickNoteButton] Active tab: ${activeTab ? activeTab.id : 'none'}`, 'info');
       
       if (!activeTab) {
-        this.hideButton();
+        this.button.style.display = 'none';
         return;
       }
       
@@ -162,11 +209,7 @@ export class QuickNoteButton {
       const shouldShow = this.shouldShowButton(activeTab);
       Zotero.log(`[QuickNoteButton] Should show button: ${shouldShow}`, 'info');
       
-      if (shouldShow) {
-        this.showButton(activeTab);
-      } else {
-        this.hideButton();
-      }
+      this.button.style.display = shouldShow ? 'flex' : 'none';
     } catch (error) {
       Zotero.logError(`[QuickNoteButton] Update button error: ${error}`);
     }
@@ -176,9 +219,18 @@ export class QuickNoteButton {
    * 获取当前活动的标签页
    */
   private getActiveTab(): Element | null {
+    // 首先检查主界面
+    const zoteroPane = this.window.document.getElementById('zotero-pane');
+    if (zoteroPane && !zoteroPane.hidden) {
+      return zoteroPane;
+    }
+    
     // 获取标签页容器
     const deck = this.window.document.getElementById('zotero-tabs-deck');
-    if (!deck) return null;
+    if (!deck) {
+      // 如果没有tabs-deck，可能是旧版本，返回zotero-pane
+      return zoteroPane;
+    }
     
     // 获取选中的标签页
     const selectedTab = deck.querySelector('[selected="true"]');
@@ -186,102 +238,36 @@ export class QuickNoteButton {
     
     // 备用方法：获取可见的标签页
     const visibleTab = deck.querySelector(':not([hidden="true"])');
-    return visibleTab;
+    return visibleTab || zoteroPane;
   }
   
   /**
    * 判断是否应该显示按钮
    */
-  private shouldShowButton(tab: Element): boolean {
+  private shouldShowButton(tab: Element | null): boolean {
+    if (!tab) return false;
+    
+    // 如果是zotero-pane，始终显示
+    if (tab.id === 'zotero-pane') {
+      return true;
+    }
+    
     const tabType = tab.getAttribute('data-tab-type') || tab.getAttribute('type');
     
     // 在这些标签页类型中显示按钮
     const allowedTypes = ['library', 'reader', 'note', 'web'];
     
-    // 如果没有类型信息，检查是否是主界面
+    // 如果没有类型信息，检查是否是标签页内容
     if (!tabType) {
-      return tab.id === 'zotero-pane' || tab.classList.contains('zotero-tab-content');
+      return tab.classList.contains('zotero-tab-content') || 
+             tab.tagName.toLowerCase() === 'tabpanel';
     }
     
     return allowedTypes.includes(tabType);
   }
   
-  /**
-   * 显示按钮
-   */
-  private showButton(container: Element): void {
-    // 如果按钮已存在，先移除
-    if (this.button && this.button.parentElement === container) {
-      return; // 按钮已经在正确的位置
-    }
-    
-    this.hideButton();
-    
-    // 创建按钮
-    const doc = this.window.document;
-    this.button = doc.createElement('div');
-    this.button.id = 'quick-note-floating-button';
-    this.button.style.cssText = `
-      position: fixed;
-      bottom: 30px;
-      right: 30px;
-      width: 56px;
-      height: 56px;
-      background: var(--accent-blue, #2196F3);
-      border-radius: 50%;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 999;
-      transition: all 0.3s ease;
-      user-select: none;
-    `;
-    
-    // 添加图标
-    this.button.innerHTML = `
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-        <path d="M19,2H5A3,3,0,0,0,2,5V19a3,3,0,0,0,3,3H19a3,3,0,0,0,3-3V5A3,3,0,0,0,19,2ZM19,19H5V5H19Z"/>
-        <path d="M12 6v12M6 12h12" stroke="white" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-    `;
-    
-    // 如果没有合适的 SVG，使用文字图标
-    this.button.innerHTML = `<span style="font-size: 24px; color: white;">📝</span>`;
-    
-    // 添加悬停效果
-    this.button.addEventListener('mouseenter', () => {
-      this.button!.style.transform = 'scale(1.1)';
-      this.button!.style.boxShadow = '0 4px 20px rgba(0,0,0,0.3)';
-    });
-    
-    this.button.addEventListener('mouseleave', () => {
-      this.button!.style.transform = 'scale(1)';
-      this.button!.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
-    });
-    
-    // 添加点击事件
-    this.button.addEventListener('click', () => this.handleClick());
-    
-    // 添加提示
-    this.button.title = 'Quick Note (Click to open)';
-    
-    // 添加到容器
-    container.appendChild(this.button);
-    
-    Zotero.log('[QuickNoteButton] Button shown', 'info');
-  }
-  
-  /**
-   * 隐藏按钮
-   */
-  private hideButton(): void {
-    if (this.button) {
-      this.button.remove();
-      this.button = null;
-    }
-  }
+  // Remove showButton and hideButton methods as they're no longer needed
+  // The button visibility is now controlled by display style in updateButton
   
   /**
    * 处理点击事件
@@ -356,10 +342,10 @@ export class QuickNoteButton {
    * 销毁
    */
   destroy(): void {
-    // 移除观察器
-    if (this.observer) {
-      this.observer.disconnect();
-      this.observer = null;
+    // 清理定时器
+    if (this.intervalId) {
+      this.window.clearInterval(this.intervalId);
+      this.intervalId = null;
     }
     
     // 移除按钮
