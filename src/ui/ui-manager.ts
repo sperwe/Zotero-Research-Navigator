@@ -11,7 +11,7 @@ import { ToolbarButton } from "./components/toolbar-button";
 import { ToolbarButtonV2 } from "./components/toolbar-button-v2";
 import { ToolbarButtonZotero7 } from "./components/toolbar-button-zotero7";
 import { SidebarManager } from "./sidebar-manager";
-import { QuickNoteButton } from "./components/quick-note-button";
+import { QuickNoteButtonSimple } from "./components/quick-note-button-simple";
 import { config } from "../../package.json";
 
 export interface UIManagerOptions {
@@ -25,7 +25,7 @@ export class UIManager {
   private mainPanel: MainPanel | null = null;
   private sidebarManager: SidebarManager | null = null;
   private toolbarButton: ToolbarButton | null = null;
-  private quickNoteButton: QuickNoteButton | null = null;
+  private quickNoteButton: QuickNoteButtonSimple | null = null;
   private windows = new Set<Window>();
   private displayMode: "floating" | "sidebar" = "floating";
 
@@ -147,8 +147,8 @@ export class UIManager {
       
       // 初始化快速笔记浮动按钮
       if (!this.quickNoteButton) {
-        Zotero.log("[UIManager] Creating quick note button...", "info");
-        this.quickNoteButton = new QuickNoteButton(
+        Zotero.log("[UIManager] Creating quick note button (simple version)...", "info");
+        this.quickNoteButton = new QuickNoteButtonSimple(
           win,
           this.noteAssociationSystem,
           this.historyService
