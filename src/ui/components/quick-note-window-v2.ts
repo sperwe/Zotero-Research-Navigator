@@ -491,7 +491,7 @@ export class QuickNoteWindowV2 {
    */
   private async getNodeInfo(nodeId: string): Promise<{title: string, type: string, itemID: number, parentID?: number} | null> {
     try {
-      // 解析节点ID (格式: "item-123" 或 "attachment-456")
+      // 解析节点ID (格式: "item-123" 或 "attachment-456" 或 "note-789")
       const [type, id] = nodeId.split('-');
       const itemId = parseInt(id);
       
@@ -515,6 +515,16 @@ export class QuickNoteWindowV2 {
           if (parent) {
             result.title = parent.getField('title') || 'Untitled';
           }
+        }
+      } else if (item.isNote()) {
+        // 如果是笔记，检查它是否有父项
+        if (item.parentID) {
+          // 使用笔记的父项作为新笔记的父项
+          result.parentID = item.parentID;
+          result.type = 'note-with-parent';
+        } else {
+          // 独立笔记，不能作为父项
+          result.type = 'standalone-note';
         }
       }
       
@@ -576,14 +586,27 @@ export class QuickNoteWindowV2 {
         if (nodeInfo) {
           noteContent = `<h2>Quick Note - ${nodeInfo.title}</h2><p>Created at ${timestamp}</p><p></p>`;
           
-          // 如果是附件，获取其父项作为笔记的父项
+          // 根据节点类型决定父项
           if (nodeInfo.type === 'attachment' && nodeInfo.parentID) {
+            // 附件：使用附件的父项
             parentItemID = nodeInfo.parentID;
-            Zotero.log(`[QuickNoteWindowV2] Setting parent item ID: ${parentItemID}`, 'info');
-          } else if (nodeInfo.type === 'item' && nodeInfo.itemID) {
-            // 如果是普通项目，直接作为父项
-            parentItemID = nodeInfo.itemID;
-            Zotero.log(`[QuickNoteWindowV2] Setting parent item ID: ${parentItemID}`, 'info');
+            Zotero.log(`[QuickNoteWindowV2] Attachment node - Setting parent item ID: ${parentItemID}`, 'info');
+          } else if (nodeInfo.type === 'note-with-parent' && nodeInfo.parentID) {
+            // 有父项的笔记：使用相同的父项
+            parentItemID = nodeInfo.parentID;
+            Zotero.log(`[QuickNoteWindowV2] Note with parent - Setting parent item ID: ${parentItemID}`, 'info');
+          } else if (nodeInfo.type === 'item') {
+            // 普通项目：检查是否真的是普通项目
+            const item = await Zotero.Items.getAsync(nodeInfo.itemID);
+            if (item && item.isRegularItem()) {
+              parentItemID = nodeInfo.itemID;
+              Zotero.log(`[QuickNoteWindowV2] Regular item - Setting parent item ID: ${parentItemID}`, 'info');
+            } else {
+              Zotero.log(`[QuickNoteWindowV2] Item ${nodeInfo.itemID} is not a regular item, creating standalone note`, 'info');
+            }
+          } else if (nodeInfo.type === 'standalone-note') {
+            // 独立笔记：创建新的独立笔记
+            Zotero.log(`[QuickNoteWindowV2] Standalone note selected - Creating new standalone note`, 'info');
           }
         }
       }

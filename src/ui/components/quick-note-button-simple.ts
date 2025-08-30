@@ -166,10 +166,12 @@ export class QuickNoteButtonSimple {
             const item = selectedItems[0];
             if (item.isAttachment()) {
               nodeId = `attachment-${item.id}`;
+            } else if (item.isNote()) {
+              nodeId = `note-${item.id}`;
             } else {
               nodeId = `item-${item.id}`;
             }
-            Zotero.log(`[QuickNoteButtonSimple] Library tab selected item: ${item.getField('title')}, id: ${item.id}`, 'info');
+            Zotero.log(`[QuickNoteButtonSimple] Library tab selected item: ${item.getField('title')}, id: ${item.id}, type: ${item.itemType}`, 'info');
           }
         }
       }
