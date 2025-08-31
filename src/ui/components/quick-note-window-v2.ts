@@ -52,9 +52,25 @@ export class QuickNoteWindowV2 {
     this.lastShowTime = now;
     
     // 如果已经有容器，直接显示
-    if (this.container && this.container.parentElement) {
+    if (this.container) {
+      // 检查容器是否在 DOM 中
+      if (!this.container.parentElement) {
+        Zotero.log('[QuickNoteWindowV2] Container exists but not in DOM, re-adding', 'warn');
+        const doc = Zotero.getMainWindow()?.document;
+        if (doc) {
+          this.appendToDocument(doc);
+        }
+      }
+      
       Zotero.log(`[QuickNoteWindowV2] Reusing existing window, currentNoteId: ${this.currentNoteId}`, 'info');
-      this.container.style.display = 'flex';
+      
+      // 强制确保窗口可见
+      this.container.style.cssText = this.container.style.cssText + `
+        ; display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        z-index: 10001 !important;
+      `;
       
       // 检查是否需要创建新笔记
       const shouldCreateNew = this.shouldCreateNewNote(nodeId);
@@ -123,19 +139,22 @@ export class QuickNoteWindowV2 {
       
       // 内联样式，避免外部CSS问题
       this.container.style.cssText = `
-        position: fixed;
-        top: 100px;
-        right: 50px;
-        width: 450px;
-        height: 600px;
-        background: white;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-        z-index: 10000;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
+        position: fixed !important;
+        top: 100px !important;
+        right: 50px !important;
+        width: 450px !important;
+        height: 600px !important;
+        background: white !important;
+        background-color: white !important;
+        border: 1px solid #ddd !important;
+        border-radius: 8px !important;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
+        z-index: 10000 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        opacity: 1 !important;
+        visibility: visible !important;
       `;
       
       // 创建内容
@@ -367,6 +386,14 @@ export class QuickNoteWindowV2 {
         if (element && this.container) {
           element.appendChild(this.container);
           Zotero.log(`[QuickNoteWindowV2] Appended to: ${target.name}`, 'info');
+          
+          // 确保窗口可见
+          this.container.style.display = 'flex';
+          this.container.style.visibility = 'visible';
+          
+          // 强制重绘
+          this.container.offsetHeight;
+          
           return true;
         }
       } catch (e) {
