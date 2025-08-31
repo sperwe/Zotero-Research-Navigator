@@ -1460,12 +1460,15 @@ export class QuickNoteWindowV2 {
             // 后备方案：获取当前内容并追加
             const currentHTML = await this.editor.getContentHTML();
             
-            // 将 Markdown 文本转换为 HTML，保留换行
-            const htmlText = markdownText
-              .replace(/\n/g, '<br>')
-              .replace(/> /g, '&gt; ');
+            // 直接插入带有 > 的文本，不进行HTML转义
+            // 每行用 <p> 标签包裹，让编辑器能识别 Markdown
+            const lines = markdownText.split('\n');
+            const htmlParagraphs = lines
+              .filter(line => line.trim()) // 过滤空行
+              .map(line => `<p>${line}</p>`)
+              .join('');
             
-            const newHTML = currentHTML + htmlText;
+            const newHTML = currentHTML + htmlParagraphs;
             await this.editor.setContentHTML(newHTML);
           }
           
@@ -1496,11 +1499,11 @@ export class QuickNoteWindowV2 {
               const quotedText = lines.map(line => `> ${line}`).join('\n');
               const citation = `_— ${sourceInfo ? sourceInfo + ', ' : ''}${timestamp}_`;
               
-              // 转换为 HTML，保留 Markdown 语法
-              const quotedHTML = quotedText.replace(/\n/g, '<br>').replace(/> /g, '&gt; ');
-              const citationHTML = `<br><br>${citation.replace(/_/g, '<em>').replace(/_/g, '</em>')}`;
+              // 转换为 HTML，保留 Markdown 语法但不转义
+              const quotedLines = quotedText.split('\n').map(line => `<p>${line}</p>`).join('');
+              const citationHTML = `<p>${citation}</p>`;
               
-              const newContent = currentContent + '<br>' + quotedHTML + citationHTML + '<br>';
+              const newContent = currentContent + quotedLines + citationHTML;
               note.setNote(newContent);
               await note.saveTx();
               
