@@ -1442,14 +1442,20 @@ export class QuickNoteWindowV2 {
           // 使用 Zotero 编辑器 API
           const currentHTML = await this.editor.getContentHTML();
           
-          // 创建格式化的 HTML - 使用 Markdown 风格
+          // 创建格式化的 HTML - 使用标准的 blockquote 标签
           const lines = text.trim().split('\n');
-          const quotedLines = lines.map(line => `<p style="margin: 0.5em 0;">&gt; ${line}</p>`).join('');
+          const quotedLines = lines.map(line => `<p>${line}</p>`).join('');
           
           const quoteHTML = `
-            <div style="margin: 1em 0; color: #555;">
+            <blockquote style="
+              margin: 1em 0;
+              padding: 0.5em 1em;
+              border-left: 4px solid #ddd;
+              background-color: #f9f9f9;
+              color: #555;
+            ">
               ${quotedLines}
-            </div>
+            </blockquote>
             <p style="margin-top: 0.5em; color: #666; font-style: italic;">
               — ${sourceInfo ? sourceInfo + ', ' : ''}${timestamp}
             </p>
@@ -1482,10 +1488,11 @@ export class QuickNoteWindowV2 {
             if (note) {
               const currentContent = note.getNote();
               
-              // 使用相同的 Markdown 风格 HTML
+              // 使用标准的 blockquote HTML
               const lines = text.trim().split('\n');
-              const quotedHTML = lines.map(line => `<p>&gt; ${line}</p>`).join('');
-              const citationHTML = `<p><em>— ${sourceInfo ? sourceInfo + ', ' : ''}${timestamp}</em></p>`;
+              const quotedContent = lines.map(line => `<p>${line}</p>`).join('');
+              const quotedHTML = `<blockquote style="margin: 1em 0; padding: 0.5em 1em; border-left: 4px solid #ddd; background-color: #f9f9f9; color: #555;">${quotedContent}</blockquote>`;
+              const citationHTML = `<p style="color: #666; font-style: italic;">— ${sourceInfo ? sourceInfo + ', ' : ''}${timestamp}</p>`;
               
               const newContent = currentContent + '<br>' + quotedHTML + citationHTML + '<br>';
               note.setNote(newContent);
