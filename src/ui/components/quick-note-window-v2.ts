@@ -1442,13 +1442,16 @@ export class QuickNoteWindowV2 {
           // 使用 Zotero 编辑器 API
           const currentHTML = await this.editor.getContentHTML();
           
-          // 创建格式化的 HTML
+          // 创建格式化的 HTML - 使用 Markdown 风格
+          const lines = text.trim().split('\n');
+          const quotedLines = lines.map(line => `<p style="margin: 0.5em 0;">&gt; ${line}</p>`).join('');
+          
           const quoteHTML = `
-            <blockquote style="margin: 1em 0; padding-left: 1em; border-left: 3px solid #ccc;">
-              ${text.trim().replace(/\n/g, '<br>')}
-            </blockquote>
-            <p style="margin-top: 0.5em; color: #666;">
-              <em>— ${sourceInfo ? sourceInfo + ', ' : ''}${timestamp}</em>
+            <div style="margin: 1em 0; color: #555;">
+              ${quotedLines}
+            </div>
+            <p style="margin-top: 0.5em; color: #666; font-style: italic;">
+              — ${sourceInfo ? sourceInfo + ', ' : ''}${timestamp}
             </p>
             <p><br></p>
           `;
@@ -1478,7 +1481,13 @@ export class QuickNoteWindowV2 {
             const note = await Zotero.Items.getAsync(this.currentNoteId);
             if (note) {
               const currentContent = note.getNote();
-              const newContent = currentContent + formattedText.replace(/\n/g, '<br>');
+              
+              // 使用相同的 Markdown 风格 HTML
+              const lines = text.trim().split('\n');
+              const quotedHTML = lines.map(line => `<p>&gt; ${line}</p>`).join('');
+              const citationHTML = `<p><em>— ${sourceInfo ? sourceInfo + ', ' : ''}${timestamp}</em></p>`;
+              
+              const newContent = currentContent + '<br>' + quotedHTML + citationHTML + '<br>';
               note.setNote(newContent);
               await note.saveTx();
               
