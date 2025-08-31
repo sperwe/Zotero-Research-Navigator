@@ -1439,32 +1439,35 @@ export class QuickNoteWindowV2 {
       // 获取当前内容并添加引用
       try {
         if (this.editor && this.editor.getContentHTML && this.editor.setContentHTML) {
-          // 使用 Zotero 编辑器 API
-          const currentHTML = await this.editor.getContentHTML();
-          
-          // 创建格式化的 HTML - 使用标准的 blockquote 标签
+          // 创建 Markdown 格式的引用文本
           const lines = text.trim().split('\n');
-          const quotedLines = lines.map(line => `<p>${line}</p>`).join('');
+          const quotedText = lines.map(line => `> ${line}`).join('\n');
           
-          const quoteHTML = `
-            <blockquote style="
-              margin: 1em 0;
-              padding: 0.5em 1em;
-              border-left: 4px solid #ddd;
-              background-color: #f9f9f9;
-              color: #555;
-            ">
-              ${quotedLines}
-            </blockquote>
-            <p style="margin-top: 0.5em; color: #666; font-style: italic;">
-              — ${sourceInfo ? sourceInfo + ', ' : ''}${timestamp}
-            </p>
-            <p><br></p>
-          `;
+          // 添加引文来源
+          const citation = `_— ${sourceInfo ? sourceInfo + ', ' : ''}${timestamp}_`;
           
-          // 添加到内容末尾
-          const newHTML = currentHTML + quoteHTML;
-          await this.editor.setContentHTML(newHTML);
+          // 组合新内容
+          const markdownText = `\n\n${quotedText}\n\n${citation}\n\n`;
+          
+          // 检查编辑器是否有插入文本的方法
+          if (this.editor.insertText && typeof this.editor.insertText === 'function') {
+            // 如果有 insertText 方法，直接插入文本
+            await this.editor.insertText(markdownText);
+          } else if (this.editor._editorInstance && this.editor._editorInstance.insertText) {
+            // 尝试使用内部实例的方法
+            await this.editor._editorInstance.insertText(markdownText);
+          } else {
+            // 后备方案：获取当前内容并追加
+            const currentHTML = await this.editor.getContentHTML();
+            
+            // 将 Markdown 文本转换为 HTML，保留换行
+            const htmlText = markdownText
+              .replace(/\n/g, '<br>')
+              .replace(/> /g, '&gt; ');
+            
+            const newHTML = currentHTML + htmlText;
+            await this.editor.setContentHTML(newHTML);
+          }
           
           // 尝试滚动到底部
           setTimeout(() => {
@@ -1488,11 +1491,14 @@ export class QuickNoteWindowV2 {
             if (note) {
               const currentContent = note.getNote();
               
-              // 使用标准的 blockquote HTML
+              // 使用 Markdown 格式
               const lines = text.trim().split('\n');
-              const quotedContent = lines.map(line => `<p>${line}</p>`).join('');
-              const quotedHTML = `<blockquote style="margin: 1em 0; padding: 0.5em 1em; border-left: 4px solid #ddd; background-color: #f9f9f9; color: #555;">${quotedContent}</blockquote>`;
-              const citationHTML = `<p style="color: #666; font-style: italic;">— ${sourceInfo ? sourceInfo + ', ' : ''}${timestamp}</p>`;
+              const quotedText = lines.map(line => `> ${line}`).join('\n');
+              const citation = `_— ${sourceInfo ? sourceInfo + ', ' : ''}${timestamp}_`;
+              
+              // 转换为 HTML，保留 Markdown 语法
+              const quotedHTML = quotedText.replace(/\n/g, '<br>').replace(/> /g, '&gt; ');
+              const citationHTML = `<br><br>${citation.replace(/_/g, '<em>').replace(/_/g, '</em>')}`;
               
               const newContent = currentContent + '<br>' + quotedHTML + citationHTML + '<br>';
               note.setNote(newContent);
