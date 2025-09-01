@@ -667,9 +667,10 @@ export class NoteRelationsTab {
             relationType: r.relationType,
             title: r.note?.getNoteTitle() || "Untitled",
             content: r.note?.getNote() || "",
-            dateModified: r.note?.dateModified instanceof Date 
-              ? r.note.dateModified 
-              : new Date(r.note?.dateModified || Date.now()),
+            dateModified:
+              r.note?.dateModified instanceof Date
+                ? r.note.dateModified
+                : new Date(r.note?.dateModified || Date.now()),
           }));
           this.showSearchResults(results);
         } else if (query && !this.selectedNode) {
@@ -1092,7 +1093,7 @@ export class NoteRelationsTab {
           // 删除笔记
           const noteItem = Zotero.Items.get(note.noteId);
           if (noteItem) {
-            if (!Array.isArray(noteItem) && 'eraseTx' in noteItem) {
+            if (!Array.isArray(noteItem) && "eraseTx" in noteItem) {
               await noteItem.eraseTx();
             }
             Zotero.log(
@@ -1307,7 +1308,9 @@ export class NoteRelationsTab {
       }
 
       const noteIDs = await s.search();
-      const notesArray = noteIDs.map(id => Zotero.Items.get(id)).filter(Boolean);
+      const notesArray = noteIDs
+        .map((id) => Zotero.Items.get(id))
+        .filter(Boolean);
 
       if (notesArray.length === 0) {
         noteListContainer.innerHTML = "<p>No notes found</p>";

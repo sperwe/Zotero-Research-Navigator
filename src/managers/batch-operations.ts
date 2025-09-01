@@ -260,7 +260,7 @@ export class BatchOperationManager {
     progressWindow.changeHeadline("Batch Operation");
     progressWindow.addDescription(`Processing ${total} items...`);
 
-    const progressLine = progressWindow.addLines(1)[0];
+    const progressLine = progressWindow.addLines(["Processing..."])[0];
     progressLine.progress = 0;
 
     progressWindow.show();

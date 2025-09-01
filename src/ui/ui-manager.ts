@@ -519,7 +519,11 @@ export class UIManager {
     if (win && win.setTimeout) {
       win.setTimeout(() => {
         const notification = (notificationBox as any).currentNotification;
-        if (notification && notification.label === message && notificationBox.removeNotification) {
+        if (
+          notification &&
+          notification.label === message &&
+          notificationBox.removeNotification
+        ) {
           notificationBox.removeNotification(notification);
         }
       }, 5000);

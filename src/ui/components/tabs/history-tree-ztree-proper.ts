@@ -449,9 +449,7 @@ export class HistoryTreeZTreeProper {
       if (this.window.confirm("Delete this entire session?")) {
         // Delete all nodes in the session
         // TODO: Implement database service for session nodes
-        const sessionNodes: any[] = []; // await this.databaseService.getSessionNodes(
-          treeNode.sessionId,
-        );
+        const sessionNodes: any[] = []; // await this.databaseService.getSessionNodes(treeNode.sessionId);
         for (const node of sessionNodes) {
           await this.historyService.deleteNode(node.id);
         }

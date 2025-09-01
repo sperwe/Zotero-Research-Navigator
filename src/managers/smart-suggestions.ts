@@ -101,7 +101,10 @@ export class SmartSuggestionSystem {
         search.addCondition("itemID", "isNot", currentItem.id.toString());
 
         const itemIds = await search.search();
-        const items = itemIds.slice(0, 5).map(id => Zotero.Items.get(id)).filter(Boolean);
+        const items = itemIds
+          .slice(0, 5)
+          .map((id) => Zotero.Items.get(id))
+          .filter(Boolean);
 
         for (const item of items) {
           if (!item || Array.isArray(item)) continue;
@@ -134,7 +137,10 @@ export class SmartSuggestionSystem {
         tagSearch.addCondition("itemID", "isNot", currentItem.id.toString());
 
         const tagItemIds = await tagSearch.search();
-        const tagItems = tagItemIds.slice(0, 5).map(id => Zotero.Items.get(id)).filter(Boolean);
+        const tagItems = tagItemIds
+          .slice(0, 5)
+          .map((id) => Zotero.Items.get(id))
+          .filter(Boolean);
 
         for (const item of tagItems) {
           if (!item || Array.isArray(item)) continue;
@@ -193,7 +199,10 @@ export class SmartSuggestionSystem {
       search.addCondition("itemID", "isNot", currentNote.id.toString());
 
       const noteIds = await search.search();
-      const notes = noteIds.slice(0, 5).map(id => Zotero.Items.get(id)).filter(Boolean);
+      const notes = noteIds
+        .slice(0, 5)
+        .map((id) => Zotero.Items.get(id))
+        .filter(Boolean);
 
       for (const note of notes) {
         if (!note || Array.isArray(note)) continue;
@@ -453,7 +462,10 @@ export class SmartSuggestionSystem {
       search.addCondition("itemID", "isNot", item.id.toString());
 
       const itemIds = await search.search();
-      const items = itemIds.slice(0, 10).map(id => Zotero.Items.get(id)).filter(Boolean);
+      const items = itemIds
+        .slice(0, 10)
+        .map((id) => Zotero.Items.get(id))
+        .filter(Boolean);
       related.push(...items.filter((i) => i && !Array.isArray(i)));
     }
 

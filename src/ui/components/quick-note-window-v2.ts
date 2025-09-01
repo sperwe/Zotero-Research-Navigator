@@ -559,7 +559,7 @@ export class QuickNoteWindowV2 {
 
       const doc = container.ownerDocument;
       const win = doc.defaultView || this.window || Zotero.getMainWindow();
-      
+
       if (!win) {
         Zotero.logError(
           "[QuickNoteWindowV2] No window available for editor initialization",
@@ -758,10 +758,10 @@ export class QuickNoteWindowV2 {
   private initializeSimpleEditor(container: HTMLElement): void {
     try {
       const doc = container.ownerDocument;
-      
+
       // 清空容器
       container.innerHTML = "";
-      
+
       // 创建一个安全的容器
       const editorWrapper = doc.createElement("div");
       editorWrapper.style.cssText = `
@@ -771,7 +771,7 @@ export class QuickNoteWindowV2 {
         flex-direction: column;
         background: white;
       `;
-      
+
       // 创建简单的文本编辑器作为回退
       const textArea = doc.createElement("textarea");
       textArea.style.cssText = `
@@ -790,17 +790,19 @@ export class QuickNoteWindowV2 {
 
       // 加载现有笔记内容（如果有）
       if (this.currentNoteId) {
-        Zotero.Items.getAsync(this.currentNoteId).then((note) => {
-          if (note) {
-            // 简单地去除HTML标签
-            const content = note.getNote().replace(/<[^>]*>/g, "");
-            textArea.value = content;
-          }
-        }).catch((error) => {
-          Zotero.logError(
-            `[QuickNoteWindowV2] Failed to load note content: ${error}`,
-          );
-        });
+        Zotero.Items.getAsync(this.currentNoteId)
+          .then((note) => {
+            if (note) {
+              // 简单地去除HTML标签
+              const content = note.getNote().replace(/<[^>]*>/g, "");
+              textArea.value = content;
+            }
+          })
+          .catch((error) => {
+            Zotero.logError(
+              `[QuickNoteWindowV2] Failed to load note content: ${error}`,
+            );
+          });
       }
 
       // 自动保存
@@ -809,7 +811,7 @@ export class QuickNoteWindowV2 {
         clearTimeout(saveTimeout);
         this.hasUnsavedChanges = true;
         this.updateSaveStatus("unsaved");
-        
+
         saveTimeout = setTimeout(async () => {
           if (this.currentNoteId) {
             try {
@@ -838,17 +840,17 @@ export class QuickNoteWindowV2 {
 
       editorWrapper.appendChild(textArea);
       container.appendChild(editorWrapper);
-      
+
       // Store reference for cleanup
-      this.editor = { 
-        textarea: textArea, 
+      this.editor = {
+        textarea: textArea,
         cleanup: () => {
           clearTimeout(saveTimeout);
           textArea.remove();
           editorWrapper.remove();
-        }
+        },
       };
-      
+
       // 保存引用以便后续使用
       (container as any)._simpleEditor = textArea;
     } catch (error) {
@@ -1207,20 +1209,24 @@ export class QuickNoteWindowV2 {
       try {
         const pane = (Zotero as any).getActiveZoteroPane?.();
         if (pane && pane.getSelectedItems) {
-          originalSelection = pane.getSelectedItems().map((item: any) => item.id);
+          originalSelection = pane
+            .getSelectedItems()
+            .map((item: any) => item.id);
         }
       } catch (e) {
         // Ignore error getting selection
       }
-      
+
       // 保存笔记
       await note.saveTx();
-      
+
       // 如果新笔记被选择了，恢复原始选择
       try {
         const pane = (Zotero as any).getActiveZoteroPane?.();
         if (pane && pane.selectItems && originalSelection.length > 0) {
-          const currentSelection = pane.getSelectedItems().map((item: any) => item.id);
+          const currentSelection = pane
+            .getSelectedItems()
+            .map((item: any) => item.id);
           // 检查新笔记是否被选择了
           if (currentSelection.includes(note.id)) {
             // 恢复原始选择

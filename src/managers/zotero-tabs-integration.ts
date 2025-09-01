@@ -184,10 +184,10 @@ export class ZoteroTabsIntegration {
         if (tabData.data?.itemID) {
           try {
             const item = Zotero.Items.get(tabData.data.itemID);
-            if (item && !Array.isArray(item) && 'getDisplayTitle' in item) {
+            if (item && !Array.isArray(item) && "getDisplayTitle" in item) {
               return item.getDisplayTitle();
             } else if (item && !Array.isArray(item)) {
-              return item.getField('title') || 'PDF Reader';
+              return item.getField("title") || "PDF Reader";
             }
           } catch (e) {
             // Item might be deleted

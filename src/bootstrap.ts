@@ -41,7 +41,7 @@ class ResearchNavigator {
       this.historyService = new HistoryService(this.databaseService);
       await this.historyService.initialize();
 
-           this.closedTabsManager = new ClosedTabsManager(this.historyService);
+      this.closedTabsManager = new ClosedTabsManager(this.historyService);
       await this.closedTabsManager.initialize();
 
       this.noteAssociationSystem = new NoteAssociationSystem(
@@ -50,18 +50,18 @@ class ResearchNavigator {
       );
       await this.noteAssociationSystem.initialize();
 
-           // Initialize UI
-     this.uiManager = new UIManager(
-       this.historyService,
-       this.closedTabsManager,
-       this.noteAssociationSystem,
-     );
+      // Initialize UI
+      this.uiManager = new UIManager(
+        this.historyService,
+        this.closedTabsManager,
+        this.noteAssociationSystem,
+      );
       await this.uiManager.initialize();
 
-           // Make available globally
-     Zotero.ResearchNavigator = this;
-     this.initialized = true;
-   } catch (error) {
+      // Make available globally
+      Zotero.ResearchNavigator = this;
+      this.initialized = true;
+    } catch (error) {
       Zotero.logError(`[Research Navigator] Initialization failed: ${error}`);
       throw error;
     }
