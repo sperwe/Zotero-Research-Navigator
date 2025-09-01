@@ -287,10 +287,7 @@ export class QuickNoteButton {
         const item = selectedItems[0];
         if (!item.isNote()) {
           // 为选中的项目创建历史节点
-          const node = await this.historyService.createOrUpdateNode(item.id, {
-            title: item.getField('title'),
-            url: item.getField('url')
-          });
+          const node = await this.historyService.createOrUpdateNode(item.id);
           nodeId = node.id;
         }
       }

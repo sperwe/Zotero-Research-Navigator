@@ -16,6 +16,7 @@ export class QuickNoteWindowV2 {
   private noteContext: string | null = null;  // 记录笔记创建时的上下文
   private lastShowTime = 0;  // 防抖动
   private pendingNodeId: string | null = null;  // 待处理的节点ID
+  private window: Window | null = null;  // Add window property
   
   // Pin to Tab 功能
   private isPinned = false;  // 是否固定到标签页
@@ -452,13 +453,13 @@ export class QuickNoteWindowV2 {
       editorContainer.addEventListener('input', () => this.onEditorChange());
       
       // 添加拖拽事件监听到容器
-      editorContainer.addEventListener('dragover', (e) => this.handleDragOver(e));
-      editorContainer.addEventListener('drop', (e) => this.handleDrop(e));
-      editorContainer.addEventListener('dragleave', (e) => this.handleDragLeave(e));
+      editorContainer.addEventListener('dragover', (e) => this.handleDragOver(e as DragEvent));
+      editorContainer.addEventListener('drop', (e) => this.handleDrop(e as DragEvent));
+      editorContainer.addEventListener('dragleave', (e) => this.handleDragLeave(e as DragEvent));
       
       // 添加到整个窗口，确保能捕获拖拽
-      this.container.addEventListener('dragover', (e) => this.handleDragOver(e));
-      this.container.addEventListener('drop', (e) => this.handleDrop(e));
+      this.container.addEventListener('dragover', (e) => this.handleDragOver(e as DragEvent));
+      this.container.addEventListener('drop', (e) => this.handleDrop(e as DragEvent));
     }
   }
   

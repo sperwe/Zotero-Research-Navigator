@@ -195,7 +195,7 @@ export class HistoryTreeTab {
   async refresh(): Promise<void> {
     // 如果使用 zTree，调用其 refresh 方法
     if (this.useZTree && this.zTreeComponent) {
-      await this.zTreeComponent.refreshTree();
+      await this.zTreeComponent.refresh();
       return;
     }
     

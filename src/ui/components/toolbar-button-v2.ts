@@ -75,7 +75,7 @@ export class ToolbarButtonV2 {
       const toolbar = toolbars[i];
       
       // 跳过隐藏的工具栏
-      if (toolbar.hidden || toolbar.collapsed) continue;
+      if ((toolbar as any).hidden || (toolbar as any).collapsed) continue;
       
       // 查找包含主要操作的工具栏
       if (toolbar.id === "zotero-toolbar" || 
@@ -101,7 +101,7 @@ export class ToolbarButtonV2 {
       const toolbar = toolbars[i];
       
       // 跳过隐藏的工具栏
-      if (toolbar.hidden || toolbar.collapsed) continue;
+      if ((toolbar as any).hidden || (toolbar as any).collapsed) continue;
       
       // 查找包含任何 Zotero 按钮的工具栏
       const buttons = toolbar.querySelectorAll("toolbarbutton");
@@ -123,7 +123,7 @@ export class ToolbarButtonV2 {
       const toolbar = toolbars[i];
       
       // 跳过隐藏的工具栏
-      if (toolbar.hidden || toolbar.collapsed) continue;
+      if ((toolbar as any).hidden || (toolbar as any).collapsed) continue;
       
       // 检查是否在可见区域
       const rect = toolbar.getBoundingClientRect();

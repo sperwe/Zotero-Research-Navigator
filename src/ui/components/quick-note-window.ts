@@ -439,10 +439,7 @@ export class QuickNoteWindow {
       if (!this.currentNoteId) return;
       
       // 创建历史节点
-      const node = await this.historyService.createOrUpdateNode(item.id, {
-        title: item.getField('title'),
-        url: item.getField('url')
-      });
+      const node = await this.historyService.createOrUpdateNode(item.id);
       
       // 创建关联
       await this.noteAssociationSystem.createAssociation(

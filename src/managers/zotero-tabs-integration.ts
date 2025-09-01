@@ -289,7 +289,7 @@ export class ZoteroTabsIntegration {
    */
   async restoreLastClosedGroup(): Promise<boolean> {
     if (this.originalUndoClose) {
-      return this.originalUndoClose.call(Zotero_Tabs);
+      return this.originalUndoClose.call(this.Zotero_Tabs);
     }
     return false;
   }

@@ -358,7 +358,7 @@ export class NoteBranchingSystem {
       const block2 = blocks2Map.get(id);
       if (!block2) {
         removed.push(block1);
-      } else if (block1.hash !== block2.hash) {
+      } else if (block1.metadata.hash !== block2.metadata.hash) {
         modified.push({ old: block1, new: block2 });
       }
     }
@@ -529,7 +529,7 @@ export class NoteBranchingSystem {
         // 新增的块
         if (currentBlock && incomingBlock) {
           // 两边都新增了相同 ID 的块
-          if (currentBlock.hash === incomingBlock.hash) {
+          if (currentBlock.metadata.hash === incomingBlock.metadata.hash) {
             merged.push(currentBlock);
           } else {
             conflicts.push({
@@ -551,7 +551,7 @@ export class NoteBranchingSystem {
           continue;
         } else if (!currentBlock) {
           // 当前分支删除了
-          if (incomingBlock.hash === baseBlock.hash) {
+          if (incomingBlock.metadata.hash === baseBlock.metadata.hash) {
             // incoming 没有修改，接受删除
             continue;
           } else {
@@ -565,7 +565,7 @@ export class NoteBranchingSystem {
           }
         } else if (!incomingBlock) {
           // incoming 分支删除了
-          if (currentBlock.hash === baseBlock.hash) {
+          if (currentBlock.metadata.hash === baseBlock.metadata.hash) {
             // current 没有修改，接受删除
             continue;
           } else {
@@ -579,13 +579,13 @@ export class NoteBranchingSystem {
           }
         } else {
           // 两边都存在
-          if (currentBlock.hash === incomingBlock.hash) {
+          if (currentBlock.metadata.hash === incomingBlock.metadata.hash) {
             // 相同的修改或都没修改
             merged.push(currentBlock);
-          } else if (currentBlock.hash === baseBlock.hash) {
+          } else if (currentBlock.metadata.hash === baseBlock.metadata.hash) {
             // 只有 incoming 修改了
             merged.push(incomingBlock);
-          } else if (incomingBlock.hash === baseBlock.hash) {
+          } else if (incomingBlock.metadata.hash === baseBlock.metadata.hash) {
             // 只有 current 修改了
             merged.push(currentBlock);
           } else {

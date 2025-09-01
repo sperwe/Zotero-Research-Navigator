@@ -1,6 +1,6 @@
 {
   "include": ["src", "typings"],
-  "exclude": ["build", "addon", "node_modules"],
+  "exclude": ["build", "addon", "node_modules", "src/archive-*", "src/**/__tests__", "src/test"],
   "compilerOptions": {
     "resolveJsonModule": true,
     "module": "esnext",

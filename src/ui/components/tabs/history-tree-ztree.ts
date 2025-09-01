@@ -2,7 +2,7 @@
  * History Tree zTree 实现 - 使用 iframe 隔离方案
  */
 
-import { IZTreeObj, IZTreeNode, IZTreeSetting } from '../../../types/ztree';
+/// <reference path="../../../types/ztree.d.ts" />
 import { HistoryService } from '../../../services/history-service';
 import { HistoryNode } from '../../../services/database-service';
 import { ClosedTabsManager } from '../../../managers/closed-tabs-manager';

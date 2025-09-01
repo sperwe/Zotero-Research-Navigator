@@ -421,7 +421,11 @@ export class HistoryTreeZTreeProper {
       }
     } else if (treeNode.type === 'session' && treeNode.sessionId) {
       if (this.window.confirm('Delete this entire session?')) {
-        await this.historyService.deleteSession(treeNode.sessionId);
+        // Delete all nodes in the session
+        const sessionNodes = await this.databaseService.getSessionNodes(treeNode.sessionId);
+        for (const node of sessionNodes) {
+          await this.historyService.deleteNode(node.id);
+        }
         await this.refresh();
       }
     }

@@ -4,9 +4,14 @@
  * 提供 Zotero 插件所需的生命周期函数
  */
 
-import { getResearchNavigator } from "./core/research-navigator";
+// Research Navigator instance will be created directly
 import { registerBootstrapTests } from "./test/bootstrap-tests";
 import { config } from "./config";
+import { UIManager } from "./ui/ui-manager";
+import { DatabaseService } from "./services/database-service";
+import { HistoryService } from "./services/history-service";
+import { ClosedTabsManager } from "./managers/closed-tabs-manager";
+import { NoteAssociationSystem } from "./managers/note-association-system";
 
 // Bootstrap 函数必须在全局作用域
 declare global {
@@ -16,6 +21,66 @@ declare global {
     install: (data: any, reason: any) => void;
     uninstall: (data: any, reason: any) => void;
   }
+}
+
+// Simple ResearchNavigator class
+class ResearchNavigator {
+  private uiManager: UIManager | null = null;
+  private databaseService: DatabaseService | null = null;
+  private historyService: HistoryService | null = null;
+  private closedTabsManager: ClosedTabsManager | null = null;
+  private noteAssociationSystem: NoteAssociationSystem | null = null;
+  
+  async initialize(rootURI: string, version: string): Promise<void> {
+    try {
+      // Initialize services
+      this.databaseService = new DatabaseService();
+      await this.databaseService.initialize();
+      
+      this.historyService = new HistoryService(this.databaseService);
+      await this.historyService.initialize();
+      
+      this.closedTabsManager = new ClosedTabsManager(this.databaseService, this.historyService);
+      await this.closedTabsManager.initialize();
+      
+      this.noteAssociationSystem = new NoteAssociationSystem(this.databaseService, this.historyService);
+      await this.noteAssociationSystem.initialize();
+      
+      // Initialize UI
+      this.uiManager = new UIManager({
+        closedTabsManager: this.closedTabsManager,
+        noteAssociationSystem: this.noteAssociationSystem,
+        historyService: this.historyService
+      });
+      await this.uiManager.initialize();
+      
+      // Make available globally
+      Zotero.ResearchNavigator = this;
+    } catch (error) {
+      Zotero.logError(`[Research Navigator] Initialization failed: ${error}`);
+      throw error;
+    }
+  }
+  
+  async shutdown(): Promise<void> {
+    try {
+      await this.uiManager?.shutdown();
+      await this.closedTabsManager?.destroy();
+      await this.noteAssociationSystem?.destroy();
+      await this.historyService?.destroy();
+    } catch (error) {
+      Zotero.logError(`[Research Navigator] Shutdown error: ${error}`);
+    }
+  }
+}
+
+let navigatorInstance: ResearchNavigator | null = null;
+
+function getResearchNavigator(): ResearchNavigator {
+  if (!navigatorInstance) {
+    navigatorInstance = new ResearchNavigator();
+  }
+  return navigatorInstance;
 }
 
 /**
@@ -40,7 +105,7 @@ async function startup(
       if (typeof ChromeUtils !== "undefined" && ChromeUtils.idleDispatch) {
         ChromeUtils.idleDispatch(resolve);
       } else {
-        resolve();
+        resolve(undefined);
       }
     });
     }
@@ -73,7 +138,7 @@ async function startup(
     };
     
     // 初始化
-    await navigator.initialize();
+    await navigator.initialize(rootURI, version);
 
     // 注册 Bootstrap 测试工具（开发版或从 dev 分支构建）
     const isDev = config.version.includes('dev') || 

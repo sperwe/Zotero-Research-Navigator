@@ -592,7 +592,7 @@ export class ClosedTabsManager {
     
     // 更新数据库中已关闭节点的状态
     try {
-      const nodes = this.historyService.getAllNodes();
+      const nodes = await this.databaseService.getAllHistoryNodes();
       for (const node of nodes) {
         if (node.status === "closed") {
           await this.databaseService.updateNodeStatus(node.id, "open");

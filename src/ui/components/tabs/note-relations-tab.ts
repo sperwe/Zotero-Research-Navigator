@@ -596,7 +596,17 @@ export class NoteRelationsTab {
       try {
         const query = (e.target as HTMLInputElement).value;
         if (query && this.selectedNode) {
-          const results = await this.noteAssociationSystem.searchRelatedNotes(query, this.selectedNode.id);
+          const systemResults = await this.noteAssociationSystem.searchRelatedNotes(query, this.selectedNode.id);
+          // Convert system results to tab format
+          const results: AssociatedNote[] = systemResults.map(r => ({
+            id: r.noteId,
+            noteId: r.noteId,
+            nodeId: r.nodeId,
+            relationType: r.relationType,
+            title: r.note?.getNoteTitle() || 'Untitled',
+            content: r.note?.getNote() || '',
+            dateModified: r.note?.dateModified || new Date()
+          }));
           this.showSearchResults(results);
         } else if (query && !this.selectedNode) {
           // 如果有搜索内容但没有选中节点，清空搜索结果

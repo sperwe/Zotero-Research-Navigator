@@ -3,6 +3,8 @@
  * 管理研究历史和导航
  */
 
+/// <reference path="../types/global.d.ts" />
+
 import { DatabaseService, HistoryNode } from "./database-service";
 
 export class HistoryService {

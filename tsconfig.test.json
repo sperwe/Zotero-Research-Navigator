@@ -1,14 +1,9 @@
 {
   "extends": "./tsconfig.json",
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["build", "addon", "node_modules"],
   "compilerOptions": {
-    "types": ["jest", "node"],
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true
-  },
-  "include": [
-    "src/**/*.test.ts",
-    "src/**/*.spec.ts",
-    "src/**/__tests__/**/*",
-    "src/test/**/*"
-  ]
+    "types": ["node", "jest"],
+    "typeRoots": ["./node_modules/@types", "./src/types"]
+  }
 }

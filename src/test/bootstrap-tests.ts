@@ -3,8 +3,21 @@
  * 这个文件会被编译到插件中，可以在 Zotero 控制台直接调用
  */
 
-import { runBootstrapTestSuite } from '../../test/bootstrap-filter/test-runner';
-import { startGlobalMonitoring, stopGlobalMonitoring } from '../../test/bootstrap-filter/monitor-tool';
+// import { runBootstrapTestSuite } from '../../test/bootstrap-filter/test-runner';
+// import { startGlobalMonitoring, stopGlobalMonitoring } from '../../test/bootstrap-filter/monitor-tool';
+
+// Stub functions since test files were removed
+function runBootstrapTestSuite(): void {
+  Zotero.log('[Bootstrap Tests] Test suite has been removed', 'warn');
+}
+
+function startGlobalMonitoring(): void {
+  Zotero.log('[Bootstrap Tests] Monitoring tool has been removed', 'warn');
+}
+
+function stopGlobalMonitoring(): void {
+  Zotero.log('[Bootstrap Tests] Monitoring tool has been removed', 'warn');
+}
 
 export class BootstrapTests {
   static instance: BootstrapTests | null = null;

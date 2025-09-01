@@ -21,7 +21,7 @@ async function startup(
         if (typeof ChromeUtils !== "undefined" && ChromeUtils.idleDispatch) {
           ChromeUtils.idleDispatch(resolve);
         } else {
-          resolve();
+          resolve(undefined);
         }
       });
     }

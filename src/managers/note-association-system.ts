@@ -3,6 +3,8 @@
  * 管理笔记与历史节点之间的关联
  */
 
+/// <reference path="../types/global.d.ts" />
+
 import {
   DatabaseService,
   NoteRelation,
@@ -265,8 +267,8 @@ export class NoteAssociationSystem {
                     createdAt: new Date(),
                     context: {
                       sessionId: node.sessionId,
-                      autoAssociated: true,
-                      fromAttachmentParent: true
+                      fromNode: nodeId,
+                      path: node.path
                     },
                     note,
                   });
@@ -552,7 +554,7 @@ ${initialContent || "<p>Your notes here...</p>"}
    * 获取推荐的笔记
    */
   async getSuggestedNotes(nodeId: string): Promise<any[]> {
-    const node = this.historyService.getNode(nodeId);
+    const node = await this.historyService.getNode(nodeId);
     if (!node) return [];
     
     try {
@@ -643,13 +645,9 @@ ${initialContent || "<p>Your notes here...</p>"}
           results.push({
             noteId: note.id,
             nodeId: nodeId || '',
-            associationId: '', // 搜索结果可能没有关联
-            noteTitle: note.getNoteTitle ? note.getNoteTitle() : contentPreview.substring(0, 50),
-            content: noteContent,
-            contentPreview,
-            associationType: 'search',
-            createdAt: note.dateAdded,
-            metadata: {}
+            relationType: 'suggested' as RelationType,
+            createdAt: new Date(),
+            note: note
           });
         } catch (error) {
           Zotero.logError(`Failed to process note ${noteId} in search: ${error}`);

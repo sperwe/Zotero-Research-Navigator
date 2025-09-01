@@ -320,10 +320,8 @@ export class ExportImportManager {
           for (const node of sessionNodes) {
             try {
               await this.historyService.createOrUpdateNode(node.itemId, {
-                title: node.title,
-                url: node.url,
-                sessionId: sessionData.id,
-                timestamp: new Date(node.timestamp)
+                parentId: node.parentId || undefined,
+                force: true
               });
               importedNodes++;
             } catch (error) {
