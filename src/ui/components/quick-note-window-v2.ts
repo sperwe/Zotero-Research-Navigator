@@ -5,6 +5,7 @@
 import { NoteAssociationSystem } from "../../managers/note-association-system";
 import { HistoryService } from "../../services/history-service";
 import { BetterNotesCompat } from "../../utils/betternotes-compat";
+import { EditorAutocomplete, AutocompleteContext } from "./editor-autocomplete";
 
 export class QuickNoteWindowV2 {
   private container: HTMLElement | null = null;
@@ -32,6 +33,9 @@ export class QuickNoteWindowV2 {
   // 笔记历史
   private noteHistory: number[] = []; // 最近使用的笔记ID列表
   private currentHistoryIndex = -1;
+
+  // 编辑器自动完成
+  private autocomplete: EditorAutocomplete | null = null;
 
   constructor(
     private noteAssociationSystem: NoteAssociationSystem,
@@ -726,6 +730,9 @@ export class QuickNoteWindowV2 {
             "info",
           );
           this.updateStatus("Note loaded");
+
+          // Initialize autocomplete
+          this.initializeAutocomplete(editorContainer);
         } catch (error) {
           Zotero.logError(
             `[QuickNoteWindowV2] Failed to initialize editor: ${error}`,
@@ -1954,10 +1961,62 @@ export class QuickNoteWindowV2 {
   }
 
   /**
+   * Initialize autocomplete for the editor
+   */
+  private initializeAutocomplete(container: HTMLElement): void {
+    try {
+      if (!this.editor || !this.window) return;
+
+      // Cleanup previous autocomplete
+      if (this.autocomplete) {
+        this.autocomplete.detach();
+      }
+
+      // Create new autocomplete instance
+      this.autocomplete = new EditorAutocomplete({
+        enableBuiltInCommands: true,
+        onCommandExecute: (cmd) => {
+          Zotero.log(
+            `[QuickNoteWindowV2] Autocomplete command executed: ${cmd.id}`,
+            "info",
+          );
+        },
+      });
+
+      // Create context for autocomplete
+      const context: AutocompleteContext = {
+        editor: this.editor,
+        nodeId: this.associatedNodeId || undefined,
+        noteId: this.currentNoteId || undefined,
+        window: this.window,
+        doc: container.ownerDocument,
+      };
+
+      // Attach autocomplete to editor
+      this.autocomplete.attach(context);
+
+      Zotero.log(
+        "[QuickNoteWindowV2] Autocomplete initialized successfully",
+        "info",
+      );
+    } catch (error) {
+      Zotero.logError(
+        `[QuickNoteWindowV2] Failed to initialize autocomplete: ${error}`,
+      );
+    }
+  }
+
+  /**
    * 关闭窗口
    */
   close(): void {
     try {
+      // Cleanup autocomplete
+      if (this.autocomplete) {
+        this.autocomplete.detach();
+        this.autocomplete = null;
+      }
+
       // 清理编辑器实例
       if (this.editor && typeof this.editor.uninit === "function") {
         Zotero.log("[QuickNoteWindowV2] Uninitializing editor", "info");

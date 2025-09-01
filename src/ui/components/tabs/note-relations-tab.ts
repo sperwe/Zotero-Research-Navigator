@@ -9,6 +9,7 @@ import { HistoryNode } from "../../../services/database-service";
 import { NoteEditorIntegration, EditorMode } from "./note-editor-integration";
 import { NoteBranchingSystem } from "../../../managers/note-branching";
 import { BetterNotesCompat } from "../../../utils/betternotes-compat";
+import { EditorAutocomplete, AutocompleteContext } from "../editor-autocomplete";
 
 export interface AssociatedNote {
   id: number;
@@ -29,6 +30,7 @@ export class NoteRelationsTab {
   private selectedNoteId: number | null = null;
   private noteBranchingSystem: NoteBranchingSystem;
   private branchingPanel: HTMLElement | null = null;
+  private autocomplete: EditorAutocomplete | null = null;
 
   constructor(
     private window: Window,
@@ -1951,6 +1953,9 @@ export class NoteRelationsTab {
                 "info",
               );
 
+              // Initialize autocomplete
+              this.initializeAutocomplete(editorInstance, noteEditorContainer);
+
               // 检查编辑器状态并显示
               setTimeout(() => {
                 const iframeDoc = iframe.contentDocument;
@@ -2606,9 +2611,59 @@ export class NoteRelationsTab {
   }
 
   /**
+   * Initialize autocomplete for the editor
+   */
+  private initializeAutocomplete(editor: any, container: HTMLElement): void {
+    try {
+      // Cleanup previous autocomplete
+      if (this.autocomplete) {
+        this.autocomplete.detach();
+      }
+
+      // Create new autocomplete instance
+      this.autocomplete = new EditorAutocomplete({
+        enableBuiltInCommands: true,
+        onCommandExecute: (cmd) => {
+          Zotero.log(
+            `[NoteRelationsTab] Autocomplete command executed: ${cmd.id}`,
+            "info",
+          );
+        },
+      });
+
+      // Create context for autocomplete
+      const context: AutocompleteContext = {
+        editor: editor,
+        nodeId: this.selectedNode?.id,
+        noteId: this.selectedNoteId || undefined,
+        window: this.window,
+        doc: container.ownerDocument,
+      };
+
+      // Attach autocomplete to editor
+      this.autocomplete.attach(context);
+
+      Zotero.log(
+        "[NoteRelationsTab] Autocomplete initialized successfully",
+        "info",
+      );
+    } catch (error) {
+      Zotero.logError(
+        `[NoteRelationsTab] Failed to initialize autocomplete: ${error}`,
+      );
+    }
+  }
+
+  /**
    * 销毁
    */
   destroy(): void {
+    // Cleanup autocomplete
+    if (this.autocomplete) {
+      this.autocomplete.detach();
+      this.autocomplete = null;
+    }
+
     this.container = null;
     this.contentContainer = null;
     this.selectedNode = null;
