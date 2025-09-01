@@ -20,6 +20,8 @@ export interface HistoryNode {
   hasNotes: boolean;
   depth: number;
   path: string[]; // 从根到当前节点的路径
+  data?: any; // Additional data that can be attached to the node
+  url?: string; // URL for web items
 }
 
 export interface NoteRelation {
@@ -31,7 +33,10 @@ export interface NoteRelation {
     | "inspired_by"
     | "summarizes"
     | "questions"
-    | "manual";
+    | "manual"
+    | "quick-note"
+    | "reference"
+    | "suggested";
   createdAt: Date;
   context: {
     sessionId: string;
@@ -270,6 +275,25 @@ export class DatabaseService {
        WHERE nodeId = ? 
        ORDER BY createdAt DESC`,
       [nodeId],
+    );
+
+    return results.map((row) => ({
+      id: row.id,
+      noteId: row.noteId,
+      nodeId: row.nodeId,
+      relationType: row.relationType,
+      createdAt: new Date(row.createdAt),
+      context: JSON.parse(row.context || "{}"),
+    }));
+  }
+
+  /**
+   * 获取所有笔记关联
+   */
+  async getAllNoteRelations(): Promise<NoteRelation[]> {
+    const results = await Zotero.DB.queryAsync(
+      `SELECT * FROM ${this.RELATIONS_TABLE} 
+       ORDER BY createdAt DESC`
     );
 
     return results.map((row) => ({

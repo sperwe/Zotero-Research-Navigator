@@ -655,7 +655,7 @@ export class HistoryTreeTab {
     if (isGhost) {
       icon.textContent = "👻"; // 幽灵图标
     } else {
-      icon.textContent = node.status === "active" ? "📖" : 
+      icon.textContent = node.status === "open" ? "📖" : 
                          node.status === "closed" ? "📕" : "📘";
     }
     content.appendChild(icon);
@@ -863,15 +863,42 @@ export class HistoryTreeTab {
       }
       
       if (item) {
-        if (item.isRegularItem() && item.isTopLevelItem()) {
-          // 打开 PDF
+        if (item.isAttachment()) {
+          // 直接打开附件
+          if (item.attachmentReaderType) {
+            await Zotero.Reader.open(item.id);
+          } else {
+            const ZoteroPane = Zotero.getActiveZoteroPane();
+            if (ZoteroPane) {
+              await ZoteroPane.viewAttachment(item.id);
+            }
+          }
+        } else if (item.isRegularItem() && item.isTopLevelItem()) {
+          // 打开最佳附件
           const attachment = await item.getBestAttachment();
           if (attachment) {
             await Zotero.Reader.open(attachment.id);
+          } else {
+            // 如果没有附件，在库中选择该项目
+            const ZoteroPane = Zotero.getActiveZoteroPane();
+            if (ZoteroPane) {
+              await ZoteroPane.selectItem(item.id);
+            }
           }
         } else if (item.isNote()) {
           // 打开笔记
-          Zotero.openNoteWindow(item.id);
+          const ZoteroPane = Zotero.getActiveZoteroPane();
+          if (ZoteroPane && ZoteroPane.openNoteWindow) {
+            ZoteroPane.openNoteWindow(item.id);
+          } else {
+            Zotero.openNoteWindow(item.id);
+          }
+        } else {
+          // 其他类型，在库中选择
+          const ZoteroPane = Zotero.getActiveZoteroPane();
+          if (ZoteroPane) {
+            await ZoteroPane.selectItem(item.id);
+          }
         }
       }
     } catch (error) {

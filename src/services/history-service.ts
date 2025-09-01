@@ -201,13 +201,23 @@ export class HistoryService {
   /**
    * 获取单个节点
    */
-  getNode(nodeId: string): HistoryNode | undefined {
-    return this.nodeCache.get(nodeId);
+  async getNode(nodeId: string): Promise<HistoryNode | null> {
+    if (this.nodeCache.has(nodeId)) {
+      return this.nodeCache.get(nodeId) || null;
+    }
+    
+    const node = await this.databaseService.getHistoryNode(nodeId);
+    if (node) {
+      this.nodeCache.set(nodeId, node);
+    }
+    return node;
   }
   
   /**
    * 根据文献ID获取节点
    */
+
+
   async getNodesByItemId(itemId: number): Promise<HistoryNode[]> {
     return Array.from(this.nodeCache.values())
       .filter(node => node.itemId === itemId)
@@ -461,6 +471,37 @@ export class HistoryService {
     } catch (error) {
       Zotero.logError(error);
       return false;
+    }
+  }
+
+  /**
+   * 清除所有历史记录
+   */
+  async clearAll(preserveSessions: boolean = false): Promise<void> {
+    try {
+      Zotero.log('[HistoryService] Clearing all history', 'info');
+      
+      // 清除数据库中的所有历史记录
+      await this.databaseService.clearAll();
+      
+      // 清除内存缓存
+      this.nodeCache.clear();
+      this.itemNodeMap.clear();
+      this.currentNode = null;
+      
+      // 如果不保留会话，重置当前会话
+      if (!preserveSessions) {
+        this.currentSessionId = this.generateSessionId();
+        this.lastActivityTime = Date.now();
+      }
+      
+      // 通知监听器
+      await this.notifyListeners('clear', null);
+      
+      Zotero.log('[HistoryService] All history cleared', 'info');
+    } catch (error) {
+      Zotero.logError(`[HistoryService] Failed to clear history: ${error}`);
+      throw error;
     }
   }
 

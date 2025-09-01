@@ -335,7 +335,7 @@ export class BatchOperationManager {
           affected.push(node);
           
           // 检查警告
-          if (options.operation === 'delete' && node.status === 'active') {
+          if (options.operation === 'delete' && node.status === 'open') {
             warnings.push(`Node "${node.title}" is active`);
           }
         }

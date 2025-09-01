@@ -311,7 +311,7 @@ export class VisualizationTab {
       this.ctx.stroke();
       
       // 节点圆圈
-      this.ctx.fillStyle = node.status === 'active' ? '#4CAF50' : '#2196F3';
+      this.ctx.fillStyle = node.status === 'open' ? '#4CAF50' : '#2196F3';
       this.ctx.beginPath();
       this.ctx.arc(x, y, 5, 0, Math.PI * 2);
       this.ctx.fill();
@@ -378,7 +378,7 @@ export class VisualizationTab {
       if (!pos) continue;
       
       // 节点圆圈
-      this.ctx.fillStyle = node.status === 'active' ? '#4CAF50' : '#2196F3';
+      this.ctx.fillStyle = node.status === 'open' ? '#4CAF50' : '#2196F3';
       this.ctx.beginPath();
       this.ctx.arc(pos.x, pos.y, 20, 0, Math.PI * 2);
       this.ctx.fill();

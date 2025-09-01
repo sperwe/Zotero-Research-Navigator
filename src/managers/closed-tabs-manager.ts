@@ -43,11 +43,18 @@ export class ClosedTabsManager {
     // 从数据库加载已关闭的标签页
     await this.loadClosedTabs();
 
-    // 同步 Zotero 的已关闭标签页历史
-    await this.syncWithZoteroHistory();
+    // 检查是否应该在启动时加载历史
+    const loadHistoryOnStartup = Zotero.Prefs.get('extensions.zotero.researchnavigator.loadHistoryOnStartup', false) as boolean;
+    
+    if (loadHistoryOnStartup) {
+      // 同步 Zotero 的已关闭标签页历史
+      await this.syncWithZoteroHistory();
+    } else {
+      Zotero.log("[ClosedTabsManager] Skipping initial history sync (disabled by preference)", "info");
+    }
     
     // 如果初始同步失败，延迟重试
-    if (this.closedTabs.length === 0) {
+    if (loadHistoryOnStartup && this.closedTabs.length === 0) {
       // 多次重试，以防 Zotero_Tabs 初始化较晚
       let retryCount = 0;
       const retryInterval = setInterval(async () => {

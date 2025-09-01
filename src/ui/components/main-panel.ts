@@ -393,7 +393,7 @@ export class MainPanel {
 
     // 渲染标签页
     const container = doc.createElement('div');
-    container.style.cssText = 'height: 100%; width: 100%;';
+    container.style.cssText = 'height: 100%; width: 100%; overflow: auto;';
     content.appendChild(container);
     
     // 所有标签页都应该有 create 方法

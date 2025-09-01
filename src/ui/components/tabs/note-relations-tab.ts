@@ -195,7 +195,7 @@ export class NoteRelationsTab {
     // 图标
     const icon = doc.createElement("span");
     icon.style.pointerEvents = "none";
-    icon.textContent = node.status === "active" ? "📖" : "📕";
+    icon.textContent = node.status === "open" ? "📖" : "📕";
     element.appendChild(icon);
     
     // 标题
@@ -524,7 +524,7 @@ export class NoteRelationsTab {
       
       // 图标
       const icon = doc.createElement("span");
-      icon.textContent = this.selectedNode.status === "active" ? "📖" : "📕";
+      icon.textContent = this.selectedNode.status === "open" ? "📖" : "📕";
       icon.style.fontSize = "14px";
       nodeInfo.appendChild(icon);
       
@@ -885,7 +885,7 @@ export class NoteRelationsTab {
       removeBtn.addEventListener("click", async () => {
         if (this.selectedNode && note.id > 0) {
           // note.id 是关联记录的ID，不是笔记ID
-          await this.noteAssociationSystem.removeAssociation(note.id);
+          await this.noteAssociationSystem.removeAssociation(note.noteId, this.selectedNode.id);
           await this.loadNodeAssociations();
         }
       });
@@ -2351,9 +2351,8 @@ export class NoteRelationsTab {
     this.contentContainer = null;
     this.selectedNode = null;
     // 清除缓存（如果方法存在）
-    if (typeof this.noteAssociationSystem.clearCache === 'function') {
-      this.noteAssociationSystem.clearCache();
-    }
+    // Clear cache if needed
+    // Note: clearCache method might need to be implemented in the future
     // 清理分支面板
     if (this.branchingPanel) {
       this.branchingPanel.remove();

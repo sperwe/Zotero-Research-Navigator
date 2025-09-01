@@ -325,9 +325,13 @@ export class HistoryTreeSafe {
         
         const ZoteroPane = Zotero.getActiveZoteroPane();
         
-        // 如果是附件，直接打开
+        // 如果是附件，在标签页中打开
         if (item.isAttachment()) {
-          await ZoteroPane.viewAttachment(item.id);
+          if (item.attachmentReaderType) {
+            await Zotero.Reader.open(item.id);
+          } else {
+            await ZoteroPane.viewAttachment(item.id);
+          }
           return;
         }
         
@@ -343,7 +347,12 @@ export class HistoryTreeSafe {
         const attachments = await item.getBestAttachments();
         if (attachments && attachments.length > 0) {
           // 打开第一个最佳附件
-          await ZoteroPane.viewAttachment(attachments[0].id);
+          const attachment = attachments[0];
+          if (attachment.attachmentReaderType) {
+            await Zotero.Reader.open(attachment.id);
+          } else {
+            await ZoteroPane.viewAttachment(attachment.id);
+          }
           return;
         }
         
@@ -354,12 +363,21 @@ export class HistoryTreeSafe {
           for (let attachmentId of allAttachments) {
             const attachment = await Zotero.Items.getAsync(attachmentId);
             if (attachment && attachment.isPDFAttachment()) {
-              await ZoteroPane.viewAttachment(attachment.id);
+              if (attachment.attachmentReaderType) {
+                await Zotero.Reader.open(attachment.id);
+              } else {
+                await ZoteroPane.viewAttachment(attachment.id);
+              }
               return;
             }
           }
           // 如果没有 PDF，打开第一个附件
-          await ZoteroPane.viewAttachment(allAttachments[0]);
+          const firstAttachment = await Zotero.Items.getAsync(allAttachments[0]);
+          if (firstAttachment && firstAttachment.attachmentReaderType) {
+            await Zotero.Reader.open(firstAttachment.id);
+          } else {
+            await ZoteroPane.viewAttachment(allAttachments[0]);
+          }
           return;
         }
         

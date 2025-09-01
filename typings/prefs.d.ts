@@ -15,6 +15,8 @@ declare namespace _ZoteroTypes {
       "historyLoadDays": number;
       "maxHistoryGroups": number;
       "useZTree": boolean;
+      "loadHistoryOnStartup": boolean;
+      "onlyTrackNewTabs": boolean;
       "quickNoteMode": string;
       "quickNoteShowInfo": boolean;
     };

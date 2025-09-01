@@ -15,11 +15,33 @@ export type RelationType =
   | "inspired_by"
   | "summarizes"
   | "questions"
-  | "manual";
+  | "manual"
+  | "quick-note"
+  | "reference"
+  | "suggested";
 
 export interface NoteAssociation extends NoteRelation {
   note?: Zotero.Item;
   node?: HistoryNode;
+}
+
+export interface AssociatedNote {
+  noteId: number;
+  note?: Zotero.Item;
+  nodeId: string;
+  relationType: RelationType;
+  createdAt: Date;
+  context?: any;
+}
+
+export interface SearchCriteria {
+  query?: string;
+  nodeId?: string;
+  relationType?: RelationType;
+  dateRange?: {
+    start: Date;
+    end: Date;
+  };
 }
 
 export class NoteAssociationSystem {
@@ -40,6 +62,18 @@ export class NoteAssociationSystem {
 
   async initialize(): Promise<void> {
     Zotero.log("[NoteAssociationSystem] Initialized", "info");
+  }
+
+  /**
+   * 创建笔记关联 (别名方法)
+   */
+  async associateNote(
+    noteId: number,
+    nodeId: string,
+    relationType: RelationType = "manual",
+    context?: any,
+  ): Promise<void> {
+    return this.createAssociation(noteId, nodeId, relationType, context);
   }
 
   /**
@@ -432,6 +466,9 @@ ${initialContent || "<p>Your notes here...</p>"}
       summarizes: 0,
       questions: 0,
       manual: 0,
+      'quick-note': 0,
+      reference: 0,
+      suggested: 0,
     };
 
     for (const relation of allRelations) {
