@@ -101,10 +101,10 @@ export class SmartSuggestionSystem {
         search.addCondition("itemID", "isNot", currentItem.id.toString());
 
         const itemIds = await search.search();
-        const items = await Zotero.Items.getAsync(itemIds.slice(0, 5));
+        const items = itemIds.slice(0, 5).map(id => Zotero.Items.get(id)).filter(Boolean);
 
         for (const item of items) {
-          if (!item) continue;
+          if (!item || Array.isArray(item)) continue;
 
           suggestions.push({
             id: `related-author-${item.id}`,
@@ -134,10 +134,10 @@ export class SmartSuggestionSystem {
         tagSearch.addCondition("itemID", "isNot", currentItem.id.toString());
 
         const tagItemIds = await tagSearch.search();
-        const tagItems = await Zotero.Items.getAsync(tagItemIds.slice(0, 5));
+        const tagItems = tagItemIds.slice(0, 5).map(id => Zotero.Items.get(id)).filter(Boolean);
 
         for (const item of tagItems) {
-          if (!item) continue;
+          if (!item || Array.isArray(item)) continue;
 
           suggestions.push({
             id: `related-tag-${item.id}`,
@@ -193,10 +193,10 @@ export class SmartSuggestionSystem {
       search.addCondition("itemID", "isNot", currentNote.id.toString());
 
       const noteIds = await search.search();
-      const notes = await Zotero.Items.getAsync(noteIds.slice(0, 5));
+      const notes = noteIds.slice(0, 5).map(id => Zotero.Items.get(id)).filter(Boolean);
 
       for (const note of notes) {
-        if (!note) continue;
+        if (!note || Array.isArray(note)) continue;
 
         const similarity = this.calculateTextSimilarity(
           noteContent,
@@ -453,8 +453,8 @@ export class SmartSuggestionSystem {
       search.addCondition("itemID", "isNot", item.id.toString());
 
       const itemIds = await search.search();
-      const items = await Zotero.Items.getAsync(itemIds.slice(0, 10));
-      related.push(...items.filter((i) => i));
+      const items = itemIds.slice(0, 10).map(id => Zotero.Items.get(id)).filter(Boolean);
+      related.push(...items.filter((i) => i && !Array.isArray(i)));
     }
 
     return related;

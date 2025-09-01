@@ -184,8 +184,10 @@ export class ZoteroTabsIntegration {
         if (tabData.data?.itemID) {
           try {
             const item = Zotero.Items.get(tabData.data.itemID);
-            if (item) {
+            if (item && !Array.isArray(item) && 'getDisplayTitle' in item) {
               return item.getDisplayTitle();
+            } else if (item && !Array.isArray(item)) {
+              return item.getField('title') || 'PDF Reader';
             }
           } catch (e) {
             // Item might be deleted
@@ -220,14 +222,7 @@ export class ZoteroTabsIntegration {
             // 检查条目是否还存在
             const item = await Zotero.Items.getAsync(tabData.data.itemID);
             if (item) {
-              await Zotero.Reader.open(
-                tabData.data.itemID,
-                tabData.data.location,
-                {
-                  openInWindow: tabData.data.openInWindow,
-                  allowDuplicate: false,
-                },
-              );
+              await Zotero.Reader.open(tabData.data.itemID);
 
               // 恢复状态（如滚动位置）
               if (tabData.state) {

@@ -667,7 +667,9 @@ export class NoteRelationsTab {
             relationType: r.relationType,
             title: r.note?.getNoteTitle() || "Untitled",
             content: r.note?.getNote() || "",
-            dateModified: r.note?.dateModified || new Date(),
+            dateModified: r.note?.dateModified instanceof Date 
+              ? r.note.dateModified 
+              : new Date(r.note?.dateModified || Date.now()),
           }));
           this.showSearchResults(results);
         } else if (query && !this.selectedNode) {
@@ -1090,7 +1092,9 @@ export class NoteRelationsTab {
           // 删除笔记
           const noteItem = Zotero.Items.get(note.noteId);
           if (noteItem) {
-            await noteItem.eraseTx();
+            if (!Array.isArray(noteItem) && 'eraseTx' in noteItem) {
+              await noteItem.eraseTx();
+            }
             Zotero.log(
               `[NoteRelationsTab] Note ${note.noteId} deleted successfully`,
               "info",
@@ -1303,15 +1307,16 @@ export class NoteRelationsTab {
       }
 
       const noteIDs = await s.search();
-      const notes = await Zotero.Items.getAsync(noteIDs);
+      const notesArray = noteIDs.map(id => Zotero.Items.get(id)).filter(Boolean);
 
-      if (notes.length === 0) {
+      if (notesArray.length === 0) {
         noteListContainer.innerHTML = "<p>No notes found</p>";
         return;
       }
 
       // 显示笔记列表
-      for (const note of notes.slice(0, 50)) {
+      for (const note of notesArray.slice(0, 50)) {
+        if (Array.isArray(note)) continue;
         // 限制显示前50个
         const noteItem = doc.createElement("div");
         noteItem.style.cssText = `

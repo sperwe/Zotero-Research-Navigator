@@ -497,7 +497,7 @@ export class QuickNoteWindow {
       } else if (this.currentNoteId) {
         // 备用方案：从 item 获取
         const item = Zotero.Items.get(this.currentNoteId);
-        if (item && item.isNote()) {
+        if (item && !Array.isArray(item) && item.isNote()) {
           content = item.getNote();
         }
       }

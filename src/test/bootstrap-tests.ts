@@ -101,7 +101,7 @@ export class BootstrapTests {
    */
   stopMonitoring(): void {
     const data = stopGlobalMonitoring();
-    if (data) {
+    if (data !== undefined) {
       console.log("📊 Monitoring stopped. Results:", data);
     } else {
       console.log("⚠️  No monitoring session was active.");

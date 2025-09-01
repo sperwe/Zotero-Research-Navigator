@@ -497,14 +497,14 @@ export class UIManager {
 
     const notificationBox = win.document.getElementById(
       "zotero-notification-box",
-    );
-    if (!notificationBox) return;
+    ) as any;
+    if (!notificationBox || !notificationBox.appendNotification) return;
 
     const priority = {
-      success: notificationBox.PRIORITY_INFO_HIGH,
-      warning: notificationBox.PRIORITY_WARNING_MEDIUM,
-      error: notificationBox.PRIORITY_CRITICAL_HIGH,
-      info: notificationBox.PRIORITY_INFO_LOW,
+      success: notificationBox.PRIORITY_INFO_HIGH || 8,
+      warning: notificationBox.PRIORITY_WARNING_MEDIUM || 4,
+      error: notificationBox.PRIORITY_CRITICAL_HIGH || 10,
+      info: notificationBox.PRIORITY_INFO_LOW || 3,
     }[type];
 
     notificationBox.appendNotification(
@@ -518,8 +518,8 @@ export class UIManager {
     // 自动关闭通知
     if (win && win.setTimeout) {
       win.setTimeout(() => {
-        const notification = notificationBox.currentNotification;
-        if (notification && notification.label === message) {
+        const notification = (notificationBox as any).currentNotification;
+        if (notification && notification.label === message && notificationBox.removeNotification) {
           notificationBox.removeNotification(notification);
         }
       }, 5000);

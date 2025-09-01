@@ -25,6 +25,7 @@ declare global {
 
 // Simple ResearchNavigator class
 class ResearchNavigator {
+  public initialized: boolean = false;
   private uiManager: UIManager | null = null;
   private databaseService: DatabaseService | null = null;
   private historyService: HistoryService | null = null;
@@ -40,10 +41,7 @@ class ResearchNavigator {
       this.historyService = new HistoryService(this.databaseService);
       await this.historyService.initialize();
 
-      this.closedTabsManager = new ClosedTabsManager(
-        this.databaseService,
-        this.historyService,
-      );
+           this.closedTabsManager = new ClosedTabsManager(this.historyService);
       await this.closedTabsManager.initialize();
 
       this.noteAssociationSystem = new NoteAssociationSystem(
@@ -52,17 +50,18 @@ class ResearchNavigator {
       );
       await this.noteAssociationSystem.initialize();
 
-      // Initialize UI
-      this.uiManager = new UIManager({
-        closedTabsManager: this.closedTabsManager,
-        noteAssociationSystem: this.noteAssociationSystem,
-        historyService: this.historyService,
-      });
+           // Initialize UI
+     this.uiManager = new UIManager(
+       this.historyService,
+       this.closedTabsManager,
+       this.noteAssociationSystem,
+     );
       await this.uiManager.initialize();
 
-      // Make available globally
-      Zotero.ResearchNavigator = this;
-    } catch (error) {
+           // Make available globally
+     Zotero.ResearchNavigator = this;
+     this.initialized = true;
+   } catch (error) {
       Zotero.logError(`[Research Navigator] Initialization failed: ${error}`);
       throw error;
     }
@@ -70,7 +69,7 @@ class ResearchNavigator {
 
   async shutdown(): Promise<void> {
     try {
-      await this.uiManager?.shutdown();
+      await this.uiManager?.destroy();
       await this.closedTabsManager?.destroy();
       await this.noteAssociationSystem?.destroy();
       await this.historyService?.destroy();

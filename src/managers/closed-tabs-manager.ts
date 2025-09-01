@@ -212,11 +212,11 @@ export class ClosedTabsManager {
                 const zoteroItem = Zotero.Items.get(item.data.itemID);
                 if (zoteroItem) {
                   Zotero.log(
-                    `[ClosedTabsManager]   - Title: ${zoteroItem.getField("title")}`,
+                    `[ClosedTabsManager]   - Title: ${!Array.isArray(zoteroItem) ? zoteroItem.getField("title") : "Multiple items"}`,
                     "info",
                   );
                   Zotero.log(
-                    `[ClosedTabsManager]   - Type: ${zoteroItem.itemType}`,
+                    `[ClosedTabsManager]   - Type: ${!Array.isArray(zoteroItem) ? zoteroItem.itemType : "Multiple"}`,
                     "info",
                   );
                 }

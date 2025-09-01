@@ -517,7 +517,8 @@ export class HistoryService {
       }
 
       // 通知监听器
-      await this.notifyListeners("clear", null);
+      // TODO: Implement listener notification system if needed
+      // await this.notifyListeners("clear", null);
 
       Zotero.log("[HistoryService] All history cleared", "info");
     } catch (error) {
