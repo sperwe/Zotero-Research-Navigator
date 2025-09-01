@@ -8,6 +8,7 @@ import { HistoryService } from "../../../services/history-service";
 import { HistoryNode } from "../../../services/database-service";
 import { NoteEditorIntegration, EditorMode } from "./note-editor-integration";
 import { NoteBranchingSystem } from "../../../managers/note-branching";
+import { BetterNotesCompat } from "../../../utils/betternotes-compat";
 
 export interface AssociatedNote {
   id: number;
@@ -1716,10 +1717,8 @@ export class NoteRelationsTab {
               const editorInstance = new win.Zotero.EditorInstance();
               Zotero.log(`[NoteRelationsTab] EditorInstance created`, "info");
               
-              // 处理 BetterNotes 兼容性
-              if (iframe.contentWindow && (iframe.contentWindow as any).wrappedJSObject) {
-                (iframe.contentWindow as any).wrappedJSObject._betterNotesIgnore = true;
-              }
+              // 使用兼容性模块处理 BetterNotes
+              BetterNotesCompat.markEditorAsManaged(editorInstance, iframe);
               
               // 初始化编辑器
               await editorInstance.init({

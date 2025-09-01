@@ -4,6 +4,7 @@
 
 import { NoteAssociationSystem } from '../../managers/note-association-system';
 import { HistoryService } from '../../services/history-service';
+import { BetterNotesCompat } from '../../utils/betternotes-compat';
 
 export class QuickNoteWindowV2 {
   private container: HTMLElement | null = null;
@@ -581,14 +582,15 @@ export class QuickNoteWindowV2 {
           // 创建 EditorInstance
           const editorInstance = new win.Zotero.EditorInstance();
           
-          // 处理 BetterNotes 兼容性
-          if (iframe.contentWindow && (iframe.contentWindow as any).wrappedJSObject) {
-            (iframe.contentWindow as any).wrappedJSObject._betterNotesIgnore = true;
-          }
+          // 使用兼容性模块处理 BetterNotes
+          BetterNotesCompat.markEditorAsManaged(editorInstance, iframe);
           
           // 存储实例引用以便清理
           (iframe as any)._editorInstance = editorInstance;
           (editorContainer as any)._editorInstance = editorInstance;
+          
+          // 等待 BetterNotes 完成其代理设置（如果存在）
+          await BetterNotesCompat.waitForInitialization();
           
           // 初始化编辑器
           await editorInstance.init({
@@ -600,6 +602,8 @@ export class QuickNoteWindowV2 {
             saveOnClose: true,
             ignoreUpdate: true
           });
+          
+          // BetterNotes 兼容性已由 BetterNotesCompat 处理
           
           // 显示 iframe
           iframe.style.visibility = 'visible';
@@ -1449,8 +1453,15 @@ export class QuickNoteWindowV2 {
           // 组合新内容
           const markdownText = `\n\n${quotedText}\n\n${citation}\n\n`;
           
-          // 检查编辑器是否有插入文本的方法
-          if (this.editor.insertText && typeof this.editor.insertText === 'function') {
+          // 尝试使用 BetterNotes 的 Markdown 功能
+          const betterNotesInserted = await BetterNotesCompat.insertWithBetterNotes(
+            this.editor, 
+            markdownText
+          );
+          
+          if (betterNotesInserted) {
+            Zotero.log('[QuickNoteWindowV2] Text inserted using BetterNotes Markdown conversion', 'info');
+          } else if (this.editor.insertText && typeof this.editor.insertText === 'function') {
             // 如果有 insertText 方法，直接插入文本
             await this.editor.insertText(markdownText);
           } else if (this.editor._editorInstance && this.editor._editorInstance.insertText) {
