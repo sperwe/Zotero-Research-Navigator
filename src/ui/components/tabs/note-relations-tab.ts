@@ -2639,6 +2639,193 @@ export class NoteRelationsTab {
   }
 
   /**
+   * 显示笔记卡片的右键菜单
+   */
+  private showNoteContextMenu(
+    event: MouseEvent,
+    note: AssociatedNote,
+    isAssociated: boolean,
+  ): void {
+    const doc = this.window.document;
+
+    // 移除任何现有的菜单
+    const existingMenu = doc.querySelector(".note-context-menu");
+    if (existingMenu) {
+      existingMenu.remove();
+    }
+
+    // 创建菜单容器
+    const menu = doc.createElement("div");
+    menu.className = "note-context-menu";
+    menu.style.cssText = `
+      position: fixed;
+      background: white;
+      border: 1px solid var(--material-border-quarternary);
+      border-radius: 4px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 4px 0;
+      min-width: 150px;
+      z-index: 1000;
+    `;
+
+    // 创建菜单项的辅助函数
+    const createMenuItem = (
+      text: string,
+      handler: () => void,
+      isDanger: boolean = false,
+    ) => {
+      const item = doc.createElement("div");
+      item.style.cssText = `
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 13px;
+        color: ${isDanger ? "#dc3545" : "var(--fill-primary)"};
+        user-select: none;
+      `;
+      item.textContent = text;
+
+      // 悬停效果
+      item.addEventListener("mouseenter", () => {
+        item.style.background = isDanger
+          ? "rgba(220, 53, 69, 0.1)"
+          : "var(--fill-quinary)";
+      });
+      item.addEventListener("mouseleave", () => {
+        item.style.background = "transparent";
+      });
+
+      item.addEventListener("click", () => {
+        handler();
+        menu.remove();
+      });
+
+      return item;
+    };
+
+    // 添加菜单项
+    if (isAssociated) {
+      menu.appendChild(
+        createMenuItem("Remove Association", async () => {
+          if (this.selectedNode && note.id > 0) {
+            await this.noteAssociationSystem.removeAssociation(
+              note.noteId,
+              this.selectedNode.id,
+            );
+            await this.loadNodeAssociations();
+          }
+        }),
+      );
+    } else {
+      menu.appendChild(
+        createMenuItem("Associate Note", async () => {
+          if (this.selectedNode) {
+            await this.noteAssociationSystem.associateNote(
+              note.noteId,
+              this.selectedNode.id,
+              "manual",
+            );
+            await this.loadNodeAssociations();
+          }
+        }),
+      );
+    }
+
+    // 分支管理
+    menu.appendChild(
+      createMenuItem("Manage Branches", () => {
+        this.showBranchingPanel(note.noteId);
+      }),
+    );
+
+    // 分隔线
+    const separator = doc.createElement("div");
+    separator.style.cssText = `
+      height: 1px;
+      background: var(--material-border-quarternary);
+      margin: 4px 0;
+    `;
+    menu.appendChild(separator);
+
+    // 删除笔记
+    menu.appendChild(
+      createMenuItem("Delete Note", async () => {
+        const confirmDelete = this.window.confirm(
+          `Are you sure you want to delete this note?\n\nTitle: ${note.title}\n\nThis action cannot be undone.`,
+        );
+
+        if (confirmDelete) {
+          try {
+            Zotero.log(`[NoteRelationsTab] Deleting note ${note.noteId}`, "info");
+
+            // 如果正在编辑这个笔记，先清空编辑器
+            if (this.selectedNoteId === note.noteId && this.editorContainer) {
+              this.editorContainer.innerHTML = "";
+              this.selectedNoteId = null;
+            }
+
+            // 删除笔记
+            const noteItem = Zotero.Items.get(note.noteId);
+            if (noteItem) {
+              if (!Array.isArray(noteItem) && "eraseTx" in noteItem) {
+                await noteItem.eraseTx();
+              }
+              Zotero.log(
+                `[NoteRelationsTab] Note ${note.noteId} deleted successfully`,
+                "info",
+              );
+
+              // 刷新列表
+              await this.loadNodeAssociations();
+            }
+          } catch (error) {
+            Zotero.logError(
+              `[NoteRelationsTab] Failed to delete note: ${error}`,
+            );
+            this.window.alert(`Failed to delete note: ${error}`);
+          }
+        }
+      }, true),
+    );
+
+    // 定位菜单
+    const x = event.clientX;
+    const y = event.clientY;
+
+    // 先添加到文档以获取尺寸
+    doc.body.appendChild(menu);
+
+    // 调整位置防止超出屏幕
+    const menuRect = menu.getBoundingClientRect();
+    const windowWidth = this.window.innerWidth;
+    const windowHeight = this.window.innerHeight;
+
+    if (x + menuRect.width > windowWidth) {
+      menu.style.left = `${windowWidth - menuRect.width - 10}px`;
+    } else {
+      menu.style.left = `${x}px`;
+    }
+
+    if (y + menuRect.height > windowHeight) {
+      menu.style.top = `${windowHeight - menuRect.height - 10}px`;
+    } else {
+      menu.style.top = `${y}px`;
+    }
+
+    // 点击其他地方关闭菜单
+    const closeMenu = (e: MouseEvent) => {
+      if (!menu.contains(e.target as Node)) {
+        menu.remove();
+        doc.removeEventListener("click", closeMenu);
+      }
+    };
+
+    // 延迟添加监听器，避免立即触发
+    setTimeout(() => {
+      doc.addEventListener("click", closeMenu);
+    }, 0);
+  }
+
+  /**
    * 销毁
    */
   destroy(): void {
