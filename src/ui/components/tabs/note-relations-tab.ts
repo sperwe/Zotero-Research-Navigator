@@ -9,7 +9,6 @@ import { HistoryNode } from "../../../services/database-service";
 import { NoteEditorIntegration, EditorMode } from "./note-editor-integration";
 import { NoteBranchingSystem } from "../../../managers/note-branching";
 import { BetterNotesCompat } from "../../../utils/betternotes-compat";
-import { EditorAutocomplete, AutocompleteContext } from "../editor-autocomplete";
 
 export interface AssociatedNote {
   id: number;
@@ -30,7 +29,6 @@ export class NoteRelationsTab {
   private selectedNoteId: number | null = null;
   private noteBranchingSystem: NoteBranchingSystem;
   private branchingPanel: HTMLElement | null = null;
-  private autocomplete: EditorAutocomplete | null = null;
 
   constructor(
     private window: Window,
@@ -951,172 +949,14 @@ export class NoteRelationsTab {
 
     header.appendChild(titleContainer);
 
-    // 分支管理按钮
-    const branchBtn = doc.createElement("button");
-    branchBtn.style.cssText = `
-      padding: 4px 8px;
-      font-size: 12px;
-      background: white;
-      border: 1px solid var(--material-border-quarternary);
-      border-radius: 3px;
-      cursor: pointer;
-      color: var(--fill-secondary);
-    `;
-    branchBtn.innerHTML = "🌿 Branches";
-    branchBtn.title = "Manage note branches";
-    branchBtn.addEventListener("click", (e) => {
+    // 添加右键菜单处理
+    card.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
       e.stopPropagation();
-      this.showBranchingPanel(note.noteId);
+      this.showNoteContextMenu(e, note, isAssociated);
     });
-    header.appendChild(branchBtn);
 
-    // 操作按钮
-    const actions = doc.createElement("div");
-    actions.style.cssText = `
-      display: flex;
-      gap: 5px;
-    `;
-
-    if (isAssociated) {
-      const removeBtn = doc.createElement("button");
-      removeBtn.textContent = "Remove";
-      removeBtn.style.cssText = `
-        padding: 3px 8px;
-        font-size: 0.9em;
-      `;
-      removeBtn.addEventListener("click", async () => {
-        if (this.selectedNode && note.id > 0) {
-          // note.id 是关联记录的ID，不是笔记ID
-          await this.noteAssociationSystem.removeAssociation(
-            note.noteId,
-            this.selectedNode.id,
-          );
-          await this.loadNodeAssociations();
-        }
-      });
-      actions.appendChild(removeBtn);
-    } else {
-      const addBtn = doc.createElement("button");
-      addBtn.textContent = "Associate";
-      addBtn.style.cssText = `
-        padding: 3px 8px;
-        font-size: 0.9em;
-      `;
-      addBtn.addEventListener("click", async () => {
-        if (this.selectedNode) {
-          await this.noteAssociationSystem.associateNote(
-            note.noteId,
-            this.selectedNode.id,
-            "manual",
-          );
-          await this.loadNodeAssociations();
-        }
-      });
-      actions.appendChild(addBtn);
-    }
-
-    const openBtn = doc.createElement("button");
-    openBtn.textContent = this.editorMode === "column" ? "Edit" : "Open";
-    openBtn.style.cssText = `
-      padding: 3px 8px;
-      font-size: 0.9em;
-    `;
-    openBtn.addEventListener("click", () => {
-      // 根据模式打开笔记
-      Zotero.log(
-        `[NoteRelationsTab] Open button clicked. Mode: ${this.editorMode}, Has container: ${!!this.editorContainer}`,
-        "info",
-      );
-
-      if (this.editorMode === "column" && this.editorContainer) {
-        // 分栏模式：在右侧编辑器中打开
-        Zotero.log(
-          `[NoteRelationsTab] Opening note ${note.noteId} in editor`,
-          "info",
-        );
-        this.openNoteInEditor(note.noteId);
-      } else {
-        // 其他模式：在新窗口中打开
-        Zotero.log(
-          `[NoteRelationsTab] Opening note ${note.noteId} in new window`,
-          "info",
-        );
-        try {
-          const noteItem = Zotero.Items.get(note.noteId);
-          if (noteItem) {
-            const zoteroPane = Zotero.getActiveZoteroPane();
-            if (zoteroPane) {
-              zoteroPane.openNoteWindow(note.noteId);
-            }
-          }
-        } catch (error) {
-          Zotero.logError(`Failed to open note: ${error}`);
-        }
-      }
-    });
-    actions.appendChild(openBtn);
-
-    // 删除按钮
-    const deleteBtn = doc.createElement("button");
-    deleteBtn.textContent = "Delete";
-    deleteBtn.style.cssText = `
-      padding: 3px 8px;
-      font-size: 0.9em;
-      background: #dc3545;
-      color: white;
-      border: none;
-      border-radius: 3px;
-      cursor: pointer;
-    `;
-    deleteBtn.addEventListener("mouseover", () => {
-      deleteBtn.style.background = "#c82333";
-    });
-    deleteBtn.addEventListener("mouseout", () => {
-      deleteBtn.style.background = "#dc3545";
-    });
-    deleteBtn.addEventListener("click", async (e) => {
-      e.stopPropagation(); // 防止触发卡片点击事件
-
-      // 确认删除
-      const confirmDelete = this.window.confirm(
-        `Are you sure you want to delete this note?\n\nTitle: ${note.title}\n\nThis action cannot be undone.`,
-      );
-
-      if (confirmDelete) {
-        try {
-          Zotero.log(`[NoteRelationsTab] Deleting note ${note.noteId}`, "info");
-
-          // 如果正在编辑这个笔记，先清空编辑器
-          if (this.selectedNoteId === note.noteId && this.editorContainer) {
-            this.editorContainer.innerHTML = "";
-            this.selectedNoteId = null;
-          }
-
-          // 删除笔记
-          const noteItem = Zotero.Items.get(note.noteId);
-          if (noteItem) {
-            if (!Array.isArray(noteItem) && "eraseTx" in noteItem) {
-              await noteItem.eraseTx();
-            }
-            Zotero.log(
-              `[NoteRelationsTab] Note ${note.noteId} deleted successfully`,
-              "info",
-            );
-
-            // 刷新列表
-            await this.loadNodeAssociations();
-          } else {
-            Zotero.logError(`[NoteRelationsTab] Note ${note.noteId} not found`);
-          }
-        } catch (error) {
-          Zotero.logError(`[NoteRelationsTab] Failed to delete note: ${error}`);
-          this.window.alert(`Failed to delete note: ${error}`);
-        }
-      }
-    });
-    actions.appendChild(deleteBtn);
-
-    header.appendChild(actions);
+    // 移除所有按钮，界面更简洁
     card.appendChild(header);
 
     // 内容预览
@@ -1953,8 +1793,7 @@ export class NoteRelationsTab {
                 "info",
               );
 
-              // Initialize autocomplete
-              this.initializeAutocomplete(editorInstance, noteEditorContainer);
+
 
               // 检查编辑器状态并显示
               setTimeout(() => {
@@ -2610,59 +2449,200 @@ export class NoteRelationsTab {
     doc.body.appendChild(this.branchingPanel);
   }
 
-  /**
-   * Initialize autocomplete for the editor
-   */
-  private initializeAutocomplete(editor: any, container: HTMLElement): void {
-    try {
-      // Cleanup previous autocomplete
-      if (this.autocomplete) {
-        this.autocomplete.detach();
-      }
 
-      // Create new autocomplete instance
-      this.autocomplete = new EditorAutocomplete({
-        enableBuiltInCommands: true,
-        onCommandExecute: (cmd) => {
-          Zotero.log(
-            `[NoteRelationsTab] Autocomplete command executed: ${cmd.id}`,
-            "info",
-          );
-        },
+
+  /**
+   * 显示笔记卡片的右键菜单
+   */
+  private showNoteContextMenu(
+    event: MouseEvent,
+    note: AssociatedNote,
+    isAssociated: boolean,
+  ): void {
+    const doc = this.window.document;
+
+    // 移除任何现有的菜单
+    const existingMenu = doc.querySelector(".note-context-menu");
+    if (existingMenu) {
+      existingMenu.remove();
+    }
+
+    // 创建菜单容器
+    const menu = doc.createElement("div");
+    menu.className = "note-context-menu";
+    menu.style.cssText = `
+      position: fixed;
+      background: white;
+      border: 1px solid var(--material-border-quarternary);
+      border-radius: 4px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 4px 0;
+      min-width: 150px;
+      z-index: 1000;
+    `;
+
+    // 创建菜单项的辅助函数
+    const createMenuItem = (
+      text: string,
+      handler: () => void,
+      isDanger: boolean = false,
+    ) => {
+      const item = doc.createElement("div");
+      item.style.cssText = `
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 13px;
+        color: ${isDanger ? "#dc3545" : "var(--fill-primary)"};
+        user-select: none;
+      `;
+      item.textContent = text;
+
+      // 悬停效果
+      item.addEventListener("mouseenter", () => {
+        item.style.background = isDanger
+          ? "rgba(220, 53, 69, 0.1)"
+          : "var(--fill-quinary)";
+      });
+      item.addEventListener("mouseleave", () => {
+        item.style.background = "transparent";
       });
 
-      // Create context for autocomplete
-      const context: AutocompleteContext = {
-        editor: editor,
-        nodeId: this.selectedNode?.id,
-        noteId: this.selectedNoteId || undefined,
-        window: this.window,
-        doc: container.ownerDocument,
-      };
+      item.addEventListener("click", () => {
+        handler();
+        menu.remove();
+      });
 
-      // Attach autocomplete to editor
-      this.autocomplete.attach(context);
+      return item;
+    };
 
-      Zotero.log(
-        "[NoteRelationsTab] Autocomplete initialized successfully",
-        "info",
+    // 添加菜单项
+    if (isAssociated) {
+      menu.appendChild(
+        createMenuItem("Remove Association", async () => {
+          if (this.selectedNode && note.id > 0) {
+            await this.noteAssociationSystem.removeAssociation(
+              note.noteId,
+              this.selectedNode.id,
+            );
+            await this.loadNodeAssociations();
+          }
+        }),
       );
-    } catch (error) {
-      Zotero.logError(
-        `[NoteRelationsTab] Failed to initialize autocomplete: ${error}`,
+    } else {
+      menu.appendChild(
+        createMenuItem("Associate Note", async () => {
+          if (this.selectedNode) {
+            await this.noteAssociationSystem.associateNote(
+              note.noteId,
+              this.selectedNode.id,
+              "manual",
+            );
+            await this.loadNodeAssociations();
+          }
+        }),
       );
     }
+
+    // 分支管理
+    menu.appendChild(
+      createMenuItem("Manage Branches", () => {
+        this.showBranchingPanel(note.noteId);
+      }),
+    );
+
+    // 分隔线
+    const separator = doc.createElement("div");
+    separator.style.cssText = `
+      height: 1px;
+      background: var(--material-border-quarternary);
+      margin: 4px 0;
+    `;
+    menu.appendChild(separator);
+
+    // 删除笔记
+    menu.appendChild(
+      createMenuItem("Delete Note", async () => {
+        const confirmDelete = this.window.confirm(
+          `Are you sure you want to delete this note?\n\nTitle: ${note.title}\n\nThis action cannot be undone.`,
+        );
+
+        if (confirmDelete) {
+          try {
+            Zotero.log(`[NoteRelationsTab] Deleting note ${note.noteId}`, "info");
+
+            // 如果正在编辑这个笔记，先清空编辑器
+            if (this.selectedNoteId === note.noteId && this.editorContainer) {
+              this.editorContainer.innerHTML = "";
+              this.selectedNoteId = null;
+            }
+
+            // 删除笔记
+            const noteItem = Zotero.Items.get(note.noteId);
+            if (noteItem) {
+              if (!Array.isArray(noteItem) && "eraseTx" in noteItem) {
+                await noteItem.eraseTx();
+              }
+              Zotero.log(
+                `[NoteRelationsTab] Note ${note.noteId} deleted successfully`,
+                "info",
+              );
+
+              // 刷新列表
+              await this.loadNodeAssociations();
+            }
+          } catch (error) {
+            Zotero.logError(
+              `[NoteRelationsTab] Failed to delete note: ${error}`,
+            );
+            this.window.alert(`Failed to delete note: ${error}`);
+          }
+        }
+      }, true),
+    );
+
+    // 定位菜单
+    const x = event.clientX;
+    const y = event.clientY;
+
+    // 先添加到文档以获取尺寸
+    doc.body.appendChild(menu);
+
+    // 调整位置防止超出屏幕
+    const menuRect = menu.getBoundingClientRect();
+    const windowWidth = this.window.innerWidth;
+    const windowHeight = this.window.innerHeight;
+
+    if (x + menuRect.width > windowWidth) {
+      menu.style.left = `${windowWidth - menuRect.width - 10}px`;
+    } else {
+      menu.style.left = `${x}px`;
+    }
+
+    if (y + menuRect.height > windowHeight) {
+      menu.style.top = `${windowHeight - menuRect.height - 10}px`;
+    } else {
+      menu.style.top = `${y}px`;
+    }
+
+    // 点击其他地方关闭菜单
+    const closeMenu = (e: MouseEvent) => {
+      if (!menu.contains(e.target as Node)) {
+        menu.remove();
+        doc.removeEventListener("click", closeMenu);
+      }
+    };
+
+    // 延迟添加监听器，避免立即触发
+    setTimeout(() => {
+      doc.addEventListener("click", closeMenu);
+    }, 0);
   }
 
   /**
    * 销毁
    */
   destroy(): void {
-    // Cleanup autocomplete
-    if (this.autocomplete) {
-      this.autocomplete.detach();
-      this.autocomplete = null;
-    }
+
 
     this.container = null;
     this.contentContainer = null;
