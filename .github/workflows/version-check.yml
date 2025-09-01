@@ -11,51 +11,51 @@ on:
 jobs:
   check-versions:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-    
-    - name: Check version consistency
-      run: |
-        echo "Checking version consistency across files..."
-        
-        # Extract versions
-        PKG_VERSION=$(node -p "require('./package.json').version")
-        MANIFEST_VERSION=$(node -p "require('./addon/manifest.json').version")
-        
-        echo "package.json version: $PKG_VERSION"
-        echo "manifest.json version: $MANIFEST_VERSION"
-        
-        # Check if update.json exists
-        if [ -f "./addon/update.json" ]; then
-          UPDATE_VERSION=$(node -p "require('./addon/update.json').addons['research-navigator@zotero.org'].updates[0].version")
-          echo "update.json version: $UPDATE_VERSION"
-          
-          if [ "$PKG_VERSION" != "$UPDATE_VERSION" ]; then
-            echo "❌ Version mismatch: update.json ($UPDATE_VERSION) != package.json ($PKG_VERSION)"
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Check version consistency
+        run: |
+          echo "Checking version consistency across files..."
+
+          # Extract versions
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          MANIFEST_VERSION=$(node -p "require('./addon/manifest.json').version")
+
+          echo "package.json version: $PKG_VERSION"
+          echo "manifest.json version: $MANIFEST_VERSION"
+
+          # Check if update.json exists
+          if [ -f "./addon/update.json" ]; then
+            UPDATE_VERSION=$(node -p "require('./addon/update.json').addons['research-navigator@zotero.org'].updates[0].version")
+            echo "update.json version: $UPDATE_VERSION"
+            
+            if [ "$PKG_VERSION" != "$UPDATE_VERSION" ]; then
+              echo "❌ Version mismatch: update.json ($UPDATE_VERSION) != package.json ($PKG_VERSION)"
+              exit 1
+            fi
+          fi
+
+          # Check manifest version
+          if [ "$PKG_VERSION" != "$MANIFEST_VERSION" ]; then
+            echo "❌ Version mismatch: manifest.json ($MANIFEST_VERSION) != package.json ($PKG_VERSION)"
             exit 1
           fi
-        fi
-        
-        # Check manifest version
-        if [ "$PKG_VERSION" != "$MANIFEST_VERSION" ]; then
-          echo "❌ Version mismatch: manifest.json ($MANIFEST_VERSION) != package.json ($PKG_VERSION)"
-          exit 1
-        fi
-        
-        echo "✅ All versions are consistent: $PKG_VERSION"
-    
-    - name: Check for uncommitted version changes
-      run: |
-        if git diff --exit-code package.json addon/manifest.json; then
-          echo "✅ No uncommitted version changes"
-        else
-          echo "❌ There are uncommitted version changes"
-          git diff package.json addon/manifest.json
-          exit 1
-        fi
+
+          echo "✅ All versions are consistent: $PKG_VERSION"
+
+      - name: Check for uncommitted version changes
+        run: |
+          if git diff --exit-code package.json addon/manifest.json; then
+            echo "✅ No uncommitted version changes"
+          else
+            echo "❌ There are uncommitted version changes"
+            git diff package.json addon/manifest.json
+            exit 1
+          fi

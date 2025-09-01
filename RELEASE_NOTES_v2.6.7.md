@@ -7,6 +7,7 @@ This release focuses on **automated testing infrastructure** and **critical bug 
 ## ✨ New Features
 
 ### 1. **Comprehensive Testing Infrastructure** 🧪
+
 - Added complete mock environment for Zotero APIs
 - Implemented unit tests for core services
 - Created integration tests for plugin lifecycle
@@ -14,6 +15,7 @@ This release focuses on **automated testing infrastructure** and **critical bug 
 - GitHub Actions CI/CD pipeline for automated testing
 
 ### 2. **Enhanced Quick Note Functionality** 📝
+
 - New `QuickNoteWindowV2` with improved stability
 - Simplified floating button implementation
 - Better DOM timing handling
@@ -22,7 +24,7 @@ This release focuses on **automated testing infrastructure** and **critical bug 
 ## 🐛 Bug Fixes
 
 - **Fixed**: "Document body not available, delaying..." infinite loop
-- **Fixed**: Quick note window not appearing in certain scenarios  
+- **Fixed**: Quick note window not appearing in certain scenarios
 - **Fixed**: MutationObserver compatibility issues in Zotero environment
 - **Fixed**: Bootstrap security filter removing UI elements
 - **Fixed**: Tab switching issues in Note Relations panel
@@ -30,8 +32,9 @@ This release focuses on **automated testing infrastructure** and **critical bug 
 ## 🛠️ Technical Improvements
 
 ### Testing Coverage
+
 - ✅ HistoryService
-- ✅ DatabaseService  
+- ✅ DatabaseService
 - ✅ ClosedTabsManager
 - ✅ NoteAssociationSystem
 - ✅ NavigationService
@@ -39,6 +42,7 @@ This release focuses on **automated testing infrastructure** and **critical bug 
 - ✅ QuickNoteWindow UI
 
 ### Developer Experience
+
 - Jest test framework configured
 - Test runner scripts for convenient testing
 - Smoke test script for pre-release validation

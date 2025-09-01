@@ -31,7 +31,7 @@ export class ToolbarButton {
     // 尝试多个工具栏位置
     const toolbarIds = [
       "zotero-tb-search", // 主搜索框所在的工具栏
-      "zotero-toolbar",   // 主工具栏
+      "zotero-toolbar", // 主工具栏
       "zotero-tb-advanced-search", // 高级搜索按钮
       "zotero-items-toolbar", // 条目列表工具栏（最后的选择）
     ];
@@ -57,7 +57,10 @@ export class ToolbarButton {
         Zotero.log("[ToolbarButton] Using first available toolbar", "info");
       } else {
         // 这个窗口可能不支持工具栏（如对话框窗口）
-        Zotero.log("[ToolbarButton] No toolbar in this window type, skipping", "info");
+        Zotero.log(
+          "[ToolbarButton] No toolbar in this window type, skipping",
+          "info",
+        );
         return;
       }
     }
@@ -82,8 +85,9 @@ export class ToolbarButton {
 
     // 插入到工具栏内部
     // 尝试找到一个合适的插入位置
-    const searchButton = toolbar.querySelector("#zotero-tb-search") || 
-                        toolbar.querySelector("#zotero-tb-advanced-search");
+    const searchButton =
+      toolbar.querySelector("#zotero-tb-search") ||
+      toolbar.querySelector("#zotero-tb-advanced-search");
     if (searchButton) {
       // 插入到搜索按钮之后
       toolbar.insertBefore(this.button, searchButton.nextSibling);

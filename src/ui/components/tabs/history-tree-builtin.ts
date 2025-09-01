@@ -2,26 +2,29 @@
  * 内置库的历史树实现 - 不依赖外部文件加载
  */
 
-import { HistoryService } from '../../../services/history-service';
-import { ClosedTabsManager } from '../../../managers/closed-tabs-manager';
+import { HistoryService } from "../../../services/history-service";
+import { ClosedTabsManager } from "../../../managers/closed-tabs-manager";
 
 export class HistoryTreeBuiltin {
   private container: HTMLElement;
   private treeContainer: HTMLElement | null = null;
   private expandedNodes = new Set<string>();
-  
+
   constructor(
     private window: Window,
     private historyService: HistoryService,
-    private closedTabsManager: ClosedTabsManager
+    private closedTabsManager: ClosedTabsManager,
   ) {
-    Zotero.log('[HistoryTreeBuiltin] Using built-in tree implementation', 'info');
+    Zotero.log(
+      "[HistoryTreeBuiltin] Using built-in tree implementation",
+      "info",
+    );
   }
-  
+
   async init(container: HTMLElement): Promise<void> {
     this.container = container;
     const doc = container.ownerDocument || this.window.document;
-    
+
     // 创建结构 - 先创建DOM结构
     container.innerHTML = `
       <div class="htb-container">
@@ -34,24 +37,32 @@ export class HistoryTreeBuiltin {
         <div class="htb-tree" id="htb-tree-container"></div>
       </div>
     `;
-    
-    this.treeContainer = doc.getElementById('htb-tree-container');
-    
+
+    this.treeContainer = doc.getElementById("htb-tree-container");
+
     // 在DOM创建后添加样式
     this.addStyles(doc);
-    
+
     // 绑定事件
-    doc.getElementById('htb-refresh')?.addEventListener('click', () => this.refresh());
-    doc.getElementById('htb-expand-all')?.addEventListener('click', () => this.expandAll());
-    doc.getElementById('htb-collapse-all')?.addEventListener('click', () => this.collapseAll());
-    doc.getElementById('htb-clear-all')?.addEventListener('click', () => this.clearAll());
-    
+    doc
+      .getElementById("htb-refresh")
+      ?.addEventListener("click", () => this.refresh());
+    doc
+      .getElementById("htb-expand-all")
+      ?.addEventListener("click", () => this.expandAll());
+    doc
+      .getElementById("htb-collapse-all")
+      ?.addEventListener("click", () => this.collapseAll());
+    doc
+      .getElementById("htb-clear-all")
+      ?.addEventListener("click", () => this.clearAll());
+
     // 初始化数据
     await this.refresh();
   }
-  
+
   private addStyles(doc: Document): void {
-    const style = doc.createElement('style');
+    const style = doc.createElement("style");
     style.textContent = `
       .htb-container {
         height: 100%;
@@ -173,7 +184,7 @@ export class HistoryTreeBuiltin {
         font-style: italic;
       }
     `;
-    
+
     // 安全地添加样式
     if (doc.head) {
       doc.head.appendChild(style);
@@ -183,270 +194,289 @@ export class HistoryTreeBuiltin {
       doc.body.appendChild(style);
     } else {
       // 如果都不存在，尝试稍后添加
-      Zotero.log('[HistoryTreeBuiltin] No suitable element to append styles, trying inline styles', 'warn');
+      Zotero.log(
+        "[HistoryTreeBuiltin] No suitable element to append styles, trying inline styles",
+        "warn",
+      );
       // 作为备用方案，我们可以将样式内联到容器中
       if (this.container) {
-        const styleContainer = doc.createElement('div');
+        const styleContainer = doc.createElement("div");
         styleContainer.innerHTML = `<style>${style.textContent}</style>`;
-        this.container.insertBefore(styleContainer.firstChild!, this.container.firstChild);
+        this.container.insertBefore(
+          styleContainer.firstChild!,
+          this.container.firstChild,
+        );
       }
     }
   }
-  
+
   private async refresh(): Promise<void> {
     if (!this.treeContainer) return;
-    
+
     try {
-      Zotero.log('[HistoryTreeBuiltin] Refreshing tree...', 'info');
-      
+      Zotero.log("[HistoryTreeBuiltin] Refreshing tree...", "info");
+
       const sessions = await this.historyService.getAllSessions();
       const closedTabs = this.closedTabsManager.getClosedTabs();
-      
+
       // 构建树结构
       const treeData = await this.buildTreeData(sessions, closedTabs);
-      
+
       // 渲染树
       this.renderTree(treeData);
-      
-      Zotero.log(`[HistoryTreeBuiltin] Rendered ${treeData.length} root nodes`, 'info');
-      
+
+      Zotero.log(
+        `[HistoryTreeBuiltin] Rendered ${treeData.length} root nodes`,
+        "info",
+      );
     } catch (error) {
       Zotero.logError(`[HistoryTreeBuiltin] Failed to refresh: ${error}`);
     }
   }
-  
-  private async buildTreeData(sessions: any[], closedTabs: any[]): Promise<any[]> {
+
+  private async buildTreeData(
+    sessions: any[],
+    closedTabs: any[],
+  ): Promise<any[]> {
     const nodes = [];
-    
+
     // 按日期分组
     const dateGroups = new Map<string, any[]>();
-    
+
     for (const session of sessions) {
       const date = new Date(session.startTime).toLocaleDateString();
       if (!dateGroups.has(date)) {
         dateGroups.set(date, []);
       }
-      const sessionNodes = await this.historyService.getSessionNodes(session.id);
+      const sessionNodes = await this.historyService.getSessionNodes(
+        session.id,
+      );
       dateGroups.get(date)!.push({ session, nodes: sessionNodes });
     }
-    
+
     // 创建日期节点
     for (const [date, sessionData] of dateGroups) {
       const dateNode = {
         id: `date_${date}`,
-        type: 'date',
-        icon: '📅',
+        type: "date",
+        icon: "📅",
         text: date,
         count: sessionData.length,
-        children: []
+        children: [],
       };
-      
+
       // 创建会话节点
       for (const { session, nodes: historyNodes } of sessionData) {
         const sessionNode = {
           id: `session_${session.id}`,
-          type: 'session',
-          icon: '📚',
+          type: "session",
+          icon: "📚",
           text: `Session ${session.id.slice(-6)}`,
           count: historyNodes.length,
-          children: historyNodes.map(node => ({
+          children: historyNodes.map((node) => ({
             id: `node_${node.id}`,
-            type: 'history',
-            icon: node.status === 'active' ? '📖' : '📕',
-            text: node.title || 'Untitled',
-            data: node
-          }))
+            type: "history",
+            icon: node.status === "active" ? "📖" : "📕",
+            text: node.title || "Untitled",
+            data: node,
+          })),
         };
         dateNode.children.push(sessionNode);
       }
-      
+
       nodes.push(dateNode);
     }
-    
+
     // 创建关闭标签节点
     if (closedTabs.length > 0) {
       const closedNode = {
-        id: 'closed_tabs',
-        type: 'closed',
-        icon: '👻',
-        text: 'Closed Tabs',
+        id: "closed_tabs",
+        type: "closed",
+        icon: "👻",
+        text: "Closed Tabs",
         count: closedTabs.length,
         children: closedTabs.map((tab, i) => ({
           id: `closed_${i}`,
-          type: 'closedItem',
-          icon: '👻',
-          text: tab.node.title || 'Untitled',
-          data: tab
-        }))
+          type: "closedItem",
+          icon: "👻",
+          text: tab.node.title || "Untitled",
+          data: tab,
+        })),
       };
       nodes.push(closedNode);
     }
-    
+
     return nodes;
   }
-  
+
   private renderTree(nodes: any[]): void {
     if (!this.treeContainer) return;
-    
-    this.treeContainer.innerHTML = '';
-    
+
+    this.treeContainer.innerHTML = "";
+
     for (const node of nodes) {
       const element = this.createNodeElement(node);
       this.treeContainer.appendChild(element);
     }
   }
-  
+
   private createNodeElement(node: any): HTMLElement {
     const doc = this.window.document;
-    const nodeEl = doc.createElement('div');
-    nodeEl.className = 'htb-node';
-    
+    const nodeEl = doc.createElement("div");
+    nodeEl.className = "htb-node";
+
     // 节点内容
-    const content = doc.createElement('div');
+    const content = doc.createElement("div");
     content.className = `htb-node-content htb-${node.type}-group`;
-    
+
     // 展开图标
     if (node.children && node.children.length > 0) {
-      const expandIcon = doc.createElement('span');
-      expandIcon.className = 'htb-expand-icon';
-      expandIcon.textContent = this.expandedNodes.has(node.id) ? '▼' : '▶';
-      expandIcon.addEventListener('click', (e) => {
+      const expandIcon = doc.createElement("span");
+      expandIcon.className = "htb-expand-icon";
+      expandIcon.textContent = this.expandedNodes.has(node.id) ? "▼" : "▶";
+      expandIcon.addEventListener("click", (e) => {
         e.stopPropagation();
         this.toggleNode(node.id, nodeEl);
       });
       content.appendChild(expandIcon);
     } else {
-      const spacer = doc.createElement('span');
-      spacer.className = 'htb-expand-icon';
-      spacer.textContent = ' ';
+      const spacer = doc.createElement("span");
+      spacer.className = "htb-expand-icon";
+      spacer.textContent = " ";
       content.appendChild(spacer);
     }
-    
+
     // 图标
-    const icon = doc.createElement('span');
-    icon.className = 'htb-node-icon';
+    const icon = doc.createElement("span");
+    icon.className = "htb-node-icon";
     icon.textContent = node.icon;
     content.appendChild(icon);
-    
+
     // 文本
-    const text = doc.createElement('span');
-    text.className = 'htb-node-text';
+    const text = doc.createElement("span");
+    text.className = "htb-node-text";
     text.textContent = node.text;
     content.appendChild(text);
-    
+
     // 计数
     if (node.count !== undefined) {
-      const count = doc.createElement('span');
-      count.className = 'htb-node-count';
+      const count = doc.createElement("span");
+      count.className = "htb-node-count";
       count.textContent = `(${node.count})`;
       content.appendChild(count);
     }
-    
+
     // 点击事件
-    content.addEventListener('click', () => this.handleNodeClick(node));
-    
+    content.addEventListener("click", () => this.handleNodeClick(node));
+
     nodeEl.appendChild(content);
-    
+
     // 子节点容器
     if (node.children && node.children.length > 0) {
-      const children = doc.createElement('div');
-      children.className = 'htb-children';
-      
+      const children = doc.createElement("div");
+      children.className = "htb-children";
+
       for (const child of node.children) {
         const childEl = this.createNodeElement(child);
         children.appendChild(childEl);
       }
-      
+
       nodeEl.appendChild(children);
-      
+
       // 恢复展开状态
       if (this.expandedNodes.has(node.id)) {
-        nodeEl.classList.add('htb-expanded');
+        nodeEl.classList.add("htb-expanded");
       }
     }
-    
+
     return nodeEl;
   }
-  
+
   private toggleNode(nodeId: string, nodeEl: HTMLElement): void {
-    const isExpanded = nodeEl.classList.contains('htb-expanded');
-    
+    const isExpanded = nodeEl.classList.contains("htb-expanded");
+
     if (isExpanded) {
-      nodeEl.classList.remove('htb-expanded');
+      nodeEl.classList.remove("htb-expanded");
       this.expandedNodes.delete(nodeId);
     } else {
-      nodeEl.classList.add('htb-expanded');
+      nodeEl.classList.add("htb-expanded");
       this.expandedNodes.add(nodeId);
     }
-    
+
     // 更新图标
-    const expandIcon = nodeEl.querySelector('.htb-expand-icon');
+    const expandIcon = nodeEl.querySelector(".htb-expand-icon");
     if (expandIcon) {
-      expandIcon.textContent = isExpanded ? '▶' : '▼';
+      expandIcon.textContent = isExpanded ? "▶" : "▼";
     }
   }
-  
+
   private handleNodeClick(node: any): void {
-    if (node.type === 'history' && node.data?.itemId) {
+    if (node.type === "history" && node.data?.itemId) {
       // 打开历史项目
       const ZoteroPane = Zotero.getActiveZoteroPane();
       if (ZoteroPane) {
         ZoteroPane.selectItem(node.data.itemId);
       }
-    } else if (node.type === 'closedItem' && node.data) {
+    } else if (node.type === "closedItem" && node.data) {
       // 恢复关闭的标签
       this.closedTabsManager.restoreTab(node.data);
     }
   }
-  
+
   private expandAll(): void {
-    const nodes = this.treeContainer?.querySelectorAll('.htb-node');
-    nodes?.forEach(node => {
-      if (node.querySelector('.htb-children')) {
-        node.classList.add('htb-expanded');
-        const expandIcon = node.querySelector('.htb-expand-icon');
-        if (expandIcon) expandIcon.textContent = '▼';
+    const nodes = this.treeContainer?.querySelectorAll(".htb-node");
+    nodes?.forEach((node) => {
+      if (node.querySelector(".htb-children")) {
+        node.classList.add("htb-expanded");
+        const expandIcon = node.querySelector(".htb-expand-icon");
+        if (expandIcon) expandIcon.textContent = "▼";
       }
     });
-    
+
     // 更新展开状态
     this.expandedNodes.clear();
-    nodes?.forEach(node => {
-      const content = node.querySelector('.htb-node-content');
+    nodes?.forEach((node) => {
+      const content = node.querySelector(".htb-node-content");
       if (content) {
         const id = this.getNodeIdFromElement(node as HTMLElement);
         if (id) this.expandedNodes.add(id);
       }
     });
   }
-  
+
   private collapseAll(): void {
-    const nodes = this.treeContainer?.querySelectorAll('.htb-node');
-    nodes?.forEach(node => {
-      node.classList.remove('htb-expanded');
-      const expandIcon = node.querySelector('.htb-expand-icon');
-      if (expandIcon && node.querySelector('.htb-children')) {
-        expandIcon.textContent = '▶';
+    const nodes = this.treeContainer?.querySelectorAll(".htb-node");
+    nodes?.forEach((node) => {
+      node.classList.remove("htb-expanded");
+      const expandIcon = node.querySelector(".htb-expand-icon");
+      if (expandIcon && node.querySelector(".htb-children")) {
+        expandIcon.textContent = "▶";
       }
     });
-    
+
     this.expandedNodes.clear();
   }
-  
+
   private getNodeIdFromElement(nodeEl: HTMLElement): string | null {
     // 从渲染的数据中提取节点ID（这是一个简化实现）
-    const text = nodeEl.querySelector('.htb-node-text')?.textContent || '';
-    const icon = nodeEl.querySelector('.htb-node-icon')?.textContent || '';
+    const text = nodeEl.querySelector(".htb-node-text")?.textContent || "";
+    const icon = nodeEl.querySelector(".htb-node-icon")?.textContent || "";
     return `${icon}_${text}`;
   }
-  
+
   private async clearAll(): Promise<void> {
-    if (this.window.confirm('Are you sure you want to clear all history? This cannot be undone.')) {
+    if (
+      this.window.confirm(
+        "Are you sure you want to clear all history? This cannot be undone.",
+      )
+    ) {
       try {
         await this.historyService.clearAll(false);
         await this.refresh();
       } catch (error) {
-        Zotero.logError(`[HistoryTreeBuiltin] Failed to clear history: ${error}`);
+        Zotero.logError(
+          `[HistoryTreeBuiltin] Failed to clear history: ${error}`,
+        );
       }
     }
   }

@@ -36,6 +36,7 @@
 ```
 
 ### 节点元素代码位置
+
 - `createNodeElement()` - 第160-246行
   - 图标：第171-175行
   - 标题：第177-187行
@@ -45,6 +46,7 @@
 ## 右侧：笔记内容区 (contentContainer)
 
 ### 空状态
+
 ```
 ┌─────────────────────────────────────────┐
 │                                         │
@@ -57,6 +59,7 @@
 ```
 
 ### 选中节点后
+
 ```
 ┌─────────────────────────────────────────┐
 │  标题栏 (header)                         │
@@ -90,18 +93,18 @@
 
 ## 关键方法对应关系
 
-| 设计元素 | 对应方法 | 代码位置 |
-|---------|---------|---------|
-| 主容器 | `create()` | 31-60行 |
-| 左侧节点选择器 | `createNodeSelector()` | 65-115行 |
-| 节点列表 | `loadRecentNodes()` | 120-152行 |
-| 节点元素 | `createNodeElement()` | 160-246行 |
-| 右侧内容区 | `loadNodeAssociations()` | 261-334行 |
-| 工具栏 | `createToolbar()` | 339-378行 |
-| 关联笔记部分 | `createAssociatedSection()` | 383-413行 |
-| 建议笔记部分 | `createSuggestedSection()` | 418-443行 |
-| 笔记卡片 | `createNoteCard()` | 448-591行 |
-| 空状态 | `showEmptyState()` | 754-774行 |
+| 设计元素       | 对应方法                    | 代码位置  |
+| -------------- | --------------------------- | --------- |
+| 主容器         | `create()`                  | 31-60行   |
+| 左侧节点选择器 | `createNodeSelector()`      | 65-115行  |
+| 节点列表       | `loadRecentNodes()`         | 120-152行 |
+| 节点元素       | `createNodeElement()`       | 160-246行 |
+| 右侧内容区     | `loadNodeAssociations()`    | 261-334行 |
+| 工具栏         | `createToolbar()`           | 339-378行 |
+| 关联笔记部分   | `createAssociatedSection()` | 383-413行 |
+| 建议笔记部分   | `createSuggestedSection()`  | 418-443行 |
+| 笔记卡片       | `createNoteCard()`          | 448-591行 |
+| 空状态         | `showEmptyState()`          | 754-774行 |
 
 ## 交互流程
 
@@ -113,6 +116,7 @@
 6. 用户点击 "Remove" → 移除关联 (500行)
 
 ## 样式变量
+
 - 背景色：`var(--material-sidepane)`, `var(--material-background)`
 - 边框色：`var(--material-border-quarternary)`
 - 文字色：`var(--fill-secondary)`, `var(--fill-tertiary)`

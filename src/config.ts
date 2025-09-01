@@ -9,5 +9,5 @@ export const config = {
   addonID: "research-navigator@zotero.org",
   addonRef: "researchnavigator",
   addonInstance: "ResearchNavigator",
-  prefsPrefix: "extensions.zotero.researchnavigator"
+  prefsPrefix: "extensions.zotero.researchnavigator",
 };

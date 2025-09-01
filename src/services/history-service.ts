@@ -26,11 +26,17 @@ export class HistoryService {
     Zotero.log("[HistoryService] Starting initialization...", "info");
     // 加载现有节点到缓存
     await this.loadNodesIntoCache();
-    Zotero.log(`[HistoryService] Loaded ${this.nodeCache.size} nodes into cache`, "info");
+    Zotero.log(
+      `[HistoryService] Loaded ${this.nodeCache.size} nodes into cache`,
+      "info",
+    );
 
     // 检查是否需要恢复会话
     await this.checkSessionContinuity();
-    Zotero.log(`[HistoryService] Current session ID: ${this.currentSessionId}`, "info");
+    Zotero.log(
+      `[HistoryService] Current session ID: ${this.currentSessionId}`,
+      "info",
+    );
 
     Zotero.log("[HistoryService] Initialized", "info");
   }
@@ -134,7 +140,9 @@ export class HistoryService {
 
     // 创建新节点
     // 如果使用 force 选项，不设置父节点（避免外键约束问题）
-    const parentId = options.force ? null : (options.parentId || this.currentNode?.id || null);
+    const parentId = options.force
+      ? null
+      : options.parentId || this.currentNode?.id || null;
     const path =
       parentId && this.currentNode && !options.force
         ? [...this.currentNode.path, this.currentNode.id]
@@ -159,12 +167,18 @@ export class HistoryService {
 
     // 保存到数据库
     await this.databaseService.saveHistoryNode(newNode);
-    
-    Zotero.log(`[HistoryService] Created new node: ${newNode.id} for item "${newNode.title}"`, "info");
+
+    Zotero.log(
+      `[HistoryService] Created new node: ${newNode.id} for item "${newNode.title}"`,
+      "info",
+    );
 
     // 更新缓存
     this.nodeCache.set(newNode.id, newNode);
-    Zotero.log(`[HistoryService] Current nodeCache size: ${this.nodeCache.size}`, "info");
+    Zotero.log(
+      `[HistoryService] Current nodeCache size: ${this.nodeCache.size}`,
+      "info",
+    );
     if (!this.itemNodeMap.has(itemId)) {
       this.itemNodeMap.set(itemId, []);
     }
@@ -207,62 +221,65 @@ export class HistoryService {
     if (this.nodeCache.has(nodeId)) {
       return this.nodeCache.get(nodeId) || null;
     }
-    
+
     const node = await this.databaseService.getHistoryNode(nodeId);
     if (node) {
       this.nodeCache.set(nodeId, node);
     }
     return node;
   }
-  
+
   /**
    * 根据文献ID获取节点
    */
 
-
   async getNodesByItemId(itemId: number): Promise<HistoryNode[]> {
     return Array.from(this.nodeCache.values())
-      .filter(node => node.itemId === itemId)
+      .filter((node) => node.itemId === itemId)
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   }
-  
+
   /**
    * 获取所有会话
    */
   getAllSessions(): any[] {
     // 根据 sessionId 分组节点
     const sessionMap = new Map<string, any>();
-    
+
     for (const node of this.nodeCache.values()) {
       if (!sessionMap.has(node.sessionId)) {
         sessionMap.set(node.sessionId, {
           id: node.sessionId,
           name: `Session ${node.timestamp.toLocaleDateString()} ${node.timestamp.toLocaleTimeString()}`,
           startTime: node.timestamp,
-          nodes: []
+          nodes: [],
         });
       }
       sessionMap.get(node.sessionId).nodes.push(node);
     }
-    
+
     // 按时间排序会话
-    const sessions = Array.from(sessionMap.values())
-      .sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
-    
-    Zotero.log(`[HistoryService] Returning ${sessions.length} sessions with total ${this.nodeCache.size} nodes`, "info");
-    
+    const sessions = Array.from(sessionMap.values()).sort(
+      (a, b) => b.startTime.getTime() - a.startTime.getTime(),
+    );
+
+    Zotero.log(
+      `[HistoryService] Returning ${sessions.length} sessions with total ${this.nodeCache.size} nodes`,
+      "info",
+    );
+
     return sessions;
   }
-  
+
   /**
    * 获取会话的所有节点
    */
   getSessionNodes(sessionId: string): HistoryNode[] {
     return Array.from(this.nodeCache.values())
-      .filter(node => node.sessionId === sessionId)
+      .filter((node) => node.sessionId === sessionId)
       .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
   }
-  
+
   /**
    * 获取节点的子节点
    */
@@ -330,7 +347,7 @@ export class HistoryService {
   private generateNodeId(): string {
     return `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
-  
+
   /**
    * 获取项目标题
    */
@@ -338,18 +355,20 @@ export class HistoryService {
     try {
       // 尝试获取标题
       let title = item.getField("title");
-      
+
       // 如果标题为空，尝试其他字段
       if (!title) {
         // 对于附件，使用文件名
         if (item.isAttachment()) {
-          title = item.getField("filename") || item.getField("title") || "Attachment";
-        } 
+          title =
+            item.getField("filename") || item.getField("title") || "Attachment";
+        }
         // 对于笔记，使用前50个字符
         else if (item.isNote()) {
           const noteContent = item.getNote();
-          const plainText = noteContent.replace(/<[^>]*>/g, '').trim();
-          title = plainText.substring(0, 50) + (plainText.length > 50 ? "..." : "");
+          const plainText = noteContent.replace(/<[^>]*>/g, "").trim();
+          title =
+            plainText.substring(0, 50) + (plainText.length > 50 ? "..." : "");
           if (!title) title = "Note";
         }
         // 其他类型尝试获取创作者和年份
@@ -365,7 +384,7 @@ export class HistoryService {
           }
         }
       }
-      
+
       return title || `Item ${item.id}`;
     } catch (error) {
       Zotero.logError(`[HistoryService] Error getting item title: ${error}`);
@@ -382,12 +401,12 @@ export class HistoryService {
     for (const child of childNodes) {
       await this.deleteNode(child.id);
     }
-    
+
     // 从缓存中删除
     const node = this.nodeCache.get(nodeId);
     if (node) {
       this.nodeCache.delete(nodeId);
-      
+
       // 从 itemNodeMap 中删除
       const nodeIds = this.itemNodeMap.get(node.itemId);
       if (nodeIds) {
@@ -400,7 +419,7 @@ export class HistoryService {
         }
       }
     }
-    
+
     // 从数据库中删除
     await this.databaseService.deleteHistoryNode(nodeId);
   }
@@ -481,26 +500,26 @@ export class HistoryService {
    */
   async clearAll(preserveSessions: boolean = false): Promise<void> {
     try {
-      Zotero.log('[HistoryService] Clearing all history', 'info');
-      
+      Zotero.log("[HistoryService] Clearing all history", "info");
+
       // 清除数据库中的所有历史记录
       await this.databaseService.clearAll();
-      
+
       // 清除内存缓存
       this.nodeCache.clear();
       this.itemNodeMap.clear();
       this.currentNode = null;
-      
+
       // 如果不保留会话，重置当前会话
       if (!preserveSessions) {
         this.currentSessionId = this.generateSessionId();
         this.lastActivityTime = Date.now();
       }
-      
+
       // 通知监听器
-      await this.notifyListeners('clear', null);
-      
-      Zotero.log('[HistoryService] All history cleared', 'info');
+      await this.notifyListeners("clear", null);
+
+      Zotero.log("[HistoryService] All history cleared", "info");
     } catch (error) {
       Zotero.logError(`[HistoryService] Failed to clear history: ${error}`);
       throw error;

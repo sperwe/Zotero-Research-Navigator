@@ -9,7 +9,7 @@
 ```
 文献条目 (Parent Item)
 ├── 附件1 (PDF/EPUB/HTML等)
-├── 附件2 
+├── 附件2
 └── 笔记1, 笔记2, ... (Notes)
 ```
 
@@ -83,6 +83,7 @@ if (item.isAttachment() && item.parentID) {
 ### 3. 用户界面展示
 
 在 Note Relations 标签页中，这些笔记会被正确显示：
+
 - 直接关联的笔记：显示实际的关联类型
 - 通过父项关联的笔记：显示为 "created_during" 类型
 
@@ -92,10 +93,11 @@ if (item.isAttachment() && item.parentID) {
 
 ```javascript
 // 在 Zotero 控制台中运行
-await Zotero.ResearchNavigator.testNoteRelations()
+await Zotero.ResearchNavigator.testNoteRelations();
 ```
 
 这会显示：
+
 1. 选中项目的基本信息
 2. 如果是附件，显示其父项的所有笔记
 3. 如果是主条目，显示其所有笔记和附件
@@ -104,6 +106,7 @@ await Zotero.ResearchNavigator.testNoteRelations()
 ## 总结
 
 通过理解 Zotero 的笔记数据结构，我们实现了智能的笔记关联系统：
+
 - 自动识别通过父项关联的笔记
 - 在用户界面中正确显示这些关联
 - 提供调试工具帮助验证功能

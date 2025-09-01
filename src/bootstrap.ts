@@ -30,30 +30,36 @@ class ResearchNavigator {
   private historyService: HistoryService | null = null;
   private closedTabsManager: ClosedTabsManager | null = null;
   private noteAssociationSystem: NoteAssociationSystem | null = null;
-  
+
   async initialize(rootURI: string, version: string): Promise<void> {
     try {
       // Initialize services
       this.databaseService = new DatabaseService();
       await this.databaseService.initialize();
-      
+
       this.historyService = new HistoryService(this.databaseService);
       await this.historyService.initialize();
-      
-      this.closedTabsManager = new ClosedTabsManager(this.databaseService, this.historyService);
+
+      this.closedTabsManager = new ClosedTabsManager(
+        this.databaseService,
+        this.historyService,
+      );
       await this.closedTabsManager.initialize();
-      
-      this.noteAssociationSystem = new NoteAssociationSystem(this.databaseService, this.historyService);
+
+      this.noteAssociationSystem = new NoteAssociationSystem(
+        this.databaseService,
+        this.historyService,
+      );
       await this.noteAssociationSystem.initialize();
-      
+
       // Initialize UI
       this.uiManager = new UIManager({
         closedTabsManager: this.closedTabsManager,
         noteAssociationSystem: this.noteAssociationSystem,
-        historyService: this.historyService
+        historyService: this.historyService,
       });
       await this.uiManager.initialize();
-      
+
       // Make available globally
       Zotero.ResearchNavigator = this;
     } catch (error) {
@@ -61,7 +67,7 @@ class ResearchNavigator {
       throw error;
     }
   }
-  
+
   async shutdown(): Promise<void> {
     try {
       await this.uiManager?.shutdown();
@@ -101,13 +107,13 @@ async function startup(
     // 等待 Zotero 初始化
     while (typeof Zotero === "undefined" || !Zotero.initialized) {
       await new Promise((resolve) => {
-      // 在 Zotero 环境中使用 ChromeUtils.idleDispatch 或直接 resolve
-      if (typeof ChromeUtils !== "undefined" && ChromeUtils.idleDispatch) {
-        ChromeUtils.idleDispatch(resolve);
-      } else {
-        resolve(undefined);
-      }
-    });
+        // 在 Zotero 环境中使用 ChromeUtils.idleDispatch 或直接 resolve
+        if (typeof ChromeUtils !== "undefined" && ChromeUtils.idleDispatch) {
+          ChromeUtils.idleDispatch(resolve);
+        } else {
+          resolve(undefined);
+        }
+      });
     }
 
     // 记录启动信息
@@ -118,15 +124,15 @@ async function startup(
 
     // 获取插件实例
     const navigator = getResearchNavigator();
-    
+
     // 确保 Zotero.ResearchNavigator 对象存在
     if (!(Zotero as any).ResearchNavigator) {
       (Zotero as any).ResearchNavigator = {};
     }
-    
+
     // 将导航器实例存储在对象中
     (Zotero as any).ResearchNavigator.instance = navigator;
-    
+
     // 添加基本的调试方法（在初始化之前就可用）
     (Zotero as any).ResearchNavigator.debug = {
       getNavigator: () => navigator,
@@ -134,19 +140,20 @@ async function startup(
         Zotero.log(`Navigator initialized: ${navigator.initialized}`, "info");
         Zotero.log(`Navigator instance: ${navigator}`, "info");
         return navigator.initialized;
-      }
+      },
     };
-    
+
     // 初始化
     await navigator.initialize(rootURI, version);
 
     // 注册 Bootstrap 测试工具（开发版或从 dev 分支构建）
-    const isDev = config.version.includes('dev') || 
-                  config.version.includes('beta') || 
-                  version.includes('dev') ||
-                  rootURI.includes('dev') ||
-                  true; // 暂时总是启用测试工具
-    
+    const isDev =
+      config.version.includes("dev") ||
+      config.version.includes("beta") ||
+      version.includes("dev") ||
+      rootURI.includes("dev") ||
+      true; // 暂时总是启用测试工具
+
     if (isDev) {
       try {
         registerBootstrapTests();

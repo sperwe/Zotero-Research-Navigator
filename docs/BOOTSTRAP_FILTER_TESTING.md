@@ -7,6 +7,7 @@ Zotero uses a modified Bootstrap environment with security filters that automati
 ## The Problem
 
 Bootstrap's security filter removes elements like:
+
 - `<button>` - Interactive elements
 - `<input>` (if not self-closed)
 - `<script>` - Script execution
@@ -48,21 +49,21 @@ After installing the plugin, open Zotero's Error Console (Ctrl+Shift+K / Cmd+Opt
 
 ```javascript
 // Full test suite
-Zotero.ResearchNavigator.runBootstrapTests()
+Zotero.ResearchNavigator.runBootstrapTests();
 
 // Quick test
-Zotero.ResearchNavigator.quickBootstrapTest()
+Zotero.ResearchNavigator.quickBootstrapTest();
 
 // Start monitoring
-Zotero.ResearchNavigator.startFilterMonitor()
+Zotero.ResearchNavigator.startFilterMonitor();
 // ... perform actions ...
-Zotero.ResearchNavigator.stopFilterMonitor()
+Zotero.ResearchNavigator.stopFilterMonitor();
 
 // Test specific component
-Zotero.ResearchNavigator.testComponent('QuickNoteButton')
+Zotero.ResearchNavigator.testComponent("QuickNoteButton");
 
 // Show help
-Zotero.ResearchNavigator.bootstrapHelp()
+Zotero.ResearchNavigator.bootstrapHelp();
 ```
 
 ### From Command Line
@@ -82,21 +83,23 @@ node scripts/run-bootstrap-tests.js
 ### Buttons
 
 ❌ **Unsafe:**
+
 ```html
 <button class="my-button">Click me</button>
 ```
 
 ✅ **Safe:**
+
 ```javascript
-const button = document.createElement('span');
-button.setAttribute('role', 'button');
-button.setAttribute('tabindex', '0');
-button.className = 'my-button';
-button.textContent = 'Click me';
+const button = document.createElement("span");
+button.setAttribute("role", "button");
+button.setAttribute("tabindex", "0");
+button.className = "my-button";
+button.textContent = "Click me";
 
 // Add keyboard support
-button.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' || e.key === ' ') {
+button.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" || e.key === " ") {
     e.preventDefault();
     button.click();
   }
@@ -106,15 +109,17 @@ button.addEventListener('keydown', (e) => {
 ### Input Fields
 
 ❌ **Unsafe:**
+
 ```html
-<input type="text" value="test">
+<input type="text" value="test" />
 ```
 
 ✅ **Safe:**
+
 ```javascript
-const input = document.createElement('input');
-input.type = 'text';
-input.value = 'test';
+const input = document.createElement("input");
+input.type = "text";
+input.value = "test";
 container.appendChild(input);
 
 // Or use self-closing in HTML
@@ -124,15 +129,17 @@ container.innerHTML = '<input type="text" value="test" />';
 ### Event Handlers
 
 ❌ **Unsafe:**
+
 ```html
 <div onclick="handleClick()">Click me</div>
 ```
 
 ✅ **Safe:**
+
 ```javascript
-const div = document.createElement('div');
-div.textContent = 'Click me';
-div.addEventListener('click', handleClick);
+const div = document.createElement("div");
+div.textContent = "Click me";
+div.addEventListener("click", handleClick);
 ```
 
 ## Best Practices
@@ -147,17 +154,18 @@ div.addEventListener('click', handleClick);
    - `aria-label` for screen readers
 
 3. **Style appropriately**
+
    ```css
    [role="button"] {
      cursor: pointer;
      user-select: none;
      display: inline-block;
    }
-   
+
    [role="button"]:focus {
      outline: 2px solid #0084ff;
    }
-   
+
    [role="button"]:hover {
      opacity: 0.8;
    }
@@ -171,17 +179,20 @@ div.addEventListener('click', handleClick);
 ## Example: Safe Button Component
 
 ```typescript
-export function createSafeButton(text: string, onClick: () => void): HTMLElement {
-  const button = document.createElement('span');
-  
+export function createSafeButton(
+  text: string,
+  onClick: () => void,
+): HTMLElement {
+  const button = document.createElement("span");
+
   // ARIA attributes
-  button.setAttribute('role', 'button');
-  button.setAttribute('tabindex', '0');
-  button.setAttribute('aria-label', text);
-  
+  button.setAttribute("role", "button");
+  button.setAttribute("tabindex", "0");
+  button.setAttribute("aria-label", text);
+
   // Content and styling
   button.textContent = text;
-  button.className = 'safe-button';
+  button.className = "safe-button";
   button.style.cssText = `
     display: inline-block;
     padding: 4px 12px;
@@ -191,27 +202,27 @@ export function createSafeButton(text: string, onClick: () => void): HTMLElement
     cursor: pointer;
     user-select: none;
   `;
-  
+
   // Mouse events
-  button.addEventListener('click', onClick);
-  
+  button.addEventListener("click", onClick);
+
   // Keyboard events
-  button.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
+  button.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       onClick();
     }
   });
-  
+
   // Visual feedback
-  button.addEventListener('mouseenter', () => {
-    button.style.opacity = '0.8';
+  button.addEventListener("mouseenter", () => {
+    button.style.opacity = "0.8";
   });
-  
-  button.addEventListener('mouseleave', () => {
-    button.style.opacity = '1';
+
+  button.addEventListener("mouseleave", () => {
+    button.style.opacity = "1";
   });
-  
+
   return button;
 }
 ```
@@ -219,16 +230,19 @@ export function createSafeButton(text: string, onClick: () => void): HTMLElement
 ## Troubleshooting
 
 ### Elements disappearing after innerHTML assignment
+
 - Use DOM manipulation instead
 - Check the console for "Removing unsafe node" messages
 - Use the monitor tool to identify what's being filtered
 
 ### Event handlers not working
+
 - Avoid inline event attributes
 - Use `addEventListener()` instead
 - Check if the element still exists after insertion
 
 ### Styles not applying
+
 - Use `style.cssText` or individual style properties
 - Avoid `style` attributes in HTML strings
 - Consider using CSS classes instead

@@ -84,7 +84,7 @@ export class MainPanel {
 
     // 先加载保存的状态（这会设置正确的 activeTab）
     this.loadState();
-    
+
     // 然后初始化标签页（这会显示正确的 activeTab）
     await this.initializeTabs();
 
@@ -133,7 +133,7 @@ export class MainPanel {
       transition: all 0.2s;
       display: inline-block;
     `;
-    
+
     // 停靠按钮（黄色）
     const dockButton = doc.createElement("span");
     dockButton.className = "panel-dock-button";
@@ -152,7 +152,7 @@ export class MainPanel {
       transition: all 0.2s;
       display: inline-block;
     `;
-    
+
     // 添加悬停效果的内联样式
     const style = doc.createElement("style");
     style.textContent = `
@@ -169,7 +169,7 @@ export class MainPanel {
         font-weight: bold;
       }
       .panel-header:hover .panel-dock-button::after {
-        content: "${this.isDocked ? '◱' : '▪'}";
+        content: "${this.isDocked ? "◱" : "▪"}";
         position: absolute;
         top: 50%;
         left: 50%;
@@ -179,10 +179,10 @@ export class MainPanel {
       }
     `;
     header.appendChild(style);
-    
+
     closeButton.addEventListener("click", () => this.hide());
     dockButton.addEventListener("click", () => this.toggleDock());
-    
+
     buttonGroup.appendChild(closeButton);
     buttonGroup.appendChild(dockButton);
     header.appendChild(buttonGroup);
@@ -303,7 +303,7 @@ export class MainPanel {
       const historyTab = new HistoryTreeTab(
         this.window,
         this.options.historyService,
-        this.options.closedTabsManager
+        this.options.closedTabsManager,
       );
       this.tabs.set("history", historyTab);
       Zotero.log("[MainPanel] HistoryTreeTab created successfully", "info");
@@ -316,34 +316,41 @@ export class MainPanel {
       const notesTab = new NoteRelationsTab(
         this.window,
         this.options.historyService,
-        this.options.noteAssociationSystem
+        this.options.noteAssociationSystem,
       );
       this.tabs.set("notes", notesTab);
-      Zotero.log(`[MainPanel] NoteRelationsTab created successfully. Total tabs: ${this.tabs.size}`, "info");
-      
+      Zotero.log(
+        `[MainPanel] NoteRelationsTab created successfully. Total tabs: ${this.tabs.size}`,
+        "info",
+      );
+
       // 不再创建这些未完成的功能标签页
 
-          // 显示初始标签页
-    Zotero.log(`[MainPanel] Showing initial tab: ${this.activeTab}`, "info");
-    this.showTab(this.activeTab);
+      // 显示初始标签页
+      Zotero.log(`[MainPanel] Showing initial tab: ${this.activeTab}`, "info");
+      this.showTab(this.activeTab);
     } catch (error) {
       Zotero.logError(`[MainPanel] Error initializing tabs: ${error}`);
     }
   }
 
-
-
   /**
    * 切换标签页
    */
   private switchTab(tabId: string): void {
-    Zotero.log(`[MainPanel] switchTab called with tabId: ${tabId}, current: ${this.activeTab}`, "info");
-    
+    Zotero.log(
+      `[MainPanel] switchTab called with tabId: ${tabId}, current: ${this.activeTab}`,
+      "info",
+    );
+
     // 如果是同一个 tab，检查内容是否为空，如果为空则强制刷新
     if (tabId === this.activeTab) {
       const content = this.container?.querySelector(".panel-content");
       if (content && (!content.firstChild || content.innerHTML.trim() === "")) {
-        Zotero.log(`[MainPanel] Current tab ${tabId} has no content, forcing refresh`, "info");
+        Zotero.log(
+          `[MainPanel] Current tab ${tabId} has no content, forcing refresh`,
+          "info",
+        );
         this.showTab(tabId);
       }
       return;
@@ -351,7 +358,10 @@ export class MainPanel {
 
     // 更新标签栏样式
     const tabButtons = this.container?.querySelectorAll(".panel-tab");
-    Zotero.log(`[MainPanel] Found ${tabButtons?.length || 0} tab buttons`, "info");
+    Zotero.log(
+      `[MainPanel] Found ${tabButtons?.length || 0} tab buttons`,
+      "info",
+    );
     tabButtons?.forEach((button) => {
       const isActive = button.getAttribute("data-tab") === tabId;
       button.classList.toggle("active", isActive);
@@ -392,12 +402,12 @@ export class MainPanel {
     content.innerHTML = "";
 
     // 渲染标签页
-    const container = doc.createElement('div');
-    container.style.cssText = 'height: 100%; width: 100%; overflow: auto;';
+    const container = doc.createElement("div");
+    container.style.cssText = "height: 100%; width: 100%; overflow: auto;";
     content.appendChild(container);
-    
+
     // 所有标签页都应该有 create 方法
-    if (tab && typeof (tab as any).create === 'function') {
+    if (tab && typeof (tab as any).create === "function") {
       (tab as any).create(container);
     } else {
       Zotero.logError(`Tab ${tabId} does not have a create method`);
@@ -586,8 +596,11 @@ export class MainPanel {
       this.activeTab = state.activeTab || "history";
       this.width = state.width || 400;
       this.height = state.height || 500;
-      
-      Zotero.log(`[MainPanel] Loaded state: activeTab=${this.activeTab}, isDocked=${this.isDocked}`, "info");
+
+      Zotero.log(
+        `[MainPanel] Loaded state: activeTab=${this.activeTab}, isDocked=${this.isDocked}`,
+        "info",
+      );
 
       if (this.container) {
         this.container.style.width = `${this.width}px`;
@@ -613,7 +626,7 @@ export class MainPanel {
    */
   getContent(): HTMLElement | null {
     if (!this.container) return null;
-    
+
     // 创建一个新的容器，包含标签页内容
     const doc = this.window.document;
     const contentWrapper = doc.createElement("div");
@@ -623,7 +636,7 @@ export class MainPanel {
       height: 100%;
       overflow: hidden;
     `;
-    
+
     // 复制标签栏
     const tabBar = this.container.querySelector(".panel-tab-bar");
     if (tabBar) {
@@ -640,17 +653,17 @@ export class MainPanel {
       });
       contentWrapper.appendChild(tabBarClone);
     }
-    
+
     // 复制内容区域
     const content = this.container.querySelector(".panel-content");
     if (content) {
       const contentClone = content.cloneNode(true) as HTMLElement;
       contentWrapper.appendChild(contentClone);
     }
-    
+
     return contentWrapper;
   }
-  
+
   /**
    * 刷新历史标签页
    */
@@ -658,12 +671,12 @@ export class MainPanel {
     const historyTab = this.tabs.get("history");
     if (historyTab && this.activeTab === "history") {
       // 触发历史树的刷新
-      if ('refresh' in historyTab && typeof historyTab.refresh === 'function') {
+      if ("refresh" in historyTab && typeof historyTab.refresh === "function") {
         (historyTab as any).refresh();
       }
     }
   }
-  
+
   /**
    * 销毁组件
    */

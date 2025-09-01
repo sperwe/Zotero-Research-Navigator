@@ -1,40 +1,39 @@
 /** @type {import('jest').Config} */
 export default {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
+  preset: "ts-jest",
+  testEnvironment: "node",
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', {
-      tsconfig: 'tsconfig.test.json'
-    }]
+    "^.+\\.tsx?$": [
+      "ts-jest",
+      {
+        tsconfig: "tsconfig.test.json",
+      },
+    ],
   },
-  roots: ['<rootDir>/src'],
-  testMatch: ['**/__tests__/**/*.ts', '**/*.test.ts', '**/*.spec.ts'],
+  roots: ["<rootDir>/src"],
+  testMatch: ["**/__tests__/**/*.ts", "**/*.test.ts", "**/*.spec.ts"],
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
-    '\\.(css|less|scss|sass)$': '<rootDir>/src/__mocks__/styleMock.js'
+    "^@/(.*)$": "<rootDir>/src/$1",
+    "\\.(css|less|scss|sass)$": "<rootDir>/src/__mocks__/styleMock.js",
   },
-  setupFilesAfterEnv: ['<rootDir>/src/test/setup.ts'],
+  setupFilesAfterEnv: ["<rootDir>/src/test/setup.ts"],
   collectCoverageFrom: [
-    'src/**/*.ts',
-    '!src/**/*.d.ts',
-    '!src/test/**/*',
-    '!src/**/__tests__/**/*',
-    '!src/**/*.test.ts',
-    '!src/bootstrap/**/*',
-    '!src/polyfills/**/*'
+    "src/**/*.ts",
+    "!src/**/*.d.ts",
+    "!src/test/**/*",
+    "!src/**/__tests__/**/*",
+    "!src/**/*.test.ts",
+    "!src/bootstrap/**/*",
+    "!src/polyfills/**/*",
   ],
-  coverageReporters: ['text', 'lcov', 'html', 'json-summary'],
-  testPathIgnorePatterns: [
-    '/node_modules/',
-    '/build/',
-    '/dist/'
-  ],
+  coverageReporters: ["text", "lcov", "html", "json-summary"],
+  testPathIgnorePatterns: ["/node_modules/", "/build/", "/dist/"],
   coverageThreshold: {
     global: {
       branches: 50,
       functions: 50,
       lines: 50,
-      statements: 50
-    }
-  }
+      statements: 50,
+    },
+  },
 };

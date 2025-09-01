@@ -84,10 +84,18 @@ export class DatabaseService {
       `);
 
       // 创建索引
-      await Zotero.DB.queryAsync(`CREATE INDEX IF NOT EXISTS idx_itemId ON ${this.HISTORY_TABLE}(itemId)`);
-      await Zotero.DB.queryAsync(`CREATE INDEX IF NOT EXISTS idx_sessionId ON ${this.HISTORY_TABLE}(sessionId)`);
-      await Zotero.DB.queryAsync(`CREATE INDEX IF NOT EXISTS idx_status ON ${this.HISTORY_TABLE}(status)`);
-      await Zotero.DB.queryAsync(`CREATE INDEX IF NOT EXISTS idx_timestamp ON ${this.HISTORY_TABLE}(timestamp)`);
+      await Zotero.DB.queryAsync(
+        `CREATE INDEX IF NOT EXISTS idx_itemId ON ${this.HISTORY_TABLE}(itemId)`,
+      );
+      await Zotero.DB.queryAsync(
+        `CREATE INDEX IF NOT EXISTS idx_sessionId ON ${this.HISTORY_TABLE}(sessionId)`,
+      );
+      await Zotero.DB.queryAsync(
+        `CREATE INDEX IF NOT EXISTS idx_status ON ${this.HISTORY_TABLE}(status)`,
+      );
+      await Zotero.DB.queryAsync(
+        `CREATE INDEX IF NOT EXISTS idx_timestamp ON ${this.HISTORY_TABLE}(timestamp)`,
+      );
 
       // 创建笔记关联表
       await Zotero.DB.queryAsync(`
@@ -104,8 +112,12 @@ export class DatabaseService {
       `);
 
       // 创建笔记关联表的索引
-      await Zotero.DB.queryAsync(`CREATE INDEX IF NOT EXISTS idx_noteId ON ${this.RELATIONS_TABLE}(noteId)`);
-      await Zotero.DB.queryAsync(`CREATE INDEX IF NOT EXISTS idx_nodeId ON ${this.RELATIONS_TABLE}(nodeId)`);
+      await Zotero.DB.queryAsync(
+        `CREATE INDEX IF NOT EXISTS idx_noteId ON ${this.RELATIONS_TABLE}(noteId)`,
+      );
+      await Zotero.DB.queryAsync(
+        `CREATE INDEX IF NOT EXISTS idx_nodeId ON ${this.RELATIONS_TABLE}(nodeId)`,
+      );
 
       this.initialized = true;
       Zotero.log("[DatabaseService] Database initialized", "info");
@@ -121,7 +133,7 @@ export class DatabaseService {
   async deleteHistoryNode(nodeId: string): Promise<void> {
     await Zotero.DB.queryAsync(
       `DELETE FROM ${this.HISTORY_TABLE} WHERE id = ?`,
-      [nodeId]
+      [nodeId],
     );
   }
 
@@ -186,7 +198,10 @@ export class DatabaseService {
     const results = await Zotero.DB.queryAsync(
       `SELECT * FROM ${this.HISTORY_TABLE} ORDER BY timestamp DESC`,
     );
-    Zotero.log(`[DatabaseService] Found ${results.length} history nodes in database`, "info");
+    Zotero.log(
+      `[DatabaseService] Found ${results.length} history nodes in database`,
+      "info",
+    );
 
     return results.map((row) => this.rowToHistoryNode(row));
   }
@@ -293,7 +308,7 @@ export class DatabaseService {
   async getAllNoteRelations(): Promise<NoteRelation[]> {
     const results = await Zotero.DB.queryAsync(
       `SELECT * FROM ${this.RELATIONS_TABLE} 
-       ORDER BY createdAt DESC`
+       ORDER BY createdAt DESC`,
     );
 
     return results.map((row) => ({

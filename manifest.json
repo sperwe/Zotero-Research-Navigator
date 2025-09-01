@@ -22,24 +22,16 @@
   },
   "content_scripts": [
     {
-      "matches": [
-        "*://zotero.org/*"
-      ],
-      "js": [
-        "chrome/content/scripts/content.js"
-      ]
+      "matches": ["*://zotero.org/*"],
+      "js": ["chrome/content/scripts/content.js"]
     }
   ],
   "background": {
-    "scripts": [
-      "chrome/content/scripts/background.js"
-    ]
+    "scripts": ["chrome/content/scripts/background.js"]
   },
   "options_ui": {
     "page": "chrome/content/preferences.xhtml",
     "open_in_tab": false
   },
-  "permissions": [
-    "storage"
-  ]
+  "permissions": ["storage"]
 }

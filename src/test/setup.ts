@@ -4,7 +4,7 @@
 (global as any).Zotero = {
   log: jest.fn((msg: string, level?: string) => {
     if (process.env.DEBUG) {
-      console.log(`[${level || 'info'}] ${msg}`);
+      console.log(`[${level || "info"}] ${msg}`);
     }
   }),
   logError: jest.fn((msg: string) => {
@@ -21,23 +21,23 @@
         appendChild: jest.fn(),
       })),
       body: {},
-      documentElement: {}
-    }
+      documentElement: {},
+    },
   })),
   getActiveZoteroPane: jest.fn(() => ({
-    getSelectedItems: jest.fn(() => [])
+    getSelectedItems: jest.fn(() => []),
   })),
   Prefs: {
     get: jest.fn(),
-    set: jest.fn()
+    set: jest.fn(),
   },
   Items: {
-    getAsync: jest.fn()
+    getAsync: jest.fn(),
   },
   getString: jest.fn((key: string) => key),
   Plugins: {
-    getRootURI: jest.fn(() => 'chrome://researchnavigator/')
-  }
+    getRootURI: jest.fn(() => "chrome://researchnavigator/"),
+  },
 } as any;
 
 // Mock window object
@@ -51,5 +51,5 @@
   }),
   clearTimeout: jest.fn(),
   setInterval: jest.fn(),
-  clearInterval: jest.fn()
+  clearInterval: jest.fn(),
 } as any;

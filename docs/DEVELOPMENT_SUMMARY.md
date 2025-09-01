@@ -17,16 +17,19 @@ Zotero Research Navigator 是一个用于增强 Zotero 研究导航和笔记管�
 ### 2.1 从 Bootstrap 到 TypeScript
 
 **初期（v1.x - v2.0）**：
+
 - 基于 Bootstrap 框架的传统插件结构
 - 使用 `bootstrap.js` 作为入口点
 - 直接操作 XUL/DOM 元素
 
 **转型期（v2.1 - v2.3）**：
+
 - 逐步引入 TypeScript 支持
 - 保留 Bootstrap 兼容层
 - 混合使用传统和现代开发方式
 
 **成熟期（v2.4+）**：
+
 - 完全 TypeScript 化
 - 使用 esbuild 构建系统
 - 模块化组件架构
@@ -60,17 +63,19 @@ src/
 **解决方案演进**：
 
 1. **v2.0.3 的简单方案**：
+
 ```typescript
 const mainWindow = doc.getElementById("main-window") || doc.body;
 mainWindow.appendChild(container);
 ```
 
 2. **v2.6.2 的完善方案**：
+
 ```typescript
 private async waitForDOM(): Promise<void> {
   const doc = this.window.document;
   if (doc.body) return;
-  
+
   return new Promise((resolve) => {
     if (doc.readyState === 'loading') {
       doc.addEventListener('DOMContentLoaded', () => resolve());
@@ -86,6 +91,7 @@ private async waitForDOM(): Promise<void> {
 **问题**：Bootstrap 内部安全机制移除 `<button>`、`<input>` 等"不安全"元素。
 
 **解决方案**：
+
 - 使用 `<span role="button">` 替代 `<button>`
 - 动态创建 DOM 元素而非静态 HTML 字符串
 - 内联样式避免外部 CSS 依赖
@@ -93,15 +99,17 @@ private async waitForDOM(): Promise<void> {
 ### 3.3 Zotero API 兼容性
 
 **挑战**：
+
 - `MutationObserver` 在 Zotero 环境不可用
 - 某些现代 Web API 缺失
 - XUL 与 HTML 混合环境
 
 **适配策略**：
+
 ```typescript
 // 使用事件监听替代 MutationObserver
-this.window.addEventListener('select', (e) => {
-  if ((e.target as any)?.id === 'zotero-tabs') {
+this.window.addEventListener("select", (e) => {
+  if ((e.target as any)?.id === "zotero-tabs") {
     this.updateButton();
   }
 });
@@ -113,6 +121,7 @@ this.intervalId = setInterval(() => this.updateButton(), 1000);
 ### 3.4 外部库集成（jQuery/zTree）
 
 **尝试历程**：
+
 1. Chrome URL 注册方式 → 失败（路径问题）
 2. Data URL 方式 → 失败（安全限制）
 3. Services.scriptloader → 失败（环境差异）
@@ -123,6 +132,7 @@ this.intervalId = setInterval(() => this.updateButton(), 1000);
 ### 4.1 浮动按钮实现对比
 
 **v2.0.3 版本**：
+
 ```typescript
 // 简单直接，作为工具栏的后备方案
 function createFloatingButton(doc: Document, onClick: () => void) {
@@ -134,13 +144,22 @@ function createFloatingButton(doc: Document, onClick: () => void) {
 ```
 
 **v2.6.x 版本**：
+
 ```typescript
 // 复杂但健壮，考虑多种边界情况
 class QuickNoteButton {
-  private async waitForDOM() { /* ... */ }
-  private getActiveTab() { /* 检测当前标签页 */ }
-  private shouldShowButton() { /* 条件显示逻辑 */ }
-  private updateButton() { /* 动态更新显示状态 */ }
+  private async waitForDOM() {
+    /* ... */
+  }
+  private getActiveTab() {
+    /* 检测当前标签页 */
+  }
+  private shouldShowButton() {
+    /* 条件显示逻辑 */
+  }
+  private updateButton() {
+    /* 动态更新显示状态 */
+  }
 }
 ```
 
@@ -218,6 +237,7 @@ CREATE TABLE note_associations (
 Zotero Research Navigator 的开发历程体现了在受限环境中进行现代化开发的挑战与机遇。通过不断迭代和优化，我们成功构建了一个功能丰富、用户友好的研究辅助工具。
 
 关键成功因素：
+
 1. **深入理解宿主环境**：Zotero 的特殊性要求特殊处理
 2. **用户需求导向**：功能开发始终围绕实际研究需求
 3. **技术务实主义**：在理想方案和现实限制间找平衡

@@ -5,9 +5,9 @@ on:
     branches:
       - fix/typescript-errors-and-functionality
     paths:
-      - 'package.json'
-      - 'src/**'
-      - 'addon/**'
+      - "package.json"
+      - "src/**"
+      - "addon/**"
 
 permissions:
   contents: write
@@ -17,15 +17,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-      
+          node-version: "20"
+
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Build Development XPI with Auto-Update URL
         run: |
           # 创建带有开发更新 URL 的 manifest
@@ -46,14 +46,14 @@ jobs:
             }
           }
           EOF
-          
+
           # 构建 XPI
           npm run build-prod
-      
+
       - name: Get version
         id: version
         run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
-      
+
       - name: Create Development Release
         uses: softprops/action-gh-release@v2
         with:
@@ -64,9 +64,9 @@ jobs:
           files: build/zotero-research-navigator.xpi
           body: |
             Development build from commit ${{ github.sha }}
-            
+
             This build auto-updates from the development branch.
-      
+
       - name: Update development update.json
         run: |
           # 更新 update-dev.json 指向最新的 release
@@ -90,7 +90,7 @@ jobs:
             }
           }
           EOF
-          
+
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add update-dev.json

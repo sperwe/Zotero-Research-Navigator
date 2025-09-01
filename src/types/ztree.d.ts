@@ -60,8 +60,17 @@ interface IZTreeSetting {
     nocheckInherit?: boolean;
   };
   callback?: {
-    beforeClick?: (treeId: string, treeNode: IZTreeNode, clickFlag: number) => boolean;
-    onClick?: (event: Event, treeId: string, treeNode: IZTreeNode, clickFlag: number) => void;
+    beforeClick?: (
+      treeId: string,
+      treeNode: IZTreeNode,
+      clickFlag: number,
+    ) => boolean;
+    onClick?: (
+      event: Event,
+      treeId: string,
+      treeNode: IZTreeNode,
+      clickFlag: number,
+    ) => void;
     onCheck?: (event: Event, treeId: string, treeNode: IZTreeNode) => void;
     onExpand?: (event: Event, treeId: string, treeNode: IZTreeNode) => void;
     onCollapse?: (event: Event, treeId: string, treeNode: IZTreeNode) => void;
@@ -69,8 +78,18 @@ interface IZTreeSetting {
     onDblClick?: (event: Event, treeId: string, treeNode: IZTreeNode) => void;
     beforeRemove?: (treeId: string, treeNode: IZTreeNode) => boolean;
     onRemove?: (event: Event, treeId: string, treeNode: IZTreeNode) => void;
-    beforeRename?: (treeId: string, treeNode: IZTreeNode, newName: string, isCancel: boolean) => boolean;
-    onRename?: (event: Event, treeId: string, treeNode: IZTreeNode, isCancel: boolean) => void;
+    beforeRename?: (
+      treeId: string,
+      treeNode: IZTreeNode,
+      newName: string,
+      isCancel: boolean,
+    ) => boolean;
+    onRename?: (
+      event: Event,
+      treeId: string,
+      treeNode: IZTreeNode,
+      isCancel: boolean,
+    ) => void;
   };
   edit?: {
     enable?: boolean;
@@ -84,43 +103,78 @@ interface IZTreeSetting {
     url?: string | ((treeId: string, treeNode: IZTreeNode) => string);
     autoParam?: string[];
     otherParam?: any;
-    dataFilter?: (treeId: string, parentNode: IZTreeNode, responseData: any) => any;
+    dataFilter?: (
+      treeId: string,
+      parentNode: IZTreeNode,
+      responseData: any,
+    ) => any;
   };
 }
 
 interface IZTreeObj {
   setting: IZTreeSetting;
-  
+
   // Node operations
   getNodes(): IZTreeNode[];
-  getNodeByParam(key: string, value: any, parentNode?: IZTreeNode): IZTreeNode | null;
+  getNodeByParam(
+    key: string,
+    value: any,
+    parentNode?: IZTreeNode,
+  ): IZTreeNode | null;
   getNodeByTId(tId: string): IZTreeNode | null;
-  getNodesByParam(key: string, value: any, parentNode?: IZTreeNode): IZTreeNode[];
-  getNodesByParamFuzzy(key: string, value: string, parentNode?: IZTreeNode): IZTreeNode[];
-  getNodesByFilter(filter: (node: IZTreeNode) => boolean, isSingle?: boolean, parentNode?: IZTreeNode): IZTreeNode[] | IZTreeNode;
+  getNodesByParam(
+    key: string,
+    value: any,
+    parentNode?: IZTreeNode,
+  ): IZTreeNode[];
+  getNodesByParamFuzzy(
+    key: string,
+    value: string,
+    parentNode?: IZTreeNode,
+  ): IZTreeNode[];
+  getNodesByFilter(
+    filter: (node: IZTreeNode) => boolean,
+    isSingle?: boolean,
+    parentNode?: IZTreeNode,
+  ): IZTreeNode[] | IZTreeNode;
   getNodeIndex(node: IZTreeNode): number;
   getSelectedNodes(): IZTreeNode[];
-  
+
   // Tree operations
-  addNodes(parentNode: IZTreeNode | null, newNodes: IZTreeNode | IZTreeNode[], isSilent?: boolean): IZTreeNode[];
+  addNodes(
+    parentNode: IZTreeNode | null,
+    newNodes: IZTreeNode | IZTreeNode[],
+    isSilent?: boolean,
+  ): IZTreeNode[];
   removeNode(node: IZTreeNode, callbackFlag?: boolean): void;
   removeChildNodes(parentNode: IZTreeNode): IZTreeNode[];
   updateNode(node: IZTreeNode, checkTypeFlag?: boolean): void;
-  
+
   // Check operations
-  checkNode(node: IZTreeNode, checked: boolean, checkTypeFlag?: boolean, callbackFlag?: boolean): void;
+  checkNode(
+    node: IZTreeNode,
+    checked: boolean,
+    checkTypeFlag?: boolean,
+    callbackFlag?: boolean,
+  ): void;
   checkAllNodes(checked: boolean): void;
   getCheckedNodes(checked?: boolean): IZTreeNode[];
   getChangeCheckedNodes(): IZTreeNode[];
-  
+
   // Expand operations
   expandAll(expandFlag: boolean): boolean;
-  expandNode(node: IZTreeNode, expandFlag?: boolean, sonSign?: boolean, focus?: boolean, callbackFlag?: boolean): boolean;
-  
+  expandNode(
+    node: IZTreeNode,
+    expandFlag?: boolean,
+    sonSign?: boolean,
+    focus?: boolean,
+    callbackFlag?: boolean,
+  ): boolean;
+
   // Selection operations
   selectNode(node: IZTreeNode, addFlag?: boolean, isSilent?: boolean): void;
   cancelSelectedNode(node?: IZTreeNode): void;
-  
+
   // Other operations
   refresh(): void;
   destroy(): void;
@@ -128,7 +182,7 @@ interface IZTreeObj {
   hideNodes(nodes: IZTreeNode[]): void;
   showNode(node: IZTreeNode): void;
   showNodes(nodes: IZTreeNode[]): void;
-  
+
   // Edit operations
   editName(node: IZTreeNode): void;
   cancelEditName(newName?: string): void;
@@ -137,7 +191,11 @@ interface IZTreeObj {
 declare namespace jQuery {
   interface fn {
     zTree: {
-      init(obj: JQuery, setting: IZTreeSetting, zNodes?: IZTreeNode[]): IZTreeObj;
+      init(
+        obj: JQuery,
+        setting: IZTreeSetting,
+        zNodes?: IZTreeNode[],
+      ): IZTreeObj;
       getZTreeObj(treeId: string): IZTreeObj | null;
       destroy(treeId: string): void;
       _z: {

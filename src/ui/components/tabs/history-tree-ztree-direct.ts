@@ -2,30 +2,30 @@
  * 直接使用 zTree 的简单实现
  */
 
-import { HistoryService } from '../../../services/history-service';
-import { ClosedTabsManager } from '../../../managers/closed-tabs-manager';
+import { HistoryService } from "../../../services/history-service";
+import { ClosedTabsManager } from "../../../managers/closed-tabs-manager";
 
 declare const Services: any;
 
 export class HistoryTreeZTreeDirect {
   private container: HTMLElement;
   private treeObj: any = null;
-  
+
   constructor(
     private window: Window,
     private historyService: HistoryService,
-    private closedTabsManager: ClosedTabsManager
+    private closedTabsManager: ClosedTabsManager,
   ) {
-    Zotero.log('[HistoryTreeZTreeDirect] Direct zTree implementation', 'info');
+    Zotero.log("[HistoryTreeZTreeDirect] Direct zTree implementation", "info");
   }
-  
+
   async init(container: HTMLElement): Promise<void> {
     this.container = container;
     const doc = container.ownerDocument || this.window.document;
-    
+
     // 加载 jQuery 和 zTree
     await this.loadDependencies();
-    
+
     // 创建基本结构
     container.innerHTML = `
       <div style="height: 100%; display: flex; flex-direction: column;">
@@ -37,109 +37,141 @@ export class HistoryTreeZTreeDirect {
         <div id="historyTree" class="ztree" style="flex: 1; overflow: auto; padding: 10px;"></div>
       </div>
     `;
-    
+
     // 绑定按钮事件
-    doc.getElementById('refreshBtn')?.addEventListener('click', () => this.refresh());
-    doc.getElementById('expandAllBtn')?.addEventListener('click', () => this.treeObj?.expandAll(true));
-    doc.getElementById('collapseAllBtn')?.addEventListener('click', () => this.treeObj?.expandAll(false));
-    
+    doc
+      .getElementById("refreshBtn")
+      ?.addEventListener("click", () => this.refresh());
+    doc
+      .getElementById("expandAllBtn")
+      ?.addEventListener("click", () => this.treeObj?.expandAll(true));
+    doc
+      .getElementById("collapseAllBtn")
+      ?.addEventListener("click", () => this.treeObj?.expandAll(false));
+
     // 加载 zTree 样式
     await this.loadStyles(doc);
-    
+
     // 初始化树
     await this.refresh();
   }
-  
+
   private async loadDependencies(): Promise<void> {
     const win = this.window as any;
-    
+
     // 加载 jQuery
     if (!win.jQuery && !win.$) {
-      Zotero.log('[HistoryTreeZTreeDirect] Loading jQuery...', 'info');
-      await this.loadScript('chrome://researchnavigator/content/lib/jquery.min.js');
+      Zotero.log("[HistoryTreeZTreeDirect] Loading jQuery...", "info");
+      await this.loadScript(
+        "chrome://researchnavigator/content/lib/jquery.min.js",
+      );
     }
-    
+
     // 等待 jQuery 就绪
     let attempts = 0;
     while (!win.$ && attempts < 10) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       attempts++;
     }
-    
+
     if (!win.$) {
-      throw new Error('Failed to load jQuery');
+      throw new Error("Failed to load jQuery");
     }
-    
+
     // 加载 zTree
     if (!win.$.fn?.zTree) {
-      Zotero.log('[HistoryTreeZTreeDirect] Loading zTree...', 'info');
-      await this.loadScript('chrome://researchnavigator/content/lib/ztree/jquery.ztree.core.min.js');
+      Zotero.log("[HistoryTreeZTreeDirect] Loading zTree...", "info");
+      await this.loadScript(
+        "chrome://researchnavigator/content/lib/ztree/jquery.ztree.core.min.js",
+      );
     }
-    
-    Zotero.log('[HistoryTreeZTreeDirect] Dependencies loaded successfully', 'info');
+
+    Zotero.log(
+      "[HistoryTreeZTreeDirect] Dependencies loaded successfully",
+      "info",
+    );
   }
-  
+
   private async loadScript(url: string): Promise<void> {
     // 获取实际的插件路径
     let actualUrl = url;
-    
+
     try {
-      if (url.startsWith('chrome://researchnavigator/')) {
+      if (url.startsWith("chrome://researchnavigator/")) {
         // 尝试获取插件的根 URI
         if (Zotero.Plugins && Zotero.Plugins.getRootURI) {
-          const rootURI = await Zotero.Plugins.getRootURI('research-navigator@zotero.org');
+          const rootURI = await Zotero.Plugins.getRootURI(
+            "research-navigator@zotero.org",
+          );
           if (rootURI) {
-            actualUrl = url.replace('chrome://researchnavigator/', rootURI);
-            Zotero.log(`[HistoryTreeZTreeDirect] Using plugin URI: ${actualUrl}`, 'info');
+            actualUrl = url.replace("chrome://researchnavigator/", rootURI);
+            Zotero.log(
+              `[HistoryTreeZTreeDirect] Using plugin URI: ${actualUrl}`,
+              "info",
+            );
           }
         }
       }
     } catch (e) {
-      Zotero.log(`[HistoryTreeZTreeDirect] Failed to get plugin URI: ${e}`, 'warn');
+      Zotero.log(
+        `[HistoryTreeZTreeDirect] Failed to get plugin URI: ${e}`,
+        "warn",
+      );
     }
-    
+
     return new Promise((resolve, reject) => {
       try {
-        if (typeof Services !== 'undefined' && Services.scriptloader) {
+        if (typeof Services !== "undefined" && Services.scriptloader) {
           Services.scriptloader.loadSubScript(actualUrl, this.window);
           resolve();
         } else {
-          const script = this.window.document.createElement('script');
+          const script = this.window.document.createElement("script");
           script.src = actualUrl;
           script.onload = () => resolve();
-          script.onerror = () => reject(new Error(`Failed to load ${actualUrl}`));
-          (this.window.document.head || this.window.document.documentElement).appendChild(script);
+          script.onerror = () =>
+            reject(new Error(`Failed to load ${actualUrl}`));
+          (
+            this.window.document.head || this.window.document.documentElement
+          ).appendChild(script);
         }
       } catch (error) {
         reject(error);
       }
     });
   }
-  
+
   private async loadStyles(doc: Document): Promise<void> {
     // 获取实际的插件路径
-    let cssUrl = 'chrome://researchnavigator/content/lib/ztree/zTreeStyle.css';
-    
+    let cssUrl = "chrome://researchnavigator/content/lib/ztree/zTreeStyle.css";
+
     try {
       if (Zotero.Plugins && Zotero.Plugins.getRootURI) {
-        const rootURI = await Zotero.Plugins.getRootURI('research-navigator@zotero.org');
+        const rootURI = await Zotero.Plugins.getRootURI(
+          "research-navigator@zotero.org",
+        );
         if (rootURI) {
-          cssUrl = rootURI + 'content/lib/ztree/zTreeStyle.css';
-          Zotero.log(`[HistoryTreeZTreeDirect] Using CSS URI: ${cssUrl}`, 'info');
+          cssUrl = rootURI + "content/lib/ztree/zTreeStyle.css";
+          Zotero.log(
+            `[HistoryTreeZTreeDirect] Using CSS URI: ${cssUrl}`,
+            "info",
+          );
         }
       }
     } catch (e) {
-      Zotero.log(`[HistoryTreeZTreeDirect] Failed to get plugin URI for CSS: ${e}`, 'warn');
+      Zotero.log(
+        `[HistoryTreeZTreeDirect] Failed to get plugin URI for CSS: ${e}`,
+        "warn",
+      );
     }
-    
+
     // 加载 zTree 样式
-    const link = doc.createElement('link');
-    link.rel = 'stylesheet';
+    const link = doc.createElement("link");
+    link.rel = "stylesheet";
     link.href = cssUrl;
     doc.head.appendChild(link);
-    
+
     // 添加自定义样式
-    const style = doc.createElement('style');
+    const style = doc.createElement("style");
     style.textContent = `
       .ztree li span.button.custom_icon {
         margin-right: 2px;
@@ -156,18 +188,18 @@ export class HistoryTreeZTreeDirect {
     `;
     doc.head.appendChild(style);
   }
-  
+
   private async refresh(): Promise<void> {
     try {
-      Zotero.log('[HistoryTreeZTreeDirect] Refreshing tree...', 'info');
-      
+      Zotero.log("[HistoryTreeZTreeDirect] Refreshing tree...", "info");
+
       // 获取数据
       const sessions = await this.historyService.getAllSessions();
       const closedTabs = this.closedTabsManager.getClosedTabs();
-      
+
       // 构建 zTree 节点
       const zNodes = await this.buildZNodes(sessions, closedTabs);
-      
+
       // zTree 配置
       const setting = {
         view: {
@@ -175,47 +207,54 @@ export class HistoryTreeZTreeDirect {
           showLine: true,
           showIcon: false,
           dblClickExpand: true,
-          addDiyDom: this.addDiyDom.bind(this)
+          addDiyDom: this.addDiyDom.bind(this),
         },
         data: {
           simpleData: {
             enable: true,
             idKey: "id",
-            pIdKey: "pId"
-          }
+            pIdKey: "pId",
+          },
         },
         callback: {
-          onClick: this.onNodeClick.bind(this)
-        }
+          onClick: this.onNodeClick.bind(this),
+        },
       };
-      
+
       // 初始化或刷新树
       const $ = (this.window as any).$;
       this.treeObj = $.fn.zTree.init($("#historyTree"), setting, zNodes);
-      
-      Zotero.log(`[HistoryTreeZTreeDirect] Tree initialized with ${zNodes.length} nodes`, 'info');
-      
+
+      Zotero.log(
+        `[HistoryTreeZTreeDirect] Tree initialized with ${zNodes.length} nodes`,
+        "info",
+      );
     } catch (error) {
       Zotero.logError(`[HistoryTreeZTreeDirect] Failed to refresh: ${error}`);
     }
   }
-  
-  private async buildZNodes(sessions: any[], closedTabs: any[]): Promise<any[]> {
+
+  private async buildZNodes(
+    sessions: any[],
+    closedTabs: any[],
+  ): Promise<any[]> {
     const nodes = [];
     let nodeId = 1;
-    
+
     // 按日期分组
     const dateGroups = new Map<string, any[]>();
-    
+
     for (const session of sessions) {
       const date = new Date(session.startTime).toLocaleDateString();
       if (!dateGroups.has(date)) {
         dateGroups.set(date, []);
       }
-      const sessionNodes = await this.historyService.getSessionNodes(session.id);
+      const sessionNodes = await this.historyService.getSessionNodes(
+        session.id,
+      );
       dateGroups.get(date)!.push({ session, nodes: sessionNodes });
     }
-    
+
     // 创建日期节点
     for (const [date, sessionData] of dateGroups) {
       const dateNodeId = nodeId++;
@@ -226,9 +265,9 @@ export class HistoryTreeZTreeDirect {
         open: true,
         isParent: true,
         iconSkin: "date",
-        customIcon: "📅"
+        customIcon: "📅",
       });
-      
+
       // 创建会话节点
       for (const { session, nodes: historyNodes } of sessionData) {
         const sessionNodeId = nodeId++;
@@ -239,23 +278,23 @@ export class HistoryTreeZTreeDirect {
           open: false,
           isParent: true,
           iconSkin: "session",
-          customIcon: "📚"
+          customIcon: "📚",
         });
-        
+
         // 创建历史节点
         for (const historyNode of historyNodes) {
           nodes.push({
             id: nodeId++,
             pId: sessionNodeId,
-            name: historyNode.title || 'Untitled',
+            name: historyNode.title || "Untitled",
             iconSkin: "item",
-            customIcon: historyNode.status === 'active' ? "📖" : "📕",
-            nodeData: historyNode
+            customIcon: historyNode.status === "active" ? "📖" : "📕",
+            nodeData: historyNode,
           });
         }
       }
     }
-    
+
     // 创建关闭标签节点
     if (closedTabs.length > 0) {
       const closedRootId = nodeId++;
@@ -266,34 +305,34 @@ export class HistoryTreeZTreeDirect {
         open: true,
         isParent: true,
         iconSkin: "closed",
-        customIcon: "👻"
+        customIcon: "👻",
       });
-      
+
       for (const tab of closedTabs) {
         nodes.push({
           id: nodeId++,
           pId: closedRootId,
-          name: tab.node.title || 'Untitled',
+          name: tab.node.title || "Untitled",
           iconSkin: "closedItem",
           customIcon: "👻",
-          closedTab: tab
+          closedTab: tab,
         });
       }
     }
-    
+
     return nodes;
   }
-  
+
   private addDiyDom(treeId: string, treeNode: any): void {
     const $ = (this.window as any).$;
     const aObj = $("#" + treeNode.tId + "_a");
-    
+
     if (treeNode.customIcon) {
       const iconHtml = `<span class='button custom_icon'>${treeNode.customIcon}</span>`;
       aObj.prepend(iconHtml);
     }
   }
-  
+
   private onNodeClick(event: any, treeId: string, treeNode: any): void {
     if (treeNode.nodeData && treeNode.nodeData.itemId) {
       // 打开历史项目

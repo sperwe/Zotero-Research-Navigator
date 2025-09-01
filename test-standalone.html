@@ -1,20 +1,20 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>Standalone Tree Test</title>
     <style>
       body {
         font-family: Arial, sans-serif;
         margin: 20px;
       }
-      
+
       #test-container {
         width: 600px;
         height: 500px;
         border: 1px solid #ccc;
       }
-      
+
       /* Test the CSS from our component */
       .history-tree-standalone {
         height: 100%;
@@ -22,7 +22,7 @@
         flex-direction: column;
         font-size: 13px;
       }
-      
+
       .hts-toolbar {
         display: flex;
         align-items: center;
@@ -30,7 +30,7 @@
         border-bottom: 1px solid #e0e0e0;
         background: #f5f5f5;
       }
-      
+
       .hts-toolbar button {
         margin-right: 10px;
         padding: 4px 8px;
@@ -40,89 +40,89 @@
         cursor: pointer;
         border-radius: 3px;
       }
-      
+
       .hts-toolbar button:hover {
         background: #e8e8e8;
       }
-      
+
       .hts-tree-container {
         flex: 1;
         overflow: auto;
         padding: 10px;
       }
-      
+
       .hts-tree-node {
         margin: 2px 0;
         padding: 2px;
         cursor: pointer;
         user-select: none;
       }
-      
+
       .hts-tree-node:hover {
         background: #f0f0f0;
       }
-      
+
       .hts-tree-group {
         margin-left: 0;
       }
-      
+
       .hts-tree-item {
         margin-left: 20px;
       }
-      
+
       .hts-tree-subitem {
         margin-left: 40px;
       }
-      
+
       .hts-icon {
         display: inline-block;
         width: 16px;
         text-align: center;
         margin-right: 4px;
       }
-      
+
       .hts-expand {
         cursor: pointer;
         font-size: 10px;
         width: 12px;
         display: inline-block;
       }
-      
+
       .hts-collapsed > .hts-children {
         display: none;
       }
-      
+
       .hts-date-group {
         font-weight: bold;
         color: #333;
       }
-      
+
       .hts-session-group {
         color: #555;
       }
-      
+
       .hts-history-item {
         color: #333;
       }
-      
+
       .hts-closed-tab {
         color: #666;
         font-style: italic;
       }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <h1>Standalone Tree Test</h1>
-    
+
     <button onclick="createTree()">Create Test Tree</button>
     <button onclick="testCollapse()">Test Collapse/Expand</button>
-    
+
     <div id="test-container"></div>
-    
+
     <script>
       function createTree() {
-        const container = document.getElementById('test-container');
-        
+        const container = document.getElementById("test-container");
+
         // Create the structure
         container.innerHTML = `
           <div class="history-tree-standalone">
@@ -201,40 +201,46 @@
           </div>
         `;
       }
-      
+
       function toggleNode(node) {
-        node.classList.toggle('hts-collapsed');
-        const expand = node.querySelector('.hts-expand');
+        node.classList.toggle("hts-collapsed");
+        const expand = node.querySelector(".hts-expand");
         if (expand) {
-          expand.textContent = node.classList.contains('hts-collapsed') ? '▶' : '▼';
+          expand.textContent = node.classList.contains("hts-collapsed")
+            ? "▶"
+            : "▼";
         }
       }
-      
+
       function expandAll() {
-        const nodes = document.querySelectorAll('.hts-tree-group, .hts-tree-item');
-        nodes.forEach(node => {
-          node.classList.remove('hts-collapsed');
-          const expand = node.querySelector('.hts-expand');
-          if (expand) expand.textContent = '▼';
+        const nodes = document.querySelectorAll(
+          ".hts-tree-group, .hts-tree-item",
+        );
+        nodes.forEach((node) => {
+          node.classList.remove("hts-collapsed");
+          const expand = node.querySelector(".hts-expand");
+          if (expand) expand.textContent = "▼";
         });
       }
-      
+
       function collapseAll() {
-        const nodes = document.querySelectorAll('.hts-tree-group, .hts-tree-item');
-        nodes.forEach(node => {
-          node.classList.add('hts-collapsed');
-          const expand = node.querySelector('.hts-expand');
-          if (expand) expand.textContent = '▶';
+        const nodes = document.querySelectorAll(
+          ".hts-tree-group, .hts-tree-item",
+        );
+        nodes.forEach((node) => {
+          node.classList.add("hts-collapsed");
+          const expand = node.querySelector(".hts-expand");
+          if (expand) expand.textContent = "▶";
         });
       }
-      
+
       function testCollapse() {
         collapseAll();
         setTimeout(() => {
-          alert('Now expanding all...');
+          alert("Now expanding all...");
           expandAll();
         }, 1000);
       }
     </script>
-</body>
+  </body>
 </html>

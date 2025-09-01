@@ -7,25 +7,25 @@ export class SidebarManager {
   private sidebarPane: any = null;
   private initialized = false;
   private contentContainer: HTMLElement | null = null;
-  
+
   constructor(
     private window: Window,
-    private onContentRequest: () => HTMLElement | null
+    private onContentRequest: () => HTMLElement | null,
   ) {}
-  
+
   /**
    * 初始化侧边栏
    */
   async initialize(): Promise<void> {
     if (this.initialized) return;
-    
+
     try {
       // 注册侧边栏
       this.registerSidebar();
-      
+
       // 监听侧边栏切换
       this.setupListeners();
-      
+
       this.initialized = true;
       Zotero.log("[SidebarManager] Initialized", "info");
     } catch (error) {
@@ -35,13 +35,13 @@ export class SidebarManager {
       // 不抛出错误，让插件继续运行
     }
   }
-  
+
   /**
    * 注册侧边栏
    */
   private registerSidebar(): void {
     const doc = this.window.document;
-    
+
     // 查找侧边栏容器 - 尝试多个可能的位置
     let sidebarContainer = doc.getElementById("zotero-view-splitter");
     if (!sidebarContainer) {
@@ -49,19 +49,20 @@ export class SidebarManager {
     }
     if (!sidebarContainer) {
       // 查找主要的内容区域
-      const mainHbox = doc.getElementById("zotero-main-hbox") || 
-                      doc.querySelector("#main-window > hbox") ||
-                      doc.querySelector("hbox#browser");
+      const mainHbox =
+        doc.getElementById("zotero-main-hbox") ||
+        doc.querySelector("#main-window > hbox") ||
+        doc.querySelector("hbox#browser");
       if (mainHbox) {
         // 在主容器的最右侧添加
         sidebarContainer = mainHbox;
       }
     }
-    
+
     if (!sidebarContainer) {
       throw new Error("Sidebar container not found");
     }
-    
+
     // 创建侧边栏面板
     const pane = doc.createXULElement("vbox");
     pane.id = "research-navigator-sidebar";
@@ -71,11 +72,11 @@ export class SidebarManager {
       min-width: 250px;
       max-width: 600px;
     `;
-    
+
     // 创建标题栏
     const header = this.createHeader(doc);
     pane.appendChild(header);
-    
+
     // 创建内容容器
     this.contentContainer = doc.createElement("div");
     this.contentContainer.style.cssText = `
@@ -85,10 +86,10 @@ export class SidebarManager {
       flex-direction: column;
     `;
     pane.appendChild(this.contentContainer);
-    
+
     // 添加到侧边栏之前
     sidebarContainer.parentNode?.insertBefore(pane, sidebarContainer);
-    
+
     // 创建分隔条
     const splitter = doc.createXULElement("splitter");
     splitter.id = "research-navigator-splitter";
@@ -103,15 +104,15 @@ export class SidebarManager {
       background: var(--material-background);
       margin: 0;
     `;
-    
+
     sidebarContainer.parentNode?.insertBefore(splitter, sidebarContainer);
-    
+
     this.sidebarPane = pane;
-    
+
     // 初始隐藏
     this.hide();
   }
-  
+
   /**
    * 创建标题栏
    */
@@ -124,7 +125,7 @@ export class SidebarManager {
       border-bottom: 1px solid var(--material-border-quarternary);
       background: var(--material-sidepane);
     `;
-    
+
     // 标题
     const title = doc.createElement("h3");
     title.style.cssText = `
@@ -134,7 +135,7 @@ export class SidebarManager {
     `;
     title.textContent = "Research Navigator";
     header.appendChild(title);
-    
+
     // 切换按钮（切换到浮动面板）
     const toggleBtn = doc.createElement("button");
     toggleBtn.innerHTML = "⇄";
@@ -151,7 +152,7 @@ export class SidebarManager {
       this.window.dispatchEvent(new Event("research-navigator-toggle-mode"));
     });
     header.appendChild(toggleBtn);
-    
+
     // 关闭按钮
     const closeBtn = doc.createElement("button");
     closeBtn.innerHTML = "✕";
@@ -165,10 +166,10 @@ export class SidebarManager {
     `;
     closeBtn.addEventListener("click", () => this.hide());
     header.appendChild(closeBtn);
-    
+
     return header;
   }
-  
+
   /**
    * 设置监听器
    */
@@ -178,43 +179,47 @@ export class SidebarManager {
       this.adjustSize();
     });
   }
-  
+
   /**
    * 显示侧边栏
    */
   show(): void {
     if (!this.sidebarPane) return;
-    
+
     this.sidebarPane.style.display = "flex";
-    const splitter = this.window.document.getElementById("research-navigator-splitter");
+    const splitter = this.window.document.getElementById(
+      "research-navigator-splitter",
+    );
     if (splitter) {
       splitter.style.display = "block";
     }
-    
+
     // 更新内容
     this.updateContent();
-    
+
     // 调整大小
     this.adjustSize();
-    
+
     Zotero.log("[SidebarManager] Sidebar shown", "info");
   }
-  
+
   /**
    * 隐藏侧边栏
    */
   hide(): void {
     if (!this.sidebarPane) return;
-    
+
     this.sidebarPane.style.display = "none";
-    const splitter = this.window.document.getElementById("research-navigator-splitter");
+    const splitter = this.window.document.getElementById(
+      "research-navigator-splitter",
+    );
     if (splitter) {
       splitter.style.display = "none";
     }
-    
+
     Zotero.log("[SidebarManager] Sidebar hidden", "info");
   }
-  
+
   /**
    * 切换侧边栏显示
    */
@@ -225,46 +230,48 @@ export class SidebarManager {
       this.show();
     }
   }
-  
+
   /**
    * 检查是否可见
    */
   isVisible(): boolean {
     return this.sidebarPane && this.sidebarPane.style.display !== "none";
   }
-  
+
   /**
    * 更新内容
    */
   updateContent(): void {
     if (!this.contentContainer) return;
-    
+
     // 清空现有内容
     this.contentContainer.innerHTML = "";
-    
+
     // 获取新内容
     const content = this.onContentRequest();
     if (content) {
       this.contentContainer.appendChild(content);
     }
   }
-  
+
   /**
    * 调整大小
    */
   private adjustSize(): void {
     if (!this.sidebarPane) return;
-    
+
     // 获取保存的宽度
-    const savedWidth = Zotero.Prefs.get("extensions.zotero.researchnavigator.sidebarWidth");
+    const savedWidth = Zotero.Prefs.get(
+      "extensions.zotero.researchnavigator.sidebarWidth",
+    );
     if (savedWidth) {
       this.sidebarPane.style.width = `${savedWidth}px`;
     }
-    
+
     // 监听宽度变化 - 使用 Zotero 的方式
     // MutationObserver 在 Zotero 环境中不可用
   }
-  
+
   /**
    * 销毁
    */
@@ -272,12 +279,14 @@ export class SidebarManager {
     if (this.sidebarPane && this.sidebarPane.parentNode) {
       this.sidebarPane.parentNode.removeChild(this.sidebarPane);
     }
-    
-    const splitter = this.window.document.getElementById("research-navigator-splitter");
+
+    const splitter = this.window.document.getElementById(
+      "research-navigator-splitter",
+    );
     if (splitter && splitter.parentNode) {
       splitter.parentNode.removeChild(splitter);
     }
-    
+
     this.sidebarPane = null;
     this.contentContainer = null;
     this.initialized = false;

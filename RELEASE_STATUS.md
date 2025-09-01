@@ -9,11 +9,13 @@
 ## ✅ Testing Results
 
 ### UI Smoke Test
+
 - ✅ All UI components are Bootstrap-filter safe
 - ✅ No critical issues found
 - ⚠️ 16 button tags in test code only (not in production code)
 
 ### Full Smoke Test
+
 - ✅ Build output exists
 - ✅ Manifest version correct (2.6.8)
 - ✅ Critical files present
@@ -52,6 +54,7 @@ The push to the branch should trigger the Development Auto-Release workflow whic
 Visit: https://github.com/sperwe/Zotero-Research-Navigator/actions
 
 Look for:
+
 - "Development Auto-Release" workflow
 - Should be triggered by the recent push
 - Will create a release with XPI attachment
@@ -71,17 +74,17 @@ Once installed, you can test in Zotero console:
 
 ```javascript
 // Run full Bootstrap filter tests
-Zotero.ResearchNavigator.runBootstrapTests()
+Zotero.ResearchNavigator.runBootstrapTests();
 
 // Quick test
-Zotero.ResearchNavigator.quickBootstrapTest()
+Zotero.ResearchNavigator.quickBootstrapTest();
 
 // Monitor DOM changes
-Zotero.ResearchNavigator.startFilterMonitor()
+Zotero.ResearchNavigator.startFilterMonitor();
 // ... perform actions ...
-Zotero.ResearchNavigator.stopFilterMonitor()
+Zotero.ResearchNavigator.stopFilterMonitor();
 
 // Test specific components
-Zotero.ResearchNavigator.testComponent('QuickNoteButton')
-Zotero.ResearchNavigator.bootstrapHelp()
+Zotero.ResearchNavigator.testComponent("QuickNoteButton");
+Zotero.ResearchNavigator.bootstrapHelp();
 ```

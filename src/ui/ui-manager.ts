@@ -76,7 +76,10 @@ export class UIManager {
       const win = Zotero.getMainWindow();
       if (win && win.document) {
         // 降低要求，只要有 document 就继续
-        Zotero.log(`[UIManager] Window state: readyState=${win.document.readyState}, hasBody=${!!win.document.body}`, "info");
+        Zotero.log(
+          `[UIManager] Window state: readyState=${win.document.readyState}, hasBody=${!!win.document.body}`,
+          "info",
+        );
         return;
       }
       await new Promise((resolve) => {
@@ -84,14 +87,17 @@ export class UIManager {
       });
       retries++;
     }
-    
+
     // 最后的尝试
     const win = Zotero.getMainWindow();
     if (win) {
-      Zotero.log("[UIManager] Main window exists but document not ready, proceeding anyway", "warn");
+      Zotero.log(
+        "[UIManager] Main window exists but document not ready, proceeding anyway",
+        "warn",
+      );
       return;
     }
-    
+
     throw new Error("Main window not available after 3 seconds");
   }
 
@@ -108,28 +114,41 @@ export class UIManager {
       // 创建工具栏按钮
       if (!this.toolbarButton) {
         Zotero.log("[UIManager] Creating toolbar button...", "info");
-        
+
         // 尝试使用 Zotero 7 专用的工具栏按钮
         try {
           const buttonZ7 = new ToolbarButtonZotero7(win, {
             onPanelToggle: () => this.toggleDisplay(),
-            onModeChange: (mode) => this.setDisplayMode(mode)
+            onModeChange: (mode) => this.setDisplayMode(mode),
           });
           await buttonZ7.create();
-          Zotero.log("[UIManager] Toolbar button Zotero7 created successfully", "info");
+          Zotero.log(
+            "[UIManager] Toolbar button Zotero7 created successfully",
+            "info",
+          );
           // 保存引用以便清理
           (this as any)._buttonZ7 = buttonZ7;
         } catch (z7Error) {
-          Zotero.log("[UIManager] Failed to create Zotero7 button, trying V2: " + z7Error, "warn");
-          
+          Zotero.log(
+            "[UIManager] Failed to create Zotero7 button, trying V2: " +
+              z7Error,
+            "warn",
+          );
+
           // 尝试使用 V2 版本
           try {
             const buttonV2 = new ToolbarButtonV2(win);
             await buttonV2.create();
-            Zotero.log("[UIManager] Toolbar button V2 created successfully", "info");
+            Zotero.log(
+              "[UIManager] Toolbar button V2 created successfully",
+              "info",
+            );
           } catch (v2Error) {
-            Zotero.log("[UIManager] Failed to create V2 button, trying V1: " + v2Error, "warn");
-            
+            Zotero.log(
+              "[UIManager] Failed to create V2 button, trying V1: " + v2Error,
+              "warn",
+            );
+
             // 回退到原版本
             this.toolbarButton = new ToolbarButton(win, {
               onTogglePanel: () => this.toggleMainPanel(),
@@ -144,14 +163,17 @@ export class UIManager {
           }
         }
       }
-      
+
       // 初始化快速笔记浮动按钮
       if (!this.quickNoteButton) {
-        Zotero.log("[UIManager] Creating quick note button (simple version)...", "info");
+        Zotero.log(
+          "[UIManager] Creating quick note button (simple version)...",
+          "info",
+        );
         this.quickNoteButton = new QuickNoteButtonSimple(
           win,
           this.noteAssociationSystem,
-          this.historyService
+          this.historyService,
         );
         await this.quickNoteButton.initialize();
         Zotero.log("[UIManager] Quick note button created", "info");
@@ -168,12 +190,14 @@ export class UIManager {
         await this.mainPanel.create();
         Zotero.log("[UIManager] Main panel created", "info");
       }
-      
+
       // 初始化侧边栏
       await this.initializeSidebar(win);
-      
+
       // 恢复显示模式
-      const savedMode = Zotero.Prefs.get("extensions.zotero.researchnavigator.displayMode") as string;
+      const savedMode = Zotero.Prefs.get(
+        "extensions.zotero.researchnavigator.displayMode",
+      ) as string;
       if (savedMode === "sidebar") {
         this.displayMode = "sidebar";
       }
@@ -192,14 +216,14 @@ export class UIManager {
    */
   private getAllWindows(): Window[] {
     const windows: Window[] = [];
-    
+
     // 首先确保主窗口被包含
     const mainWindow = Zotero.getMainWindow();
     if (mainWindow) {
       windows.push(mainWindow);
       Zotero.log("[UIManager] Added main window", "info");
     }
-    
+
     // 然后检查其他窗口
     try {
       const enumerator = Services.wm.getEnumerator("navigator:browser");
@@ -328,16 +352,16 @@ export class UIManager {
         }
         return null;
       });
-      
+
       await this.sidebarManager.initialize();
-      
+
       // 监听模式切换事件
       win.addEventListener("research-navigator-toggle-mode", () => {
         this.toggleDisplayMode();
       });
     }
   }
-  
+
   /**
    * 切换显示
    */
@@ -348,7 +372,7 @@ export class UIManager {
       this.toggleSidebar();
     }
   }
-  
+
   /**
    * 切换主面板显示/隐藏
    */
@@ -367,46 +391,51 @@ export class UIManager {
           noteAssociationSystem: this.noteAssociationSystem,
           historyService: this.historyService,
         });
-        this.mainPanel.create().then(() => {
-          Zotero.log("[UIManager] Main panel created on demand", "info");
-          this.mainPanel.show();
-        }).catch(err => {
-          Zotero.logError(`[UIManager] Failed to create panel on demand: ${err}`);
-        });
+        this.mainPanel
+          .create()
+          .then(() => {
+            Zotero.log("[UIManager] Main panel created on demand", "info");
+            this.mainPanel.show();
+          })
+          .catch((err) => {
+            Zotero.logError(
+              `[UIManager] Failed to create panel on demand: ${err}`,
+            );
+          });
       }
     }
   }
-  
+
   /**
    * 切换侧边栏显示
    */
   toggleSidebar(): void {
     if (!this.sidebarManager) return;
-    
+
     this.sidebarManager.toggle();
   }
-  
+
   /**
    * 设置显示模式
    */
   setDisplayMode(mode: "floating" | "sidebar"): void {
     if (this.displayMode === mode) return;
-    
+
     Zotero.log(`[UIManager] Switching display mode to: ${mode}`, "info");
-    
+
     // 隐藏当前模式
     if (this.displayMode === "floating" && this.mainPanel) {
       this.mainPanel.hide();
     } else if (this.displayMode === "sidebar" && this.sidebarManager) {
       this.sidebarManager.hide();
     }
-    
+
     // 切换模式
     this.displayMode = mode;
-    
+
     // 保存偏好
     Zotero.Prefs.set("extensions.zotero.researchnavigator.displayMode", mode);
-    
+
     // 显示新模式
     if (mode === "floating" && this.mainPanel) {
       this.mainPanel.show();
@@ -414,7 +443,7 @@ export class UIManager {
       this.sidebarManager.show();
     }
   }
-  
+
   /**
    * 切换显示模式
    */
@@ -428,7 +457,10 @@ export class UIManager {
    */
   async quickCreateNote(): Promise<void> {
     // 快速笔记功能已移至浮动按钮
-    this.showNotification("Please use the floating button in the bottom-right corner", "info");
+    this.showNotification(
+      "Please use the floating button in the bottom-right corner",
+      "info",
+    );
   }
 
   /**
@@ -493,7 +525,7 @@ export class UIManager {
       }, 5000);
     }
   }
-  
+
   /**
    * 刷新历史标签页
    */
@@ -515,7 +547,7 @@ export class UIManager {
       this.toolbarButton.destroy();
       this.toolbarButton = null;
     }
-    
+
     if (this.quickNoteButton) {
       this.quickNoteButton.destroy();
       this.quickNoteButton = null;

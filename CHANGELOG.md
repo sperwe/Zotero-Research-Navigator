@@ -3,6 +3,7 @@
 ## [2.1.0] - 2024-01-28
 
 ### Added
+
 - 🎯 **Toolbar Button**: Tree-style icon in the main toolbar for easy access
 - 🌳 **History Tree View**: Hierarchical display of research history
   - Session-based organization
@@ -25,18 +26,21 @@
   - Dark theme support with Zotero variables
 
 ### Fixed
+
 - TypeScript compilation errors
 - UI visibility issues in Zotero 7
 - Database schema for better SQLite compatibility
 - Chrome package registration for icons
 
 ### Technical Improvements
+
 - Full TypeScript migration
 - Modular architecture with service/manager pattern
 - Comprehensive error handling
 - Mock testing environment
 
 ## [2.0.3] - Previous Release
+
 - Basic history tracking
 - Simple tab management
 - Initial UI implementation

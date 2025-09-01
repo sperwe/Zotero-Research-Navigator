@@ -162,19 +162,31 @@ export class NoteAssociationSystem {
             // 笔记和附件有相同的父项
             shouldAssociate = true;
             relationType = "created_during";
-            Zotero.log(`[NoteAssociationSystem] Auto-associating note to attachment ${currentNode.title}`, "info");
+            Zotero.log(
+              `[NoteAssociationSystem] Auto-associating note to attachment ${currentNode.title}`,
+              "info",
+            );
           }
         } else if (currentItem && note.parentID) {
           // 检查笔记的父项是否是当前项的附件
           const noteParent = await Zotero.Items.getAsync(note.parentID);
-          if (noteParent && noteParent.isAttachment() && noteParent.parentID === currentNode.itemId) {
+          if (
+            noteParent &&
+            noteParent.isAttachment() &&
+            noteParent.parentID === currentNode.itemId
+          ) {
             shouldAssociate = true;
             relationType = "created_during";
-            Zotero.log(`[NoteAssociationSystem] Auto-associating note to parent item via attachment`, "info");
+            Zotero.log(
+              `[NoteAssociationSystem] Auto-associating note to parent item via attachment`,
+              "info",
+            );
           }
         }
       } catch (error) {
-        Zotero.logError(`[NoteAssociationSystem] Error checking attachment association: ${error}`);
+        Zotero.logError(
+          `[NoteAssociationSystem] Error checking attachment association: ${error}`,
+        );
       }
     }
 
@@ -222,7 +234,7 @@ export class NoteAssociationSystem {
     // 增强关联信息
     const associations: NoteAssociation[] = [];
     const processedNoteIds = new Set<number>();
-    
+
     // 1. 获取直接关联的笔记
     for (const relation of relations) {
       try {
@@ -268,13 +280,13 @@ export class NoteAssociationSystem {
                     context: {
                       sessionId: node.sessionId,
                       fromNode: nodeId,
-                      path: node.path
+                      path: node.path,
                     },
                     note,
                   });
                   Zotero.log(
                     `[NoteAssociationSystem] Found attachment parent note: ${note.id} for node: ${nodeId}`,
-                    "info"
+                    "info",
                   );
                 }
               }
@@ -283,7 +295,9 @@ export class NoteAssociationSystem {
         }
       }
     } catch (error) {
-      Zotero.logError(`[NoteAssociationSystem] Error getting attachment notes: ${error}`);
+      Zotero.logError(
+        `[NoteAssociationSystem] Error getting attachment notes: ${error}`,
+      );
     }
 
     return associations;
@@ -468,7 +482,7 @@ ${initialContent || "<p>Your notes here...</p>"}
       summarizes: 0,
       questions: 0,
       manual: 0,
-      'quick-note': 0,
+      "quick-note": 0,
       reference: 0,
       suggested: 0,
     };
@@ -520,14 +534,14 @@ ${initialContent || "<p>Your notes here...</p>"}
   async destroy(): Promise<void> {
     // 清理资源
   }
-  
+
   /**
    * 获取节点的关联笔记（带详细信息）
    */
   async getAssociatedNotes(nodeId: string): Promise<any[]> {
     const relations = await this.getNodeNotes(nodeId);
     const notes: any[] = [];
-    
+
     for (const relation of relations) {
       try {
         // relation 已经包含了 note 对象
@@ -537,29 +551,30 @@ ${initialContent || "<p>Your notes here...</p>"}
             noteId: relation.noteId,
             nodeId: relation.nodeId,
             relationType: relation.relationType,
-            title: relation.note.getField('title') || 'Untitled Note',
+            title: relation.note.getField("title") || "Untitled Note",
             content: relation.note.getNote(),
-            dateModified: new Date(relation.note.getField('dateModified'))
+            dateModified: new Date(relation.note.getField("dateModified")),
           });
         }
       } catch (error) {
         Zotero.logError(`Failed to process note ${relation.noteId}: ${error}`);
       }
     }
-    
+
     return notes;
   }
-  
+
   /**
    * 获取推荐的笔记
    */
   async getSuggestedNotes(nodeId: string): Promise<any[]> {
     const node = await this.historyService.getNode(nodeId);
     if (!node) return [];
-    
+
     try {
       // 获取同一文献的其他笔记
-      const itemNotes = await Zotero.DB.queryAsync(`
+      const itemNotes = await Zotero.DB.queryAsync(
+        `
         SELECT DISTINCT i.itemID as noteId, i.dateModified
         FROM items i
         JOIN itemTypes it ON i.itemTypeID = it.itemTypeID
@@ -569,8 +584,10 @@ ${initialContent || "<p>Your notes here...</p>"}
         )
         ORDER BY i.dateModified DESC
         LIMIT 5
-      `, [node.itemId, nodeId]);
-      
+      `,
+        [node.itemId, nodeId],
+      );
+
       const notes: any[] = [];
       for (const row of itemNotes) {
         try {
@@ -579,41 +596,44 @@ ${initialContent || "<p>Your notes here...</p>"}
             notes.push({
               noteId: row.noteId,
               nodeId: nodeId,
-              relationType: 'suggested',
-              title: note.getField('title') || 'Untitled Note',
+              relationType: "suggested",
+              title: note.getField("title") || "Untitled Note",
               content: note.getNote(),
-              dateModified: new Date(row.dateModified)
+              dateModified: new Date(row.dateModified),
             });
           }
         } catch (error) {
           Zotero.logError(`Failed to get note ${row.noteId}: ${error}`);
         }
       }
-      
+
       return notes;
     } catch (error) {
       Zotero.logError(`Failed to get suggested notes: ${error}`);
       return [];
     }
   }
-  
+
   /**
    * 搜索相关笔记
    */
-  async searchRelatedNotes(query: string, nodeId?: string): Promise<AssociatedNote[]> {
+  async searchRelatedNotes(
+    query: string,
+    nodeId?: string,
+  ): Promise<AssociatedNote[]> {
     try {
       const results: AssociatedNote[] = [];
       query = query.toLowerCase().trim();
-      
+
       if (!query) {
         return results;
       }
-      
+
       // 构建搜索条件
       const search = new Zotero.Search();
-      search.addCondition('note', 'contains', query);
-      search.addCondition('itemType', 'is', 'note');
-      
+      search.addCondition("note", "contains", query);
+      search.addCondition("itemType", "is", "note");
+
       // 如果提供了 nodeId，限制在相关项目的笔记中搜索
       if (nodeId) {
         const node = await this.historyService.getNode(nodeId);
@@ -622,43 +642,46 @@ ${initialContent || "<p>Your notes here...</p>"}
           if (item) {
             // 如果是附件，搜索其父项的笔记
             if (item.isAttachment() && item.parentID) {
-              search.addCondition('parent', 'is', item.parentID);
-            } 
+              search.addCondition("parent", "is", item.parentID);
+            }
             // 如果是普通项目，搜索其子笔记
             else if (!item.isNote()) {
-              search.addCondition('parent', 'is', item.id);
+              search.addCondition("parent", "is", item.id);
             }
           }
         }
       }
-      
+
       const noteIds = await search.search();
-      
+
       for (const noteId of noteIds) {
         try {
           const note = await Zotero.Items.getAsync(noteId);
           if (!note || !note.isNote()) continue;
-          
+
           const noteContent = note.getNote();
-          const contentPreview = noteContent.replace(/<[^>]*>/g, '').substring(0, 200);
-          
+          const contentPreview = noteContent
+            .replace(/<[^>]*>/g, "")
+            .substring(0, 200);
+
           results.push({
             noteId: note.id,
-            nodeId: nodeId || '',
-            relationType: 'suggested' as RelationType,
+            nodeId: nodeId || "",
+            relationType: "suggested" as RelationType,
             createdAt: new Date(),
-            note: note
+            note: note,
           });
         } catch (error) {
-          Zotero.logError(`Failed to process note ${noteId} in search: ${error}`);
+          Zotero.logError(
+            `Failed to process note ${noteId} in search: ${error}`,
+          );
         }
       }
-      
+
       return results;
     } catch (error) {
       Zotero.logError(`Failed to search notes: ${error}`);
       return [];
     }
   }
-
 }

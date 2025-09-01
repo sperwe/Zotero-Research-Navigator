@@ -5,35 +5,35 @@
  * 可以在开发时快速测试
  */
 
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
+const fs = require("fs");
+const path = require("path");
+const { execSync } = require("child_process");
 
-console.log('🧪 Bootstrap Filter Test Runner');
-console.log('================================\n');
+console.log("🧪 Bootstrap Filter Test Runner");
+console.log("================================\n");
 
 // 检查是否在正确的目录
-const projectRoot = path.resolve(__dirname, '..');
-if (!fs.existsSync(path.join(projectRoot, 'package.json'))) {
-  console.error('❌ Error: Must run from project root');
+const projectRoot = path.resolve(__dirname, "..");
+if (!fs.existsSync(path.join(projectRoot, "package.json"))) {
+  console.error("❌ Error: Must run from project root");
   process.exit(1);
 }
 
 // 编译测试文件
-console.log('📦 Compiling test files...');
+console.log("📦 Compiling test files...");
 try {
-  execSync('npm run build', { 
+  execSync("npm run build", {
     cwd: projectRoot,
-    stdio: 'inherit'
+    stdio: "inherit",
   });
-  console.log('✅ Build successful\n');
+  console.log("✅ Build successful\n");
 } catch (error) {
-  console.error('❌ Build failed:', error.message);
+  console.error("❌ Build failed:", error.message);
   process.exit(1);
 }
 
 // 创建测试报告目录
-const reportDir = path.join(projectRoot, 'test-reports');
+const reportDir = path.join(projectRoot, "test-reports");
 if (!fs.existsSync(reportDir)) {
   fs.mkdirSync(reportDir, { recursive: true });
 }
@@ -63,7 +63,7 @@ To run the tests:
    - Generate a comprehensive report
 
 5. Test results will be saved to:
-   ${path.join(Zotero.DataDirectory.dir || '[Zotero Data Directory]', 'research-navigator-bootstrap-test-report.json')}
+   ${path.join(Zotero.DataDirectory.dir || "[Zotero Data Directory]", "research-navigator-bootstrap-test-report.json")}
 
 Alternative: Run individual tests:
 
@@ -130,11 +130,13 @@ const quickTestContent = `
 `;
 
 // 保存快速测试文件
-const quickTestPath = path.join(reportDir, 'quick-bootstrap-test.js');
+const quickTestPath = path.join(reportDir, "quick-bootstrap-test.js");
 fs.writeFileSync(quickTestPath, quickTestContent.trim());
 
 console.log(`\n✅ Quick test script saved to: ${quickTestPath}`);
-console.log('\nYou can also copy the script content and paste it directly into Zotero console.');
+console.log(
+  "\nYou can also copy the script content and paste it directly into Zotero console.",
+);
 
 // 生成测试用例文档
 const testCasesDoc = `
@@ -185,8 +187,8 @@ Instead of: href="javascript:void(0)"
 Use: href="#" with preventDefault()
 `;
 
-const testCasesPath = path.join(reportDir, 'bootstrap-filter-test-cases.md');
+const testCasesPath = path.join(reportDir, "bootstrap-filter-test-cases.md");
 fs.writeFileSync(testCasesPath, testCasesDoc.trim());
 
 console.log(`📄 Test cases documentation saved to: ${testCasesPath}`);
-console.log('\n🚀 Ready to test! Follow the instructions above.');
+console.log("\n🚀 Ready to test! Follow the instructions above.");

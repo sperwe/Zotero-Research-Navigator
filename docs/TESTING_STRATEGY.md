@@ -36,12 +36,13 @@
 
 ```typescript
 // 已实施的例子
-describe('HistoryService', () => {
+describe("HistoryService", () => {
   // 测试业务逻辑，mock Zotero API
 });
 ```
 
 **优势**：
+
 - 快速执行
 - 易于 CI/CD 集成
 - 不依赖 Zotero 运行环境
@@ -55,13 +56,18 @@ describe('HistoryService', () => {
 3. **版本兼容性**：不同 Zotero 版本可能有差异
 
 **折中方案**：
+
 ```javascript
 // 创建一个简化的集成测试环境
 // 模拟关键的 Zotero API
 class ZoteroMockEnvironment {
   constructor() {
-    this.Items = { /* mock */ };
-    this.Collections = { /* mock */ };
+    this.Items = {
+      /* mock */
+    };
+    this.Collections = {
+      /* mock */
+    };
   }
 }
 ```
@@ -136,6 +142,7 @@ export class ZoteroMock {
 ### 4.1 立即行动
 
 1. **扩展单元测试**：
+
    ```bash
    npm test -- --coverage
    # 目标：核心模块覆盖率 > 70%

@@ -2,10 +2,10 @@
  * 测试插件的实际功能
  */
 
-import fs from 'fs';
-import vm from 'vm';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from "fs";
+import vm from "vm";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,36 +14,38 @@ const __dirname = path.dirname(__filename);
 const mockZotero = {
   initialized: true,
   log: (msg, level) => {
-    console.log(`[${level || 'info'}] ${msg}`);
+    console.log(`[${level || "info"}] ${msg}`);
   },
   logError: (err) => {
-    console.error('[ERROR]', err);
+    console.error("[ERROR]", err);
     if (err.stack) console.error(err.stack);
   },
   getMainWindow: () => {
     const mockWindow = {
       document: {
-        readyState: 'complete',
+        readyState: "complete",
         body: {
           appendChild: (element) => {
-            console.log(`  ✓ Added element to body: ${element.id || element.className}`);
-          }
+            console.log(
+              `  ✓ Added element to body: ${element.id || element.className}`,
+            );
+          },
         },
         head: {
           appendChild: (element) => {
             console.log(`  ✓ Added style to head`);
-          }
+          },
         },
         getElementById: (id) => {
           console.log(`  → Looking for element: ${id}`);
-          if (id === 'zotero-items-toolbar') {
+          if (id === "zotero-items-toolbar") {
             return {
               parentNode: {
                 insertBefore: (newNode, refNode) => {
                   console.log(`  ✓ Toolbar button inserted!`);
-                }
+                },
               },
-              nextSibling: null
+              nextSibling: null,
             };
           }
           return null;
@@ -56,10 +58,10 @@ const mockZotero = {
             style: {},
             appendChild: () => {},
             setAttribute: (name, value) => {
-              if (name === 'id') console.log(`    - Set ID: ${value}`);
+              if (name === "id") console.log(`    - Set ID: ${value}`);
             },
             addEventListener: () => {},
-            remove: () => {}
+            remove: () => {},
           };
         },
         createElement: (tag) => {
@@ -67,26 +69,26 @@ const mockZotero = {
           return {
             id: null,
             className: null,
-            style: { cssText: '' },
+            style: { cssText: "" },
             appendChild: () => {},
-            remove: () => {}
+            remove: () => {},
           };
         },
-        getElementsByTagName: (tag) => []
+        getElementsByTagName: (tag) => [],
       },
       addEventListener: () => {},
       removeEventListener: () => {},
-      location: { href: 'chrome://zotero/content/zotero.xul' }
+      location: { href: "chrome://zotero/content/zotero.xul" },
     };
     return mockWindow;
   },
   getActiveZoteroPane: () => null,
   addShutdownListener: (fn) => {
-    console.log('  ✓ Added shutdown listener');
+    console.log("  ✓ Added shutdown listener");
   },
   Prefs: {
     get: () => null,
-    set: () => {}
+    set: () => {},
   },
   DB: {
     queryAsync: async (sql) => {
@@ -95,32 +97,38 @@ const mockZotero = {
     },
     executeTransaction: async (fn) => {
       await fn();
-    }
+    },
   },
   Notifier: {
     registerObserver: (observer, types) => {
-      console.log(`  ✓ Registered observer for: ${types.join(', ')}`);
-      return 'observer-id';
+      console.log(`  ✓ Registered observer for: ${types.join(", ")}`);
+      return "observer-id";
     },
-    unregisterObserver: () => {}
+    unregisterObserver: () => {},
   },
   Items: {
     get: () => null,
-    getAsync: async () => null
+    getAsync: async () => null,
   },
   Libraries: {
-    userLibraryID: 1
-  }
+    userLibraryID: 1,
+  },
 };
 
 // 执行测试
 async function testPlugin() {
-  console.log('=== Testing Research Navigator Plugin ===\n');
-  
+  console.log("=== Testing Research Navigator Plugin ===\n");
+
   // 加载 bootstrap-loader.js
-  const loaderPath = path.join(__dirname, '..', 'build', 'addon', 'bootstrap.js');
-  const loaderCode = fs.readFileSync(loaderPath, 'utf8');
-  
+  const loaderPath = path.join(
+    __dirname,
+    "..",
+    "build",
+    "addon",
+    "bootstrap.js",
+  );
+  const loaderCode = fs.readFileSync(loaderPath, "utf8");
+
   // 创建测试环境
   const testEnv = {
     Zotero: mockZotero,
@@ -129,21 +137,28 @@ async function testPlugin() {
         getEnumerator: () => ({
           hasMoreElements: () => true,
           getNext: () => mockZotero.getMainWindow(),
-          _count: 0
+          _count: 0,
         }),
-        addListener: () => console.log('  ✓ Window listener added'),
-        removeListener: () => {}
+        addListener: () => console.log("  ✓ Window listener added"),
+        removeListener: () => {},
       },
       prompt: {
-        alert: (parent, title, msg) => console.error(`[ALERT] ${title}: ${msg}`)
+        alert: (parent, title, msg) =>
+          console.error(`[ALERT] ${title}: ${msg}`),
       },
       scriptloader: {
         loadSubScript: (url, scope) => {
           console.log(`\n[Loading] ${url}`);
-          if (url.includes('bootstrap-compiled.js')) {
-            const compiledPath = path.join(__dirname, '..', 'build', 'addon', 'bootstrap-compiled.js');
-            const compiledCode = fs.readFileSync(compiledPath, 'utf8');
-            
+          if (url.includes("bootstrap-compiled.js")) {
+            const compiledPath = path.join(
+              __dirname,
+              "..",
+              "build",
+              "addon",
+              "bootstrap-compiled.js",
+            );
+            const compiledCode = fs.readFileSync(compiledPath, "utf8");
+
             // 执行编译后的代码
             const sandbox = {
               ...scope,
@@ -155,64 +170,68 @@ async function testPlugin() {
               setTimeout,
               clearTimeout,
               console,
-              window: scope.window || {}
+              window: scope.window || {},
             };
-            
-            const script = new vm.Script(compiledCode, { filename: 'bootstrap-compiled.js' });
+
+            const script = new vm.Script(compiledCode, {
+              filename: "bootstrap-compiled.js",
+            });
             const context = vm.createContext(sandbox);
             script.runInContext(context);
-            
+
             // 复制函数
             if (sandbox.window) {
               Object.assign(scope.window, sandbox.window);
             }
           }
-        }
-      }
+        },
+      },
     },
     ChromeUtils: {
-      import: () => ({ Services: testEnv.Services })
+      import: () => ({ Services: testEnv.Services }),
     },
     Components: {
       utils: {},
-      interfaces: {}
-    }
+      interfaces: {},
+    },
   };
-  
+
   // 执行 loader
-  const script = new vm.Script(loaderCode, { filename: 'bootstrap.js' });
+  const script = new vm.Script(loaderCode, { filename: "bootstrap.js" });
   const context = vm.createContext(testEnv);
   script.runInContext(context);
-  
+
   // 测试启动
-  console.log('\n[TEST] Starting plugin...\n');
+  console.log("\n[TEST] Starting plugin...\n");
   if (testEnv.startup) {
     try {
-      await testEnv.startup({
-        id: 'research-navigator@zotero.org',
-        version: '2.0.3',
-        rootURI: 'chrome://researchnavigator/',
-        resourceURI: 'chrome://researchnavigator/'
-      }, 3);
-      
-      console.log('\n✅ Plugin started successfully!');
-      
+      await testEnv.startup(
+        {
+          id: "research-navigator@zotero.org",
+          version: "2.0.3",
+          rootURI: "chrome://researchnavigator/",
+          resourceURI: "chrome://researchnavigator/",
+        },
+        3,
+      );
+
+      console.log("\n✅ Plugin started successfully!");
+
       // 等待异步操作
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
       // 检查是否有错误
       if (mockZotero.ResearchNavigator) {
-        console.log('✅ ResearchNavigator instance created');
+        console.log("✅ ResearchNavigator instance created");
       } else {
-        console.error('❌ ResearchNavigator instance NOT found!');
+        console.error("❌ ResearchNavigator instance NOT found!");
       }
-      
     } catch (error) {
-      console.error('\n❌ Startup failed:', error.message);
+      console.error("\n❌ Startup failed:", error.message);
       console.error(error.stack);
     }
   } else {
-    console.error('❌ No startup function found!');
+    console.error("❌ No startup function found!");
   }
 }
 
