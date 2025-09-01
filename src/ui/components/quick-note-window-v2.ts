@@ -559,6 +559,14 @@ export class QuickNoteWindowV2 {
 
       const doc = container.ownerDocument;
       const win = doc.defaultView || this.window || Zotero.getMainWindow();
+      
+      if (!win) {
+        Zotero.logError(
+          "[QuickNoteWindowV2] No window available for editor initialization",
+        );
+        this.initializeSimpleEditor(container);
+        return;
+      }
 
       // 确保自定义元素脚本已加载
       if (!win.customElements || !win.customElements.get("note-editor")) {
@@ -748,24 +756,113 @@ export class QuickNoteWindowV2 {
    * 初始化简单编辑器（备用）
    */
   private initializeSimpleEditor(container: HTMLElement): void {
-    // 创建一个简单的文本区域作为备用
-    const textArea = container.ownerDocument.createElement("textarea");
-    textArea.style.cssText = `
-      width: 100%;
-      height: 100%;
-      border: none;
-      padding: 16px;
-      font-family: -apple-system, sans-serif;
-      font-size: 14px;
-      line-height: 1.6;
-      resize: none;
-      outline: none;
-    `;
-    textArea.placeholder = "Start typing your note...";
-    container.appendChild(textArea);
+    try {
+      const doc = container.ownerDocument;
+      
+      // 清空容器
+      container.innerHTML = "";
+      
+      // 创建一个安全的容器
+      const editorWrapper = doc.createElement("div");
+      editorWrapper.style.cssText = `
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        background: white;
+      `;
+      
+      // 创建简单的文本编辑器作为回退
+      const textArea = doc.createElement("textarea");
+      textArea.style.cssText = `
+        width: 100%;
+        height: 100%;
+        border: none;
+        outline: none;
+        padding: 16px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14px;
+        line-height: 1.6;
+        resize: none;
+        box-sizing: border-box;
+      `;
+      textArea.placeholder = "Start typing your note...";
 
-    // 保存引用以便后续使用
-    (container as any)._simpleEditor = textArea;
+      // 加载现有笔记内容（如果有）
+      if (this.currentNoteId) {
+        Zotero.Items.getAsync(this.currentNoteId).then((note) => {
+          if (note) {
+            // 简单地去除HTML标签
+            const content = note.getNote().replace(/<[^>]*>/g, "");
+            textArea.value = content;
+          }
+        }).catch((error) => {
+          Zotero.logError(
+            `[QuickNoteWindowV2] Failed to load note content: ${error}`,
+          );
+        });
+      }
+
+      // 自动保存
+      let saveTimeout: any;
+      textArea.addEventListener("input", () => {
+        clearTimeout(saveTimeout);
+        this.hasUnsavedChanges = true;
+        this.updateSaveStatus("unsaved");
+        
+        saveTimeout = setTimeout(async () => {
+          if (this.currentNoteId) {
+            try {
+              const note = await Zotero.Items.getAsync(this.currentNoteId);
+              if (note) {
+                // 转换为简单的HTML
+                const html = textArea.value
+                  .split("\n")
+                  .map((line) => `<p>${line || "<br>"}</p>`)
+                  .join("");
+                note.setNote(html);
+                await note.saveTx();
+                this.hasUnsavedChanges = false;
+                this.lastSaveTime = Date.now();
+                this.updateSaveStatus("saved");
+              }
+            } catch (error) {
+              Zotero.logError(
+                `[QuickNoteWindowV2] Failed to save note: ${error}`,
+              );
+              this.updateSaveStatus("error");
+            }
+          }
+        }, 1000);
+      });
+
+      editorWrapper.appendChild(textArea);
+      container.appendChild(editorWrapper);
+      
+      // Store reference for cleanup
+      this.editor = { 
+        textarea: textArea, 
+        cleanup: () => {
+          clearTimeout(saveTimeout);
+          textArea.remove();
+          editorWrapper.remove();
+        }
+      };
+      
+      // 保存引用以便后续使用
+      (container as any)._simpleEditor = textArea;
+    } catch (error) {
+      Zotero.logError(
+        `[QuickNoteWindowV2] Failed to initialize simple editor: ${error}`,
+      );
+      // Show error message
+      container.innerHTML = `
+        <div style="padding: 20px; text-align: center; color: #666;">
+          <p>Failed to initialize editor</p>
+          <p style="font-size: 12px; margin-top: 10px;">Error: ${error}</p>
+        </div>
+      `;
+    }
   }
 
   /**
@@ -1105,24 +1202,34 @@ export class QuickNoteWindowV2 {
         note.parentID = parentItemID;
       }
 
-      // 临时禁用项目选择通知
-      const notifierID = Zotero.Notifier.registerObserver(
-        {
-          notify: (event: string, type: string, ids: number[]) => {
-            if (event === "add" && type === "item" && ids.includes(note.id)) {
-              // 阻止选择新创建的笔记
-              return false;
-            }
-          },
-        },
-        ["item"],
-      );
-
+      // 保存笔记之前记录当前选择的项目
+      let originalSelection: number[] = [];
+      try {
+        const pane = (Zotero as any).getActiveZoteroPane?.();
+        if (pane && pane.getSelectedItems) {
+          originalSelection = pane.getSelectedItems().map((item: any) => item.id);
+        }
+      } catch (e) {
+        // Ignore error getting selection
+      }
+      
       // 保存笔记
       await note.saveTx();
-
-      // 移除通知监听
-      Zotero.Notifier.unregisterObserver(notifierID);
+      
+      // 如果新笔记被选择了，恢复原始选择
+      try {
+        const pane = (Zotero as any).getActiveZoteroPane?.();
+        if (pane && pane.selectItems && originalSelection.length > 0) {
+          const currentSelection = pane.getSelectedItems().map((item: any) => item.id);
+          // 检查新笔记是否被选择了
+          if (currentSelection.includes(note.id)) {
+            // 恢复原始选择
+            pane.selectItems(originalSelection);
+          }
+        }
+      } catch (e) {
+        // Ignore error restoring selection
+      }
 
       this.currentNoteId = note.id;
       this.noteContext = this.associatedNodeId; // 记录创建时的上下文
