@@ -4,7 +4,7 @@
 
 ![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)
 ![Zotero](https://img.shields.io/badge/Zotero-6.0.27+-red.svg)
-![Version](https://img.shields.io/badge/version-1.0.0-green.svg)
+![Version](https://img.shields.io/badge/version-2.9.9-green.svg)
 
 ## ✨ 特色功能
 

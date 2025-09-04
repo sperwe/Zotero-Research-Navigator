@@ -5,7 +5,7 @@
   <Description about="urn:mozilla:install-manifest">
     <em:id>research-navigator@zotero.org</em:id>
     <em:name>Zotero Research Navigator</em:name>
-    <em:version>1.0.0</em:version>
+    <em:version>2.9.9</em:version>
     <em:type>2</em:type>
     <em:creator>Research Navigator Developer</em:creator>
     <em:description>Track research history and enhance note navigation in Zotero</em:description>
