@@ -9,7 +9,7 @@ module.exports = (env = {}) => {
   return {
     mode: isProduction ? 'production' : 'development',
     entry: {
-      index: './src/simple-index.js',
+      'chrome/content/index': './src/simple-index.js',
     },
     output: {
       filename: '[name].js',
