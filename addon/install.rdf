@@ -24,12 +24,12 @@
       </Description>
     </em:targetApplication>
     
-    <!-- Zotero 7 (新应用ID) -->
+    <!-- Zotero 7/8 (新应用ID) -->
     <em:targetApplication>
       <Description>
         <em:id>zotero@zotero.org</em:id>
         <em:minVersion>7.0</em:minVersion>
-        <em:maxVersion>7.0.*</em:maxVersion>
+        <em:maxVersion>8.*</em:maxVersion>
       </Description>
     </em:targetApplication>
     

@@ -11,7 +11,7 @@
       "id": "research-navigator@zotero.org",
       "update_url": "https://github.com/YOUR_USERNAME/zotero-research-navigator/releases/latest/download/update.json",
       "strict_min_version": "6.0.27",
-      "strict_max_version": "7.0.*"
+      "strict_max_version": "8.*"
     }
   },
 
