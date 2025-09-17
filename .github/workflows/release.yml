@@ -29,11 +29,20 @@ jobs:
     - name: Build plugin
       run: npm run build-prod
     
+    - name: List build directory
+      run: |
+        echo "Build directory contents:"
+        ls -la build/
+        echo "Current directory contents:"
+        ls -la
+    
     - name: Create XPI
       run: |
         cd build
+        echo "Creating XPI from build directory..."
         zip -r ../zotero-research-navigator-${{ github.ref_name }}.xpi *
         cd ..
+        echo "XPI files created:"
         ls -la *.xpi
     
     - name: Create Release
