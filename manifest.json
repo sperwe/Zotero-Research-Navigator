@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "__MSG_addon_name__",
-  "version": "2.9.9",
+  "version": "2.9.3",
   "description": "__MSG_addon_description__",
   "homepage_url": "https://github.com/YOUR_USERNAME/zotero-research-navigator",
   "author": "YOUR_NAME",
@@ -11,7 +11,7 @@
       "id": "research-navigator@zotero.org",
       "update_url": "https://github.com/YOUR_USERNAME/zotero-research-navigator/releases/latest/download/update.json",
       "strict_min_version": "6.0.27",
-      "strict_max_version": "7.0.*"
+      "strict_max_version": "8.0.*"
     }
   },
 
