@@ -170,3 +170,31 @@ function shutdown(data, reason) {
 function uninstall(data, reason) {
   console.log("Research Navigator: Uninstalling...");
 }
+
+// Ensure window integration for Zotero 7/8 main window
+function onMainWindowLoad({ window }, reason) {
+  try {
+    // If script not yet present, inject compiled script into the real DOM window
+    if (!window.ResearchNavigator) {
+      const scriptPath = "chrome://research-navigator/content/index.js";
+      Services.scriptloader.loadSubScript(scriptPath, window);
+    }
+    // Optionally, initialize deferred logic handled by index.js itself
+    if (typeof window.startResearchNavigator === 'function') {
+      window.startResearchNavigator();
+    }
+    console.log("Research Navigator: onMainWindowLoad completed");
+  } catch (error) {
+    console.error("Research Navigator: onMainWindowLoad error:", error);
+  }
+}
+
+function onMainWindowUnload({ window }, reason) {
+  try {
+    if (typeof window.stopResearchNavigator === 'function') {
+      window.stopResearchNavigator();
+    }
+  } catch (error) {
+    console.error("Research Navigator: onMainWindowUnload error:", error);
+  }
+}
