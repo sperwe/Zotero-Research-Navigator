@@ -8,3 +8,4 @@ style chrome://global/content/customizeToolbar.xul chrome://research-navigator/s
 
 # 覆盖和集成
 overlay chrome://zotero/content/zoteroPane.xul chrome://research-navigator/content/overlay.xul
+overlay chrome://zotero/content/zoteroPane.xhtml chrome://research-navigator/content/overlay.xul
