@@ -6,6 +6,9 @@ on:
       - 'v*'  # 触发条件：推送以 v 开头的 tag
   workflow_dispatch:  # 允许手动触发
 
+permissions:
+  contents: write
+
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
@@ -35,7 +38,7 @@ jobs:
     
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/')
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         name: Zotero Research Navigator ${{ github.ref_name }}
         body: |
@@ -50,6 +53,7 @@ jobs:
           ### ✨ 更新内容
           请查看 [RELEASE_NOTES.md](https://github.com/${{ github.repository }}/blob/master/RELEASE_NOTES.md)
         files: ./zotero-research-navigator-${{ github.ref_name }}.xpi
+        fail_on_unmatched_files: true
         draft: false
         prerelease: false
     
