@@ -44,6 +44,8 @@ jobs:
         cd ..
         echo "XPI files created:"
         ls -la *.xpi
+        echo "XPI file size:"
+        du -h *.xpi
     
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/')
