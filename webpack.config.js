@@ -51,6 +51,10 @@ module.exports = (env = {}) => {
             from: 'addon/install.rdf',
             to: 'install.rdf',
           },
+          {
+            from: 'manifest.json',
+            to: 'manifest.json',
+          },
         ],
       }),
     ],
